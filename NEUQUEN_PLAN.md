@@ -77,6 +77,42 @@ La cordillera aporta casi toda el agua de los ríos; por eso el plan empieza ah�
   convección. Se espera que los ríos atmosféricos se pronostiquen con días de anticipación y la convección casi no;
   hay que medirlo. No es un sistema de alerta: una alerta real exige operación continua y responsabilidad.
 
+## Machine learning
+
+Regla: usar ML solo donde sobran datos (series largas, globales o sintéticos) y compararlo siempre con un
+baseline simple. El límite general del plan es que hay muy pocos eventos extremos para etiquetar.
+
+### Modelos justificados por etapa
+
+| Etapa | Modelo | Por qué se justifica | Baseline | Prioridad |
+|---|---|---|---|---|
+| 2. Crecidas | LSTM de caudal diario (forzantes ERA5, incluida la isoterma de 0 °C) | ~40 años de caudal diario; se puede preentrenar en cuencas andinas de CAMELS-CL y ajustar en Neuquén | GR4J y persistencia | Alta: el primero a encarar |
+| 4. Aluviones | Emulador de HEC-RAS 2D (U-Net o red de grafos) | Datos sintéticos: cientos de simulaciones con lluvias distintas, sin escasez de eventos | La simulación HEC-RAS misma (precisión) | Alta, después del caso HEC-RAS |
+| 1. Ríos atmosféricos | Detector DL preentrenado (por ejemplo, ClimateNet) sobre ERA5 | Comparación, no reemplazo: mide cuánto depende el catálogo del método | TECA BARD | Media |
+| 5. Predicción | Clasificador de "día de riesgo" (gradient boosting, por ejemplo LightGBM) | Variables de ERA5 abundantes, aunque las etiquetas sean pocas | Climatología y regresión logística | Media; evaluar con Brier y PR-AUC, no con exactitud |
+| 5. Predicción | Modelos de IA preentrenados (ECMWF AIFS), sin entrenar | Pronósticos abiertos; enseña dónde fallan con extremos | ECMWF IFS | Media |
+
+### Descartados o postergados
+
+- **Aprendizaje por refuerzo para operar embalses** (Cerros Colorados, Portezuelo Grande): requiere un simulador
+  propio y las reglas reales de operación no son públicas (sin verificar). Ejercicio aislado, al final o fuera.
+- **Susceptibilidad de aluviones con ML:** no hay inventario georreferenciado de aluviones (sin verificar). Usar
+  primero el método físico de la etapa 4.
+- **Downscaling de IMERG con DL:** pocas estaciones horarias para entrenar y validar. Rinde más una corrección de
+  sesgo por cuantiles (quantile mapping).
+- **Nowcasting con radar:** depende de que exista y sea accesible un radar del SINARAME que cubra la zona
+  (sin verificar).
+
+### Features opcionales
+
+- **Análogos de cada evento:** los días de ERA5 más parecidos y qué pasó en ellos (paso previo a ML).
+- **Ficha de crecida:** pronóstico LSTM de los próximos días para los ríos Neuquén y Limay, con incertidumbre,
+  contra lo observado.
+- **Escenarios de aluvión:** elegir un período de retorno y ver la mancha del emulador para un cañadón.
+- **Tablero de verificación:** acierto de IFS, AIFS y GEFS en los eventos neuquinos según días de anticipación.
+- **Capa de ríos atmosféricos** en `rionegro-basin-explorer`: trayectoria e intensidad por evento, sincronizada
+  con el caudal.
+
 ## Orden y riesgos
 
 - **Orden:** 1 → 2 → 3 → 4 → 5. La etapa 1 solo necesita datos globales y libres, así que puede empezar ya.
@@ -92,3 +128,6 @@ La cordillera aporta casi toda el agua de los ríos; por eso el plan empieza ah�
 - [ ] Literatura sobre ríos atmosféricos en los Andes y sobre aluviones en Neuquén
 - [ ] Mapas de suelo y cobertura para el método SCS-CN
 - [ ] Confirmar licencias de ERA5, IMERG, GEFS y ECMWF open data
+- [ ] CAMELS-CL: acceso y licencia para preentrenar el LSTM
+- [ ] Licencia y acceso a los pronósticos abiertos de ECMWF AIFS
+- [ ] ¿Existe un inventario de aluviones de Neuquén y un radar del SINARAME que cubra la provincia?
