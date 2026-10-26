@@ -12,6 +12,13 @@ dónde podría servir fuera del proyecto `rionegro-basin-explorer`.
 3. [Alerta temprana y planificación urbana](IDEAS.md#3-alerta-temprana-y-planificación-urbana)
 4. [Climatologías para municipios y defensa civil](IDEAS.md#4-climatologías-para-municipios-y-defensa-civil)
 
+## Investigación (búsqueda web de una pasada, 2026-10-26; fuentes sin verificar)
+
+- [COMPETIDORES.md](COMPETIDORES.md): competidores y herramientas existentes por idea
+- [HELADAS_OLAS_CALOR_Y_LICENCIAS.md](HELADAS_OLAS_CALOR_Y_LICENCIAS.md): heladas, olas de calor y licencias de datos
+- [LLUVIAS_INUNDACIONES.md](LLUVIAS_INUNDACIONES.md): lluvias extremas, tormentas e inundaciones en zonas no agrícolas
+- [NEUQUEN.md](NEUQUEN.md): caso Neuquén y Alto Valle
+
 ## Reglas de trabajo
 
 - No se inventan cifras, clientes ni mercados: lo no verificado se marca "sin verificar".
