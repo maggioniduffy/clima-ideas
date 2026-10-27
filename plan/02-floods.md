@@ -20,6 +20,7 @@ Caudales de los ríos Neuquén, Limay, Agrio y Curi Leuvú (BDHI, AIC). Estació
 | F2.4 | Capa: estaciones + panel de período de retorno y serie | Sonnet | e2e: elegir estación, ver curva y crecidas |
 | F2.5 | ML (alta): LSTM de caudal diario; preentreno en CAMELS-CL, ajuste en Neuquén; baselines GR4J y persistencia | Sonnet implementa, opencode entrena, Opus revisa métricas | NSE/KGE en test vs. baselines |
 | F2.6 | Ficha de crecida: pronóstico LSTM de próximos días con incertidumbre vs. observado | Sonnet | e2e sobre un evento pasado |
+| F2.7 | Máximos anuales y caudal estacional por fase ENSO; GEV con ONI como covariable vs. estacionaria | Sonnet | Comparación por verosimilitud + unit con GEV sintética dependiente de covariable |
 
 ## Entregable
 

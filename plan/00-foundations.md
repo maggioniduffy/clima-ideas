@@ -19,16 +19,18 @@ Repo listo para que cada etapa solo sume capas: pipeline, API y visor andando co
 | F0.7 | Capa de prueba de punta a punta (manifiesto + datos falsos) | Sonnet | e2e: la capa aparece, se activa e inspecciona |
 | F0.8 | Investigación de acceso a datos (lista abajo) → `docs/research/data-access.md` | opencode | Cada ítem con estado, URL y licencia, o "sin verificar" |
 | F0.9 | Instalar TECA y correr BARD sobre un año de ERA5 | opencode (largo) | Log y máscara de salida, o el error exacto |
+| F0.10 | Índice ENSO compartido: ONI mensual (NOAA CPC) 1950–hoy y fase por mes (Niño ≥ +0,5, Niña ≤ −0,5, Neutro) en `backend/` como única fuente para todas las fases | Sonnet | Parquet + unit: umbrales y fase sobre una serie sintética |
 
 ## F0.8: qué investigar
 
 BDHI y AIC (caudales: acceso, resolución, licencia) · lluvia horaria SMN Neuquén Aero y AIC · CAMELS-CL ·
 licencias ERA5, IMERG, GEFS, ECMWF open data y AIFS · inventario de aluviones de Neuquén · radar SINARAME en la
-provincia · mapas de suelo y cobertura para SCS-CN · fechas y magnitudes de crecidas y aluviones en el norte.
+provincia · mapas de suelo y cobertura para SCS-CN · fechas y magnitudes de crecidas y aluviones en el norte · índices ENSO (ONI, Niño 3.4, SOI) y pronósticos
+ENSO (IRI, C3S) · ECMWF open data y GEFS operativos (latencia, retención) · ERA5T y ERA5-Land (latencia).
 
 ## Tests
 
-Unit: manifiesto, carga del relieve, store de tema. e2e: shell, tema, capa de prueba.
+Unit: manifiesto, carga del relieve, store de tema, fase ENSO. e2e: shell, tema, capa de prueba.
 
 ## Abierto
 
