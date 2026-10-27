@@ -4,9 +4,11 @@ Referencias de diseño para el visor. No son productos a copiar: se anota qué e
 
 ## Chokepoint Watch (Bósforo)
 
-![Chokepoint Watch](visor-chokepoint-watch.webp)
+| Claro | Oscuro |
+|---|---|
+| ![Chokepoint Watch, tema claro](visor-chokepoint-watch-light.webp) | ![Chokepoint Watch, tema oscuro](visor-chokepoint-watch-dark.webp) |
 
-Origen: imagen compartida por el usuario el 2026-10-26; autor y fuente sin identificar.
+Origen: dos imágenes compartidas por el usuario el 2026-10-26; autor y fuente sin identificar.
 
 Visor de tráfico marítimo en un estrecho. Lo que sirve para el visor climático:
 
@@ -22,3 +24,6 @@ Visor de tráfico marítimo en un estrecho. Lo que sirve para el visor climátic
   contra climatología con intervalo).
 - **Modo replay**: reproducir un evento pasado hora por hora (en el visor: la tormenta del 8 de abril en Neuquén).
 - **Barra superior con estado** (hora, latencia): en el visor, fecha del último dato y fuente.
+- **Dos temas con el mismo layout**: el oscuro suma aberración cromática (bordes RGB) sobre la nube de puntos y
+  hace que el acento naranja resalte más. Sirve como modo "operación"; usar el efecto con moderación para que no
+  compita con los datos.

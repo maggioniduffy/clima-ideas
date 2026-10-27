@@ -21,7 +21,7 @@ dónde podría servir fuera del proyecto `rionegro-basin-explorer`.
 
 ## Diseño
 
-- [inspiracion/](inspiracion/README.md): referencias visuales para el visor
+- [inspiration/](inspiration/README.md): referencias visuales para el visor
 
 ## Reglas de trabajo
 
