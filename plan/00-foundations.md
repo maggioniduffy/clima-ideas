@@ -1,0 +1,35 @@
+# Fase 0 — Bases
+
+Estado: pendiente · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
+
+## Objetivo
+
+Repo listo para que cada etapa solo sume capas: pipeline, API y visor andando con una capa de prueba.
+
+## Tareas
+
+| ID | Tarea | Agente | Hecho cuando |
+|---|---|---|---|
+| F0.1 | Monorepo: `backend/` (uv, Python 3.12) y `web/` (pnpm, Vite, React, TS); `Makefile`; `data/` en `.gitignore` | Sonnet | `make dev` levanta API y visor |
+| F0.2 | CI: ruff, pytest, eslint, tsc, vitest, Playwright | Sonnet | CI verde en un PR |
+| F0.3 | Tokens de diseño, tema claro/oscuro, `web/src/i18n/es.ts` | Sonnet | Cambio de tema sin recarga; ningún string fuera de `es.ts` |
+| F0.4 | Shell del visor: barra superior, panel de capas, inspector, línea de tiempo, lienzo deck.gl | Sonnet | Layout fijo en ambos temas |
+| F0.5 | Relieve como nube de puntos: GLO-30 de Neuquén, submuestreado a binario Float32 | opencode (descarga y proceso) + Sonnet (carga en `PointCloudLayer`) | Relieve visible, < 15 MB |
+| F0.6 | FastAPI: `/health`, `/layers`, `/layers/{id}`; validación del manifiesto con pydantic | Sonnet | Unit tests de manifiesto válido e inválido |
+| F0.7 | Capa de prueba de punta a punta (manifiesto + datos falsos) | Sonnet | e2e: la capa aparece, se activa e inspecciona |
+| F0.8 | Investigación de acceso a datos (lista abajo) → `docs/research/data-access.md` | opencode | Cada ítem con estado, URL y licencia, o "sin verificar" |
+| F0.9 | Instalar TECA y correr BARD sobre un año de ERA5 | opencode (largo) | Log y máscara de salida, o el error exacto |
+
+## F0.8: qué investigar
+
+BDHI y AIC (caudales: acceso, resolución, licencia) · lluvia horaria SMN Neuquén Aero y AIC · CAMELS-CL ·
+licencias ERA5, IMERG, GEFS, ECMWF open data y AIFS · inventario de aluviones de Neuquén · radar SINARAME en la
+provincia · mapas de suelo y cobertura para SCS-CN · fechas y magnitudes de crecidas y aluviones en el norte.
+
+## Tests
+
+Unit: manifiesto, carga del relieve, store de tema. e2e: shell, tema, capa de prueba.
+
+## Abierto
+
+- Si TECA no instala (F0.9), Opus decide: reintento con contenedor o detector propio en la fase 1.
