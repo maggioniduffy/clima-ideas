@@ -19,6 +19,10 @@ dónde podría servir fuera del proyecto `rionegro-basin-explorer`.
 - [LLUVIAS_INUNDACIONES.md](LLUVIAS_INUNDACIONES.md): lluvias extremas, tormentas e inundaciones en zonas no agrícolas
 - [NEUQUEN.md](NEUQUEN.md): caso Neuquén y Alto Valle
 
+## Diseño
+
+- [inspiracion/](inspiracion/README.md): referencias visuales para el visor
+
 ## Reglas de trabajo
 
 - No se inventan cifras, clientes ni mercados: lo no verificado se marca "sin verificar".
