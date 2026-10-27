@@ -1,6 +1,7 @@
 # Plan de desarrollo: Neuquén, lluvias extremas y aluviones
 
-Índice de fases. Fuente de alcance: `NEUQUEN_PLAN.md` (el resto de las ideas del repo queda fuera).
+Índice de fases. Fuente de alcance: `NEUQUEN_PLAN.md` (el resto de las ideas del repo queda fuera), más ENSO como
+eje de análisis en las fases 1, 2, 3 y 5 y la fase 6 de predicción experimental (pedido del usuario, 2026-10-27).
 Producto: pipeline Python por etapa que publica capas en un visor web.
 
 ## Fases
@@ -13,6 +14,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | pendiente |
 | 4 | Aluviones: cuencas chicas, HEC-RAS, emulador | [plan/04-debris-flows.md](plan/04-debris-flows.md) | 2, 3 | pendiente |
 | 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1, 3 | pendiente |
+| 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 | pendiente |
 
 La fase 3 puede correr en paralelo a la 1–2. La investigación de acceso a datos (F0.8) arranca el día uno.
 

@@ -21,6 +21,7 @@ CAPE, convergencia).
 | F5.4 | AIFS vs. IFS en los eventos neuquinos | opencode | Tabla por evento y anticipación |
 | F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
 | F5.6 | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |
+| F5.7 | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | opencode analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
 
 ## Entregable
 

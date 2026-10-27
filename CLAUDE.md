@@ -31,4 +31,5 @@ Ciclo por tarea:
 - Código, nombres de archivo y commits en inglés. UI en español primero.
 - Nada inventado: lo no verificado se marca "sin verificar"; todo dato modelado muestra fuente y período.
 - ML solo con un baseline simple al lado.
-- No es un sistema de alerta: todo es retrospectivo.
+- No es un sistema de alerta. Todo es retrospectivo salvo la fase 6: predicciones experimentales, siempre con
+  incertidumbre, baseline y registro de aciertos, sin uso operativo.

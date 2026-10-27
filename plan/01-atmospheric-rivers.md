@@ -21,11 +21,14 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 | F1.5 | Contraste con literatura de ríos atmosféricos en los Andes | opencode | Tabla: nuestro conteo vs. publicado |
 | F1.6 | Capa del visor: eventos en la línea de tiempo + replay de IVT por hora | Sonnet | e2e: elegir evento, reproducir, inspeccionar |
 | F1.7 | ML (media): detector preentrenado tipo ClimateNet vs. BARD | opencode corre, Sonnet integra | Acuerdo entre métodos medido; opcional |
+| F1.8 | Ríos atmosféricos por fase ENSO (F0.10): conteo, IVT y lluvia por estación del año; test de permutación | opencode analiza, Sonnet codifica el test | Tabla Niño/Neutro/Niña con p-valor y n de años + unit del test |
 
 ## Entregable
 
 Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visible como capa con replay.
 
 ## Abierto
+
+- Pocos años por fase ENSO: informar n y no afirmar diferencias que el test no sostiene.
 
 - Umbral de "lluvia extrema" (p99 diario propuesto). Opus confirma tras F1.4.
