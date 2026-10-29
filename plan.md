@@ -18,6 +18,9 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 
 La fase 3 puede correr en paralelo a la 1–2. La investigación de acceso a datos (F0.8) arranca el día uno.
 
+Proyecto aparte, fuera del alcance de Neuquén: calendario de fuego para NASA Space Apps 2026 en
+[space-apps/plan.md](space-apps/plan.md).
+
 ## Referencias
 
 | Archivo | Cuándo leerlo |
