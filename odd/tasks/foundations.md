@@ -54,3 +54,4 @@ Route reason: user's model-roles override (Sonnet implements, Opus reviews).
 - L15 (2026-11-05) Branch pushed; PR https://github.com/maggioniduffy/clima-ideas/pull/6 opened (ready). Auto-fix on.
 - L16 (2026-11-05) User: "merged done". PR #6 merged 02:27Z. Launched teca.yml run 42150504752 (year 2023, run_bard=true, 6-hourly).
 - L17 (2026-11-05) Run 42150504752 failed: CMake 4 rejects cmake_minimum_required < 3.5 in TECA 6.0.0; configure error hidden by tee (no pipefail). Fix on fm/teca-cmake-pin: pin cmake>=3.20,<4, pipefail in Configure.
+- L18 (2026-11-05) Run 42151027608: configure ok; build failed in teca_io: "'comm' was not declared in this scope" (teca_array_collection_reader.cxx:211) — 6.0.0 does not compile with TECA_HAS_MPI=OFF. Enabled MPI (openmpi, REQUIRE_MPI=TRUE).

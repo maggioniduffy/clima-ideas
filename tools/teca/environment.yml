@@ -1,4 +1,4 @@
-# Build and run environment for TECA 6.0.0 (C++ apps only: BARD, no MPI, no Python bindings)
+# Build and run environment for TECA 6.0.0 (C++ apps only: BARD; MPI on, since 6.0.0 does not compile without it; no Python bindings)
 # plus the Python tooling used to fetch ERA5 and compute IVT.
 name: teca
 channels:
@@ -11,6 +11,7 @@ dependencies:
   - ccache
   - pkg-config
   - swig               # TECA's CMakeLists requires swig to be found even without Python
+  - openmpi
   - libnetcdf=*=nompi_*
   - hdf5=*=nompi_*
   - udunits2
