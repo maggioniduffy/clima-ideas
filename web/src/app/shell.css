@@ -62,3 +62,16 @@
   color: var(--text);
   cursor: pointer;
 }
+
+.layer-list,
+.feature-list { list-style: none; margin: 0; padding: 0; }
+.layer-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; }
+.layer-item[data-selected="true"] .layer-title { font-weight: 600; }
+.layer-title { background: none; border: 0; color: inherit; cursor: pointer; padding: 0; font: inherit; text-align: left; }
+.inspector-title { margin: 0 0 var(--space-2); font-size: 15px; }
+.inspector-meta,
+.inspector-point { margin: 0 0 var(--space-3); }
+.inspector-meta dt,
+.inspector-point dt { color: var(--text-muted); font-size: 12px; }
+.inspector-meta dd,
+.inspector-point dd { margin: 0 0 var(--space-2); }

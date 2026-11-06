@@ -1,5 +1,5 @@
 import DeckGL from "@deck.gl/react";
-import { MapView } from "@deck.gl/core";
+import { MapView, type Layer } from "@deck.gl/core";
 
 // Neuquén province; pitch leaves room for the 3D relief layer (F0.5).
 const INITIAL_VIEW_STATE = {
@@ -10,14 +10,14 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
 };
 
-export function MapCanvas() {
+export function MapCanvas({ layers = [] }: { layers?: Layer[] }) {
   return (
-    <main className="shell-canvas" data-testid="map-canvas">
+    <main className="shell-canvas" data-testid="map-canvas" data-deck-layers={layers.map((l) => l.id).join(",")}>
       <DeckGL
         views={new MapView({ repeat: false })}
         initialViewState={INITIAL_VIEW_STATE}
         controller
-        layers={[]}
+        layers={layers}
         style={{ background: "transparent" }}
       />
     </main>

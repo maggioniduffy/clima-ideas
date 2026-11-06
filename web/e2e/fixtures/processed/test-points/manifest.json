@@ -1,0 +1,10 @@
+{
+  "id": "test-points",
+  "title": "Capa de prueba",
+  "kind": "points",
+  "source": "Datos falsos de prueba",
+  "period": "2000-01-01/2000-12-31",
+  "license": "CC0",
+  "updated_at": "2026-01-01T00:00:00Z",
+  "files": ["points.json"]
+}

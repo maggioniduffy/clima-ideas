@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 
 from clima_nqn.layers.manifest import LayerManifest, discover_layers, load_layer
 
@@ -27,6 +28,20 @@ def create_app(data_root: Path | None = None) -> FastAPI:
         if manifest is None:
             raise HTTPException(status_code=404, detail=f"layer not found: {layer_id}")
         return manifest
+
+    @app.get("/layers/{layer_id}/data")
+    def get_layer_data(layer_id: str, file: str | None = None) -> FileResponse:
+        manifest = load_layer(root, layer_id)
+        if manifest is None:
+            raise HTTPException(status_code=404, detail=f"layer not found: {layer_id}")
+        name = file if file is not None else manifest.files[0]
+        # Only names listed verbatim in the manifest are served (blocks traversal).
+        if name not in manifest.files:
+            raise HTTPException(status_code=404, detail=f"file not in manifest: {name}")
+        path = root / layer_id / name
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail=f"file missing: {name}")
+        return FileResponse(path)
 
     return app
 
