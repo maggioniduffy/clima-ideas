@@ -164,12 +164,18 @@ jobs:
           key: teca-${{ env.TECA_TAG }}-${{ hashFiles('tools/teca/environment.yml') }}
           fail-on-cache-miss: true
 
+      - name: Compute IVT cache key
+        id: ivtkey
+        env:
+          HOURS: ${{ inputs.hours }}
+        run: echo "prefix=ivt-${{ inputs.year }}-${HOURS//,/_}-" >> "$GITHUB_OUTPUT"
+
       - name: Restore fetched IVT
         uses: actions/cache/restore@v4
         with:
           path: data/ivt
-          key: ivt-${{ inputs.year }}-${{ inputs.hours }}-${{ github.run_id }}
-          restore-keys: ivt-${{ inputs.year }}-${{ inputs.hours }}-
+          key: ${{ steps.ivtkey.outputs.prefix }}${{ github.run_id }}
+          restore-keys: ${{ steps.ivtkey.outputs.prefix }}
 
       - name: Write CDS credentials
         env:
@@ -196,7 +202,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: data/ivt
-          key: ivt-${{ inputs.year }}-${{ inputs.hours }}-${{ github.run_id }}
+          key: ${{ steps.ivtkey.outputs.prefix }}${{ github.run_id }}
 
       - name: Run BARD
         env:
