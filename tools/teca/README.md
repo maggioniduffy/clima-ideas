@@ -28,16 +28,26 @@ La instalación de TECA se cachea (clave: tag + hash de `tools/teca/environment.
 
 ERA5 (single levels), flujos verticalmente integrados de vapor de agua (este y norte), área N -15, O -95, S -60, E -40,
 mes a mes; `fetch_era5_ivt.py` calcula `IVT` = |(u, v)| en kg m-1 s-1. Fuente: ERA5, Copernicus Climate Change Service
-(C3S), licencia CC-BY 4.0 (ver `docs/research/data-access.md`). Hay que aceptar la licencia de ERA5 en CDS con la cuenta
-dueña del token y definir el secreto de repositorio `CDSAPI_KEY` (token personal de https://cds.climate.copernicus.eu/api).
+(C3S), licencia CC-BY 4.0 (ver `docs/research/data-access.md`).
 
-Tamaño estimado por año (4 horas/día, grilla 0.25°, 301x221 puntos): descarga ~0.4-0.8 GB, IVT ~0.2-0.4 GB comprimido,
+`--source` elige de dónde se leen los mismos campos ERA5 (el archivo `ivt_YYYY-MM.nc` es idéntico en formato):
+
+- `arco` (por defecto): Zarr público ARCO-ERA5 de Google Cloud (`gs://gcp-public-data-arco-era5/ar/full_37-1h-0p25deg-chunk-1.zarr-v3`),
+  acceso anónimo, sin cola ni credenciales. Los chunks son una hora global completa, así que se baja el campo global de cada
+  paso pedido (~3 MB por variable y paso; ~9 GB por año a 4 horas/día) aunque se recorte al área. `--workers` por defecto: 2.
+  El atributo `source` del archivo lo nombra como "ERA5 ... via ARCO-ERA5 (Google Cloud public dataset), CC-BY 4.0".
+- `cds`: API de Copernicus (CDS). Se agregó porque CDS rechaza los pedidos con "Maximum number queued requests for this dataset
+  has been reached" aun siendo secuenciales (runs 42263508664 y 42272035914), algo fuera de nuestro control. Hay que aceptar la
+  licencia de ERA5 en CDS con la cuenta dueña del token y definir el secreto de repositorio `CDSAPI_KEY` (token personal de
+  https://cds.climate.copernicus.eu/api); el workflow solo escribe las credenciales con `source: cds`.
+
+Tamaño estimado por año (4 horas/día, grilla 0.25°, 221x181 puntos lon x lat): descarga con CDS ~0.4-0.8 GB (con `arco`, ~9 GB, ver arriba), IVT ~0.2-0.4 GB comprimido,
 salida BARD de orden 0.3-1 GB. Estimación sin verificar.
 
 ## Caché y reintentos
 
 Los meses descargados se cachean con clave `ivt-<año>-<horas>-<run_id>`. Agregar una versión (`ivt-v2-`) cuando cambien `AREA` o
 `VARIABLES` en `fetch_era5_ivt.py`, para no reutilizar archivos viejos. Los `raw_*` parciales se borran antes de guardar
-la caché. Los reintentos de CDS esperan `--retry-wait` × intento (60 s por defecto). Las descargas son secuenciales (`--workers 1`) porque CDS rechaza pedidos en paralelo; si la cola está llena
+la caché. Los reintentos (ambas fuentes) esperan `--retry-wait` × intento (60 s por defecto). Con `cds` las descargas son secuenciales (`--workers 1`) porque CDS rechaza pedidos en paralelo; si la cola está llena
 espera `--queue-wait` (300 s) y reintenta sin gastar reintentos, hasta `--queue-timeout` (3600 s) en total. Un solo run por rama a la vez
 (`concurrency`). Si BARD no produce ningún `bard_*.nc`, el paso falla.

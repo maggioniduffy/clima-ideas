@@ -22,4 +22,6 @@ dependencies:
   - numpy
   - xarray
   - netcdf4
-  - cdsapi
+  - cdsapi            # --source cds
+  - zarr>=3           # --source arco (ARCO-ERA5 is Zarr v2; zarr 3 reads it and is what current xarray expects)
+  - gcsfs

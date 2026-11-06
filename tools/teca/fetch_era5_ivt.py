@@ -1,10 +1,12 @@
 """Download ERA5 vertically integrated water vapour flux and write monthly IVT files.
 
-Usage: python fetch_era5_ivt.py --year 2023 --hours 00,06,12,18 --out data/ivt
+Usage: python fetch_era5_ivt.py --year 2023 --hours 00,06,12,18 --out data/ivt [--source arco|cds]
 
 Output: one CF-compliant netCDF per month (ivt_YYYY-MM.nc) with variable ``IVT``
 (kg m-1 s-1) on dims time/lat/lon, ready for ``teca_bayesian_ar_detect``.
-Source: ERA5, Copernicus Climate Change Service (CDS), CC-BY 4.0.
+Source: ERA5, Copernicus Climate Change Service, CC-BY 4.0, read either from the public ARCO-ERA5 Zarr store
+on Google Cloud (``--source arco``, default, anonymous, no queue) or from the CDS API (``--source cds``).
+Both give the same ERA5 fields and the same output file format.
 """
 
 from __future__ import annotations
@@ -27,6 +29,11 @@ VARIABLES = [
 ]
 # North, West, South, East: Neuquen, the Andes and the Pacific inflow.
 AREA = [-15, -95, -60, -40]
+ARCO_STORE = "gs://gcp-public-data-arco-era5/ar/full_37-1h-0p25deg-chunk-1.zarr-v3"
+SOURCE_ATTRS = {
+    "arco": "ERA5 (Copernicus Climate Change Service) via ARCO-ERA5 (Google Cloud public dataset), CC-BY 4.0",
+    "cds": "ERA5 (Copernicus Climate Change Service), CC-BY 4.0",
+}
 TIME_UNITS = "hours since 1900-01-01 00:00:00"
 
 
@@ -46,7 +53,7 @@ def _find_var(ds, short_names: tuple[str, ...], keyword: str) -> str:
     raise KeyError(f"no variable matching '{keyword}' in {list(ds.data_vars)}")
 
 
-def build_ivt_dataset(ds):
+def build_ivt_dataset(ds, source: str = SOURCE_ATTRS["cds"]):
     """Turn a raw ERA5 dataset (u, v flux) into a TECA-friendly IVT dataset."""
     import xarray as xr
 
@@ -71,7 +78,7 @@ def build_ivt_dataset(ds):
     out.attrs = {
         "Conventions": "CF-1.8",
         "title": "ERA5 IVT magnitude",
-        "source": "ERA5 (Copernicus Climate Change Service), CC-BY 4.0",
+        "source": source,
     }
     return out
 
@@ -109,6 +116,54 @@ def _open_download(path: Path):
         parts = [xr.open_dataset(path.parent / (path.stem + "_unz") / n) for n in members]
         return xr.merge(parts, compat="override")
     return xr.open_dataset(path)
+
+
+def _open_arco():
+    """Lazily open the ARCO-ERA5 store (anonymous, consolidated metadata, no dask)."""
+    import xarray as xr
+
+    return xr.open_zarr(ARCO_STORE, consolidated=True, chunks=None, storage_options={"token": "anon"})
+
+
+def _arco_subset(year: int, month: int, hours: list[str]):
+    """Read one month of u/v flux at ``hours`` UTC over AREA from ARCO-ERA5, shaped like the CDS download.
+
+    The store keeps 0-360 longitudes and descending latitudes; the result has -180..180 longitudes and short
+    variable names so ``build_ivt_dataset`` treats both sources alike. Chunks are whole global hours, so this
+    downloads the global field for every requested step.
+    """
+    north, west, south, east = AREA
+    days = calendar.monthrange(year, month)[1]
+    times = np.array(
+        [f"{year}-{month:02d}-{d:02d}T{h}:00" for d in range(1, days + 1) for h in hours], dtype="datetime64[ns]"
+    )
+    ds = _open_arco()[VARIABLES].sel(time=times)
+    ds = ds.sel(latitude=slice(north, south), longitude=slice(west % 360, east % 360))
+    ds = ds.rename({VARIABLES[0]: "viwve", VARIABLES[1]: "viwvn"})
+    ds = ds.assign_coords(longitude=((ds["longitude"] + 180) % 360) - 180)
+    return ds.load()
+
+
+def _fetch_arco_month(year: int, month: int, hours: list[str], retries: int, retry_wait: float = 60):
+    """Read one month from ARCO-ERA5, retrying transient errors with linear backoff (``retry_wait * attempt``)."""
+    attempt = 1
+    while True:
+        try:
+            return _arco_subset(year, month, hours)
+        except Exception as exc:
+            print(f"month {month:02d} attempt {attempt} failed: {exc}", file=sys.stderr, flush=True)
+            if attempt >= retries:
+                raise
+            time.sleep(retry_wait * attempt)
+            attempt += 1
+
+
+def _load_month(source: str, year: int, month: int, hours: list[str], raw: Path, args):
+    """Fetch one month; returns the raw dataset and the temporary download to delete (None for ARCO)."""
+    if source == "arco":
+        return _fetch_arco_month(year, month, hours, args.retries, args.retry_wait), None
+    _download_month(year, month, hours, raw, args.retries, args.retry_wait, args.queue_wait, args.queue_timeout)
+    return _open_download(raw), raw
 
 
 def _parse_months(text: str) -> list[int]:
@@ -193,10 +248,15 @@ def main(argv: list[str] | None = None) -> int:
         help="give up on a month after waiting this many seconds in total on a full CDS queue",
     )
     parser.add_argument(
-        "--workers", type=int, default=1,
-        help="parallel CDS requests; CDS rejects parallel queued requests, so download sequentially",
+        "--source", choices=("arco", "cds"), default="arco",
+        help="arco: public ARCO-ERA5 Zarr on Google Cloud (no queue); cds: Copernicus CDS API (needs ~/.cdsapirc)",
+    )
+    parser.add_argument(
+        "--workers", type=int, default=None,
+        help="parallel months; default 2 for arco and 1 for cds (CDS rejects parallel queued requests)",
     )
     args = parser.parse_args(argv)
+    workers = args.workers if args.workers is not None else (2 if args.source == "arco" else 1)
 
     hours = [h.strip().zfill(2) for h in args.hours.split(",") if h.strip()]
     args.out.mkdir(parents=True, exist_ok=True)
@@ -215,32 +275,30 @@ def main(argv: list[str] | None = None) -> int:
         else:
             pending.append(month)
 
-    # Months are independent: download them (sequentially by default) and convert each one as it lands,
+    # Months are independent: fetch them (sequentially for CDS by default) and convert each one as it lands,
     # so a later failure or cancel keeps the months already written (and cached by the workflow).
     failed: list[int] = []
-    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
         futures = {
             pool.submit(
-                _download_month,
-                args.year, m, hours, args.out / f"raw_{args.year}-{m:02d}.nc", args.retries, args.retry_wait,
-                args.queue_wait, args.queue_timeout,
+                _load_month, args.source, args.year, m, hours, args.out / f"raw_{args.year}-{m:02d}.nc", args
             ): m
             for m in pending
         }
         for fut in as_completed(futures):
             month = futures[fut]
             try:
-                raw = fut.result()
+                ds, raw = fut.result()
             except Exception as exc:
                 print(f"month {month:02d} gave up: {exc}", file=sys.stderr, flush=True)
                 failed.append(month)
                 continue
             target = args.out / f"ivt_{args.year}-{month:02d}.nc"
-            ds = _open_download(raw)
-            out = build_ivt_dataset(ds)
+            out = build_ivt_dataset(ds, SOURCE_ATTRS[args.source])
             write_ivt(out, target)
             ds.close()
-            raw.unlink()
+            if raw is not None:
+                raw.unlink()
             print(f"wrote {target} ({out.sizes['time']} steps)", flush=True)
     if failed:
         print(f"months failed: {sorted(failed)}", file=sys.stderr, flush=True)

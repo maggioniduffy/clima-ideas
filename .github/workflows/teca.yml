@@ -16,6 +16,13 @@ on:
         description: 'Months to fetch, e.g. "1-12", "3" or "1,2,5-7"'
         default: "1-12"
         type: string
+      source:
+        description: "ERA5 source: arco (public ARCO-ERA5 on Google Cloud, no queue) or cds (Copernicus CDS API)"
+        default: arco
+        type: choice
+        options:
+          - arco
+          - cds
       hours:
         description: "UTC hours to download"
         default: "00,06,12,18"
@@ -190,6 +197,7 @@ jobs:
           restore-keys: ${{ steps.ivtkey.outputs.prefix }}
 
       - name: Write CDS credentials
+        if: inputs.source == 'cds'
         env:
           CDSAPI_KEY: ${{ secrets.CDSAPI_KEY }}
         run: |
@@ -202,11 +210,12 @@ jobs:
           YEAR: ${{ inputs.year }}
           HOURS: ${{ inputs.hours }}
           MONTHS: ${{ inputs.months }}
+          SOURCE: ${{ inputs.source }}
         run: |
           set -o pipefail
           mkdir -p teca-logs data/ivt
           python tools/teca/fetch_era5_ivt.py --year "$YEAR" --hours "$HOURS" --months "$MONTHS" \
-            --out data/ivt 2>&1 | tee teca-logs/fetch.log
+            --source "$SOURCE" --out data/ivt 2>&1 | tee teca-logs/fetch.log
           du -sh data/ivt | tee -a teca-logs/fetch.log
 
       - name: Drop partial downloads
