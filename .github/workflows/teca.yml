@@ -12,6 +12,10 @@ on:
         description: "Run BARD after the build"
         default: false
         type: boolean
+      months:
+        description: 'Months to fetch, e.g. "1-12", "3" or "1,2,5-7"'
+        default: "1-12"
+        type: string
       hours:
         description: "UTC hours to download"
         default: "00,06,12,18"
@@ -160,6 +164,13 @@ jobs:
           key: teca-${{ env.TECA_TAG }}-${{ hashFiles('tools/teca/environment.yml') }}
           fail-on-cache-miss: true
 
+      - name: Restore fetched IVT
+        uses: actions/cache/restore@v4
+        with:
+          path: data/ivt
+          key: ivt-${{ inputs.year }}-${{ inputs.hours }}-${{ github.run_id }}
+          restore-keys: ivt-${{ inputs.year }}-${{ inputs.hours }}-
+
       - name: Write CDS credentials
         env:
           CDSAPI_KEY: ${{ secrets.CDSAPI_KEY }}
@@ -168,14 +179,24 @@ jobs:
           printf 'url: https://cds.climate.copernicus.eu/api\nkey: %s\n' "$CDSAPI_KEY" > ~/.cdsapirc
 
       - name: Fetch ERA5 and compute IVT
+        timeout-minutes: 180
         env:
           YEAR: ${{ inputs.year }}
           HOURS: ${{ inputs.hours }}
+          MONTHS: ${{ inputs.months }}
         run: |
+          set -o pipefail
           mkdir -p teca-logs data/ivt
-          python tools/teca/fetch_era5_ivt.py --year "$YEAR" --hours "$HOURS" --out data/ivt \
-            2>&1 | tee teca-logs/fetch.log
+          python tools/teca/fetch_era5_ivt.py --year "$YEAR" --hours "$HOURS" --months "$MONTHS" \
+            --out data/ivt 2>&1 | tee teca-logs/fetch.log
           du -sh data/ivt | tee -a teca-logs/fetch.log
+
+      - name: Save fetched IVT
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/ivt
+          key: ivt-${{ inputs.year }}-${{ inputs.hours }}-${{ github.run_id }}
 
       - name: Run BARD
         env:

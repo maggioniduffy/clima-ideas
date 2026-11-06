@@ -13,6 +13,7 @@ import argparse
 import calendar
 import sys
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
@@ -108,40 +109,88 @@ def _open_download(path: Path):
     return xr.open_dataset(path)
 
 
+def _parse_months(text: str) -> list[int]:
+    """Parse "1-12", "3" or "1,2,5-7" into a sorted list of months."""
+    months: set[int] = set()
+    for part in text.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        lo, _, hi = part.partition("-")
+        months.update(range(int(lo), int(hi or lo) + 1))
+    if not months or not all(1 <= m <= 12 for m in months):
+        raise ValueError(f"invalid --months: {text!r}")
+    return sorted(months)
+
+
+def _download_month(year: int, month: int, hours: list[str], raw: Path, retries: int) -> Path:
+    """Queue and download one month. Runs in a worker thread (own client per thread)."""
+    import cdsapi  # reads ~/.cdsapirc
+
+    client = cdsapi.Client()
+    for attempt in range(1, retries + 1):
+        try:
+            client.retrieve(DATASET, _request(year, month, hours), str(raw))
+            return raw
+        except Exception as exc:
+            print(f"month {month:02d} attempt {attempt} failed: {exc}", file=sys.stderr, flush=True)
+            if attempt == retries:
+                raise
+    raise AssertionError("unreachable")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--year", type=int, required=True)
     parser.add_argument("--hours", default="00,06,12,18", help="comma-separated UTC hours")
+    parser.add_argument("--months", default="1-12", help='months to fetch, e.g. "1-12", "3", "1,2,5-7"')
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--retries", type=int, default=3)
+    parser.add_argument(
+        "--workers", type=int, default=4,
+        help="parallel CDS requests; the CDS queue wait dominates, so overlapping requests saves hours",
+    )
     args = parser.parse_args(argv)
-
-    import cdsapi  # reads ~/.cdsapirc
 
     hours = [h.strip().zfill(2) for h in args.hours.split(",") if h.strip()]
     args.out.mkdir(parents=True, exist_ok=True)
-    client = cdsapi.Client()
 
-    for month in range(1, 13):
+    pending: list[int] = []
+    for month in _parse_months(args.months):
         target = args.out / f"ivt_{args.year}-{month:02d}.nc"
         if target.exists():
             print(f"skip {target} (exists)", flush=True)
-            continue
-        raw = args.out / f"raw_{args.year}-{month:02d}.nc"
-        for attempt in range(1, args.retries + 1):
+        else:
+            pending.append(month)
+
+    # Months are independent: queue them concurrently and convert each one as it lands,
+    # so a later failure or cancel keeps the months already written (and cached by the workflow).
+    failed: list[int] = []
+    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+        futures = {
+            pool.submit(
+                _download_month, args.year, m, hours, args.out / f"raw_{args.year}-{m:02d}.nc", args.retries
+            ): m
+            for m in pending
+        }
+        for fut in as_completed(futures):
+            month = futures[fut]
             try:
-                client.retrieve(DATASET, _request(args.year, month, hours), str(raw))
-                break
+                raw = fut.result()
             except Exception as exc:
-                print(f"month {month:02d} attempt {attempt} failed: {exc}", file=sys.stderr, flush=True)
-                if attempt == args.retries:
-                    raise
-        ds = _open_download(raw)
-        out = build_ivt_dataset(ds)
-        write_ivt(out, target)
-        ds.close()
-        raw.unlink()
-        print(f"wrote {target} ({out.sizes['time']} steps)", flush=True)
+                print(f"month {month:02d} gave up: {exc}", file=sys.stderr, flush=True)
+                failed.append(month)
+                continue
+            target = args.out / f"ivt_{args.year}-{month:02d}.nc"
+            ds = _open_download(raw)
+            out = build_ivt_dataset(ds)
+            write_ivt(out, target)
+            ds.close()
+            raw.unlink()
+            print(f"wrote {target} ({out.sizes['time']} steps)", flush=True)
+    if failed:
+        print(f"months failed: {sorted(failed)}", file=sys.stderr, flush=True)
+        return 1
     return 0
 
 
