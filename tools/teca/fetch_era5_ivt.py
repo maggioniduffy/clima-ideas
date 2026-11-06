@@ -1,6 +1,6 @@
 """Download ERA5 vertically integrated water vapour flux and write monthly IVT files.
 
-Usage: python fetch_era5_ivt.py --year 2023 --hours 00,06,12,18 --out data/ivt [--source arco|cds]
+Usage: python fetch_era5_ivt.py --year 2023 --hours 00,06,12,18 --out data/ivt [--source arco|cds] [--area=N,W,S,E]
 
 Output: one CF-compliant netCDF per month (ivt_YYYY-MM.nc) with variable ``IVT``
 (kg m-1 s-1) on dims time/lat/lon, ready for ``teca_bayesian_ar_detect``.
@@ -91,7 +91,7 @@ def write_ivt(out, path: Path) -> None:
     out.to_netcdf(path, encoding=encoding)
 
 
-def _request(year: int, month: int, hours: list[str]) -> dict:
+def _request(year: int, month: int, hours: list[str], area: list[float] = AREA) -> dict:
     days = calendar.monthrange(year, month)[1]
     return {
         "product_type": ["reanalysis"],
@@ -100,7 +100,7 @@ def _request(year: int, month: int, hours: list[str]) -> dict:
         "month": [f"{month:02d}"],
         "day": [f"{d:02d}" for d in range(1, days + 1)],
         "time": [f"{h}:00" for h in hours],
-        "area": AREA,
+        "area": list(area),
         "data_format": "netcdf",
         "download_format": "unarchived",
     }
@@ -125,31 +125,34 @@ def _open_arco():
     return xr.open_zarr(ARCO_STORE, consolidated=True, chunks=None, storage_options={"token": "anon"})
 
 
-def _arco_subset(year: int, month: int, hours: list[str]):
-    """Read one month of u/v flux at ``hours`` UTC over AREA from ARCO-ERA5, shaped like the CDS download.
+def _arco_subset(year: int, month: int, hours: list[str], area: list[float] = AREA):
+    """Read one month of u/v flux at ``hours`` UTC over ``area`` from ARCO-ERA5, shaped like the CDS download.
 
     The store keeps 0-360 longitudes and descending latitudes; the result has -180..180 longitudes and short
     variable names so ``build_ivt_dataset`` treats both sources alike. Chunks are whole global hours, so this
-    downloads the global field for every requested step.
+    downloads the global field for every requested step whatever the area. Latitude is sliced first, then
+    longitudes are converted to -180..180 and sorted before slicing, so a full-circle area works too.
     """
-    north, west, south, east = AREA
+    north, west, south, east = area
     days = calendar.monthrange(year, month)[1]
     times = np.array(
         [f"{year}-{month:02d}-{d:02d}T{h}:00" for d in range(1, days + 1) for h in hours], dtype="datetime64[ns]"
     )
     ds = _open_arco()[VARIABLES].sel(time=times)
-    ds = ds.sel(latitude=slice(north, south), longitude=slice(west % 360, east % 360))
+    ds = ds.sel(latitude=slice(north, south))
     ds = ds.rename({VARIABLES[0]: "viwve", VARIABLES[1]: "viwvn"})
-    ds = ds.assign_coords(longitude=((ds["longitude"] + 180) % 360) - 180)
-    return ds.load()
+    ds = ds.assign_coords(longitude=((ds["longitude"] + 180) % 360) - 180).sortby("longitude")
+    return ds.sel(longitude=slice(west, east)).load()
 
 
-def _fetch_arco_month(year: int, month: int, hours: list[str], retries: int, retry_wait: float = 60):
+def _fetch_arco_month(
+    year: int, month: int, hours: list[str], retries: int, retry_wait: float = 60, area: list[float] = AREA
+):
     """Read one month from ARCO-ERA5, retrying transient errors with linear backoff (``retry_wait * attempt``)."""
     attempt = 1
     while True:
         try:
-            return _arco_subset(year, month, hours)
+            return _arco_subset(year, month, hours, area)
         except Exception as exc:
             print(f"month {month:02d} attempt {attempt} failed: {exc}", file=sys.stderr, flush=True)
             if attempt >= retries:
@@ -161,9 +164,24 @@ def _fetch_arco_month(year: int, month: int, hours: list[str], retries: int, ret
 def _load_month(source: str, year: int, month: int, hours: list[str], raw: Path, args):
     """Fetch one month; returns the raw dataset and the temporary download to delete (None for ARCO)."""
     if source == "arco":
-        return _fetch_arco_month(year, month, hours, args.retries, args.retry_wait), None
-    _download_month(year, month, hours, raw, args.retries, args.retry_wait, args.queue_wait, args.queue_timeout)
+        return _fetch_arco_month(year, month, hours, args.retries, args.retry_wait, args.area), None
+    _download_month(
+        year, month, hours, raw, args.retries, args.retry_wait, args.queue_wait, args.queue_timeout, args.area
+    )
     return _open_download(raw), raw
+
+
+def _parse_area(text: str) -> list[float]:
+    """Parse "N,W,S,E" (degrees, W/E in -180..180) into a list of floats; argparse type."""
+    try:
+        north, west, south, east = (float(x) for x in text.split(","))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected 4 comma-separated numbers N,W,S,E, got {text!r}") from None
+    if not -90 <= south < north <= 90:
+        raise argparse.ArgumentTypeError(f"need -90 <= S < N <= 90, got N={north:g} S={south:g}")
+    if not (-180 <= west <= 180 and -180 <= east <= 180) or west >= east:
+        raise argparse.ArgumentTypeError(f"need -180 <= W < E <= 180, got W={west:g} E={east:g}")
+    return [north, west, south, east]
 
 
 def _parse_months(text: str) -> list[int]:
@@ -194,6 +212,7 @@ def _download_month(
     retry_wait: float = 60,
     queue_wait: float = 300,
     queue_timeout: float = 3600,
+    area: list[float] = AREA,
 ) -> Path:
     """Queue and download one month. Runs in a worker thread (own client per thread).
 
@@ -208,7 +227,7 @@ def _download_month(
     attempt = 1
     while True:
         try:
-            client.retrieve(DATASET, _request(year, month, hours), str(raw))
+            client.retrieve(DATASET, _request(year, month, hours, area), str(raw))
             return raw
         except Exception as exc:
             if _queue_full(exc):
@@ -250,6 +269,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--source", choices=("arco", "cds"), default="arco",
         help="arco: public ARCO-ERA5 Zarr on Google Cloud (no queue); cds: Copernicus CDS API (needs ~/.cdsapirc)",
+    )
+    parser.add_argument(
+        "--area", type=_parse_area, default=list(AREA), metavar="N,W,S,E",
+        help='use --area=N,W,S,E (the "=" is needed for negative values); degrees, W/E in -180..180 (default "-15,-95,-60,-40"); full circle: "-10,-180,-80,179.75"',
     )
     parser.add_argument(
         "--workers", type=int, default=None,

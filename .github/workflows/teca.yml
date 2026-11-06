@@ -23,6 +23,10 @@ on:
         options:
           - arco
           - cds
+      area:
+        description: 'Area N,W,S,E in degrees (W/E in -180..180); full circle example "-10,-180,-80,179.75"'
+        default: "-15,-95,-60,-40"
+        type: string
       hours:
         description: "UTC hours to download"
         default: "00,06,12,18"
@@ -186,8 +190,15 @@ jobs:
         id: ivtkey
         env:
           HOURS: ${{ inputs.hours }}
-        # Add a version (ivt-v2-) when AREA or VARIABLES in fetch_era5_ivt.py change.
-        run: echo "prefix=ivt-${{ inputs.year }}-${HOURS//,/_}-" >> "$GITHUB_OUTPUT"
+          AREA: ${{ inputs.area }}
+        # The area is part of the key so different domains never mix. Add a version (ivt-v2-) when VARIABLES
+        # or the default AREA in fetch_era5_ivt.py change.
+        run: |
+          tag="${AREA// /}"
+          tag="${tag//,/_}"
+          tag="${tag//./p}"
+          echo "areatag=$tag" >> "$GITHUB_OUTPUT"
+          echo "prefix=ivt-${{ inputs.year }}-${HOURS//,/_}-a${tag}-" >> "$GITHUB_OUTPUT"
 
       - name: Restore fetched IVT
         uses: actions/cache/restore@v6
@@ -211,11 +222,12 @@ jobs:
           HOURS: ${{ inputs.hours }}
           MONTHS: ${{ inputs.months }}
           SOURCE: ${{ inputs.source }}
+          AREA: ${{ inputs.area }}
         run: |
           set -o pipefail
           mkdir -p teca-logs data/ivt
           python tools/teca/fetch_era5_ivt.py --year "$YEAR" --hours "$HOURS" --months "$MONTHS" \
-            --source "$SOURCE" --out data/ivt 2>&1 | tee teca-logs/fetch.log
+            --source "$SOURCE" --area="${AREA// /}" --out data/ivt 2>&1 | tee teca-logs/fetch.log
           du -sh data/ivt | tee -a teca-logs/fetch.log
 
       - name: Drop partial downloads
@@ -232,14 +244,19 @@ jobs:
       - name: Run BARD
         env:
           YEAR: ${{ inputs.year }}
+          AREA: ${{ inputs.area }}
         run: |
           set -o pipefail
           mkdir -p bard-out
+          # Wrap around the globe only when the area spans the full circle (E - W >= 359).
+          IFS=, read -r _ west _ east <<< "${AREA// /}"
+          periodic=$(awk -v w="$west" -v e="$east" 'BEGIN { print (e - w >= 359) ? 1 : 0 }')
+          echo "periodic_in_x=$periodic (area $AREA)" | tee -a teca-logs/bard.log
           export LD_LIBRARY_PATH="$TECA_PREFIX/lib:$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
           "$TECA_PREFIX/bin/teca_bayesian_ar_detect" \
             --input_regex "$GITHUB_WORKSPACE/data/ivt/ivt_${YEAR}-[0-9][0-9]\.nc" \
             --ivt IVT \
-            --periodic_in_x 0 \
+            --periodic_in_x "$periodic" \
             --segment_ar_probability \
             --output_file "$GITHUB_WORKSPACE/bard-out/bard_%t%.nc" \
             --file_layout monthly \
@@ -259,7 +276,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: bard-${{ inputs.year }}
+          name: bard-${{ inputs.year }}-${{ steps.ivtkey.outputs.areatag }}
           path: |
             bard-out/
             teca-logs/

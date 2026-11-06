@@ -26,7 +26,7 @@ La instalación de TECA se cachea (clave: tag + hash de `tools/teca/environment.
 
 ## Datos
 
-ERA5 (single levels), flujos verticalmente integrados de vapor de agua (este y norte), área N -15, O -95, S -60, E -40,
+ERA5 (single levels), flujos verticalmente integrados de vapor de agua (este y norte), por defecto área N -15, O -95, S -60, E -40,
 mes a mes; `fetch_era5_ivt.py` calcula `IVT` = |(u, v)| en kg m-1 s-1. Fuente: ERA5, Copernicus Climate Change Service
 (C3S), licencia CC-BY 4.0 (ver `docs/research/data-access.md`).
 
@@ -41,13 +41,20 @@ mes a mes; `fetch_era5_ivt.py` calcula `IVT` = |(u, v)| en kg m-1 s-1. Fuente: E
   licencia de ERA5 en CDS con la cuenta dueña del token y definir el secreto de repositorio `CDSAPI_KEY` (token personal de
   https://cds.climate.copernicus.eu/api); el workflow solo escribe las credenciales con `source: cds`.
 
+`--area=N,W,S,E` (grados, O/E en -180..180; usar `=` porque los valores empiezan con `-`) cambia el área en ambas fuentes; por defecto
+`-15,-95,-60,-40`. Círculo completo del hemisferio sur: `--area=-10,-180,-80,179.75` (con `arco` no cuesta más descarga, los chunks
+ya son globales). En el workflow es el input `area`. Motivo: en el run 42277026996 (2023, ventana regional) `ar_probability`
+nunca pasó de ~0.39, y se prueba si BARD, entrenado con campos globales, subdetecta en ventanas chicas (hipótesis sin verificar).
+
 Tamaño estimado por año (4 horas/día, grilla 0.25°, 221x181 puntos lon x lat): descarga con CDS ~0.4-0.8 GB (con `arco`, ~9 GB, ver arriba), IVT ~0.2-0.4 GB comprimido,
 salida BARD de orden 0.3-1 GB. Estimación sin verificar.
 
 ## Caché y reintentos
 
-Los meses descargados se cachean con clave `ivt-<año>-<horas>-<run_id>`. Agregar una versión (`ivt-v2-`) cuando cambien `AREA` o
-`VARIABLES` en `fetch_era5_ivt.py`, para no reutilizar archivos viejos. Los `raw_*` parciales se borran antes de guardar
+Los meses descargados se cachean con clave `ivt-<año>-<horas>-a<área>-<run_id>`, donde `<área>` es el input `area` con `,` -> `_`
+y `.` -> `p` (p. ej. `a-10_-180_-80_179p75`), así que áreas distintas nunca se mezclan. Agregar una versión (`ivt-v2-`) cuando
+cambien `VARIABLES` o el `AREA` por defecto en `fetch_era5_ivt.py`. El run de BARD pasa `--periodic_in_x 1` solo si el área abarca
+el círculo completo (E - O >= 359), si no 0, y el artefacto se llama `bard-<año>-<área>`. Los `raw_*` parciales se borran antes de guardar
 la caché. Los reintentos (ambas fuentes) esperan `--retry-wait` × intento (60 s por defecto). Con `cds` las descargas son secuenciales (`--workers 1`) porque CDS rechaza pedidos en paralelo; si la cola está llena
 espera `--queue-wait` (300 s) y reintenta sin gastar reintentos, hasta `--queue-timeout` (3600 s) en total. Un solo run por rama a la vez
 (`concurrency`). Si BARD no produce ningún `bard_*.nc`, el paso falla.

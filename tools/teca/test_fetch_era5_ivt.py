@@ -237,3 +237,49 @@ def test_cds_output_keeps_cds_source_attr(monkeypatch, tmp_path):
         assert "ARCO" not in out.attrs["source"]
         assert "Copernicus" in out.attrs["source"]
         assert np.allclose(out["IVT"].values, 5.0)
+
+
+def test_arco_full_circle_area_covers_every_longitude_once(monkeypatch, tmp_path):
+    import numpy as np
+    import xarray as xr
+
+    _fake_arco(monkeypatch)
+    argv = ["--year", "2023", "--months", "1", "--hours", "00", "--out", str(tmp_path), "--area=-10,-180,-80,179.75"]
+    assert fetch.main(argv) == 0
+    with xr.open_dataset(tmp_path / "ivt_2023-01.nc") as out:
+        lon = out["lon"].values
+        assert lon.min() == -180 and lon.max() == 175
+        assert lon.size == 72 and np.all(np.diff(lon) > 0)  # all 5-degree store columns, no duplicates
+        assert out["lat"].values.min() == -80 and out["lat"].values.max() == -10
+        assert np.all(np.diff(out["lat"].values) > 0)
+        assert np.allclose(out["IVT"].values, 5.0)
+
+
+def test_arco_default_area_is_unchanged(monkeypatch):
+    _fake_arco(monkeypatch)
+    ds = fetch._arco_subset(2023, 1, ["00"])
+    assert float(ds["longitude"].min()) == -95 and float(ds["longitude"].max()) == -40
+    assert float(ds["latitude"].min()) == -60 and float(ds["latitude"].max()) == -15
+
+
+@pytest.mark.parametrize("area", ["-80,-180,-10,179", "-10,-180,-80", "-10,-180,-80,179,1", "a,b,c,d", "-10,10,-80,-10"])
+def test_invalid_area_is_an_argparse_error(area, tmp_path, capsys):
+    with pytest.raises(SystemExit) as exc:
+        fetch.main(["--year", "2023", "--out", str(tmp_path), f"--area={area}"])
+    assert exc.value.code == 2
+    assert "--area" in capsys.readouterr().err
+
+
+def test_cds_request_carries_the_given_area(monkeypatch, tmp_path):
+    seen = []
+
+    class Client:
+        def retrieve(self, dataset, request, target):
+            seen.append(request["area"])
+            raise RuntimeError("stop")
+
+    monkeypatch.setitem(sys.modules, "cdsapi", types.SimpleNamespace(Client=Client))
+    base = ["--year", "2023", "--months", "1", "--out", str(tmp_path), "--source", "cds", "--retries", "1"]
+    assert fetch.main(base + ["--area=-10,-180,-80,179.75"]) == 1
+    assert fetch.main(base) == 1
+    assert seen == [[-10.0, -180.0, -80.0, 179.75], [-15, -95, -60, -40]]
