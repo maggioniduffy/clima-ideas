@@ -26,7 +26,11 @@ permissions:
 
 env:
   TECA_TAG: "6.0.0"
-  TECA_PREFIX: ${{ github.workspace }}/../teca-install
+  # Absolute path: actions/cache rejects paths containing "..".
+  TECA_PREFIX: /home/runner/teca-install
+  # Single-node runs: use the ob1 PML instead of UCX, which fails on hosted runners.
+  OMPI_MCA_pml: ob1
+  OMPI_MCA_osc: ^ucx
 
 defaults:
   run:
