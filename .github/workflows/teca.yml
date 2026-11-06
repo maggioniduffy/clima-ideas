@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.TECA_PREFIX }}
-          key: teca-${{ env.TECA_TAG }}-${{ hashFiles('tools/teca/environment.yml') }}
+          key: teca-${{ env.TECA_TAG }}-generic-${{ hashFiles('tools/teca/environment.yml') }}
 
       - name: Restore ccache
         if: steps.cache.outputs.cache-hit != 'true'
@@ -83,6 +83,11 @@ jobs:
 
       - name: Configure
         if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          # TECA defaults to -march=native, but the install is cached and reused on other
+          # runner CPUs ("Illegal instruction"). Setting the flags explicitly skips that default.
+          CXX_FLAGS: -fPIC -std=c++17 -Wall -Wextra -Wno-unknown-pragmas -O3 -march=x86-64-v2 -mtune=generic -fno-trapping-math -fno-math-errno -fno-signaling-nans
+          FC_FLAGS: -Wall -Wextra -Wno-conversion -Wno-compare-reals -DNDEBUG -O3 -march=x86-64-v2 -mtune=generic -fno-trapping-math -fno-signaling-nans -fno-math-errno
         run: |
           set -o pipefail
           mkdir -p teca-logs "$RUNNER_TEMP/teca-build"
@@ -94,6 +99,7 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_Fortran_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_FLAGS="$CXX_FLAGS" -DCMAKE_Fortran_FLAGS="$FC_FLAGS" \
             -DBUILD_TESTING=OFF -DREQUIRE_TECA_DATA=FALSE \
             -DREQUIRE_MPI=TRUE -DREQUIRE_NETCDF_MPI=FALSE \
             -DREQUIRE_PYTHON=FALSE -DTECA_HAS_PYTHON=OFF \
@@ -161,7 +167,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.TECA_PREFIX }}
-          key: teca-${{ env.TECA_TAG }}-${{ hashFiles('tools/teca/environment.yml') }}
+          key: teca-${{ env.TECA_TAG }}-generic-${{ hashFiles('tools/teca/environment.yml') }}
           fail-on-cache-miss: true
 
       - name: Compute IVT cache key
