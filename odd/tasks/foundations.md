@@ -22,12 +22,12 @@ Quoted verbatim from `plan/00-foundations.md` (column "Hecho cuando").
 
 | ID | Specs | Route | Status | Evidence |
 |---|---|---|---|---|
-| T1 F0.8 | S8 | opencode (background) | done | docs/research/data-access.md, 24 items; websearch failed so many "sin verificar" (BDHI, SMN hourly, CAMELS-CL, GEFS, SINARAME, debris inventory, SCS-CN) |
-| T2 F0.9 | S9 | opencode (background) | running | install only; ERA5 run blocked on CDS credentials |
+| T1 F0.8 | S8 | opencode + Haiku explorer (gap pass) | reopened | docs/research/data-access.md, 24 items; websearch failed so many "sin verificar" (BDHI, SMN hourly, CAMELS-CL, GEFS, SINARAME, debris inventory, SCS-CN) |
+| T2 F0.9 | S9 | opencode (background) | running | resumed same opencode session, install-only, max 3 attempts |
 | T3 F0.1 | S1 | builder (Sonnet) | done | make dev: /health ok, :5173 200, proxy ok; pytest 1, vitest 1, lint+tsc clean |
-| T4 F0.6 | S6 | builder | pending | |
-| T5 F0.10 | S10 | builder | pending | |
-| T6 F0.3 | S3 | builder | pending | |
+| T4 F0.6 | S6 | builder | done | RED: import errors; GREEN: 33 passed, ruff clean |
+| T5 F0.10 | S10 | builder | done | RED: ModuleNotFound; GREEN: full suite 36 passed; real parquet 921 rows 1950-01..2026-09 |
+| T6 F0.3 | S3 | builder | done | RED: missing modules; GREEN: 11 tests, lint rule fired on deliberate violation |
 | T7 F0.4 | S4 | builder | pending | |
 | T8 F0.7 | S7 | builder | pending | |
 | T9 F0.5 | S5 | opencode (data) + builder (layer) | pending | |
@@ -41,3 +41,8 @@ Route reason: user's model-roles override (Sonnet implements, Opus reviews).
 - L2 (2026-11-05) Plan approved: execute all of phase 0 in this worktree. No `~/.cdsapirc` present: F0.9 ERA5 download expected to be blocked.
 - L3 (2026-11-05) User: "Allow opencode run" — F0.9 relaunched, install-only scope in ~/teca-work.
 - L4 (2026-11-05) F0.8 opencode exited 1 (websearch "cancelled") but wrote both files; fetch-only evidence. Gaps listed in T1; candidate for a second research pass.
+- L5 (2026-11-05) User: "If you need to complete f0.8 work with a haiku, do it" — Haiku explorer launched on the "sin verificar" rows; T1 reopened for the merge.
+- L6 (2026-11-05) User: "Stop F0.9" (disk at 99%). Stopped; partial env left in ~/miniconda3/envs/teca.
+- L7 (2026-11-05) Stopping the client did not stop the opencode service session (it kept installing torch); killed service + pip. Disk freed by user: 69 GB free.
+- L8 (2026-11-05) User: "What? There should be more data for that / Or it will be done on other phases? Same for the other points open / Continue with F0" and "But continue with F0.9 too". Second Haiku pass launched with concrete leads (SINARAME RMA, SNIH, SMN 87715, inventories, DesInventar); F0.9 resumed.
+- L9 (2026-11-05) Session crashed mid-commit of F0.3 (22:13): branch ref + 20 loose objects empty. Moved empties to ~/git-empty-objects-backup-20261105, reset ref to 1f93e9b, fsck clean, re-committed. User: "resume, max ram 6gb".
