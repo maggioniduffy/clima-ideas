@@ -125,27 +125,52 @@ def _parse_months(text: str) -> list[int]:
     return sorted(months)
 
 
+def _queue_full(exc: Exception) -> bool:
+    """CDS rejects a job outright when the dataset already has too many queued requests."""
+    return "queued requests" in str(exc).lower()
+
+
 def _download_month(
-    year: int, month: int, hours: list[str], raw: Path, retries: int, retry_wait: float = 60
+    year: int,
+    month: int,
+    hours: list[str],
+    raw: Path,
+    retries: int,
+    retry_wait: float = 60,
+    queue_wait: float = 300,
+    queue_timeout: float = 3600,
 ) -> Path:
     """Queue and download one month. Runs in a worker thread (own client per thread).
 
-    Waits ``retry_wait * attempt`` seconds between attempts; a month that gives up leaves no raw file.
+    Waits ``retry_wait * attempt`` seconds between failed attempts. A full CDS queue is not a failure:
+    wait ``queue_wait`` and retry without spending an attempt, until ``queue_timeout`` seconds have been
+    waited in total. A month that gives up leaves no raw file.
     """
     import cdsapi  # reads ~/.cdsapirc
 
     client = cdsapi.Client()
-    for attempt in range(1, retries + 1):
+    queued = 0.0  # seconds slept on a full queue, summed from the sleeps themselves (no wall clock)
+    attempt = 1
+    while True:
         try:
             client.retrieve(DATASET, _request(year, month, hours), str(raw))
             return raw
         except Exception as exc:
+            if _queue_full(exc):
+                if queued + queue_wait > queue_timeout:
+                    print(f"month {month:02d} CDS queue still full after {queued:.0f}s: {exc}", file=sys.stderr, flush=True)
+                    raw.unlink(missing_ok=True)
+                    raise
+                print(f"month {month:02d} CDS queue full, waiting {queue_wait:.0f}s", file=sys.stderr, flush=True)
+                time.sleep(queue_wait)
+                queued += queue_wait
+                continue
             print(f"month {month:02d} attempt {attempt} failed: {exc}", file=sys.stderr, flush=True)
-            if attempt == retries:
+            if attempt >= retries:
                 raw.unlink(missing_ok=True)
                 raise
             time.sleep(retry_wait * attempt)
-    raise AssertionError("unreachable")
+            attempt += 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -160,8 +185,16 @@ def main(argv: list[str] | None = None) -> int:
         help="base seconds between retries; attempt N waits retry-wait * N (linear backoff)",
     )
     parser.add_argument(
-        "--workers", type=int, default=4,
-        help="parallel CDS requests; the CDS queue wait dominates, so overlapping requests saves hours",
+        "--queue-wait", type=float, default=300,
+        help="seconds to wait before retrying when the CDS queue is full (does not use up --retries)",
+    )
+    parser.add_argument(
+        "--queue-timeout", type=float, default=3600,
+        help="give up on a month after waiting this many seconds in total on a full CDS queue",
+    )
+    parser.add_argument(
+        "--workers", type=int, default=1,
+        help="parallel CDS requests; CDS rejects parallel queued requests, so download sequentially",
     )
     args = parser.parse_args(argv)
 
@@ -182,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             pending.append(month)
 
-    # Months are independent: queue them concurrently and convert each one as it lands,
+    # Months are independent: download them (sequentially by default) and convert each one as it lands,
     # so a later failure or cancel keeps the months already written (and cached by the workflow).
     failed: list[int] = []
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
@@ -190,6 +223,7 @@ def main(argv: list[str] | None = None) -> int:
             pool.submit(
                 _download_month,
                 args.year, m, hours, args.out / f"raw_{args.year}-{m:02d}.nc", args.retries, args.retry_wait,
+                args.queue_wait, args.queue_timeout,
             ): m
             for m in pending
         }

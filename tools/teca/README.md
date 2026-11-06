@@ -38,5 +38,6 @@ salida BARD de orden 0.3-1 GB. Estimación sin verificar.
 
 Los meses descargados se cachean con clave `ivt-<año>-<horas>-<run_id>`. Agregar una versión (`ivt-v2-`) cuando cambien `AREA` o
 `VARIABLES` en `fetch_era5_ivt.py`, para no reutilizar archivos viejos. Los `raw_*` parciales se borran antes de guardar
-la caché. Los reintentos de CDS esperan `--retry-wait` × intento (60 s por defecto). Un solo run por rama a la vez
+la caché. Los reintentos de CDS esperan `--retry-wait` × intento (60 s por defecto). Las descargas son secuenciales (`--workers 1`) porque CDS rechaza pedidos en paralelo; si la cola está llena
+espera `--queue-wait` (300 s) y reintenta sin gastar reintentos, hasta `--queue-timeout` (3600 s) en total. Un solo run por rama a la vez
 (`concurrency`). Si BARD no produce ningún `bard_*.nc`, el paso falla.
