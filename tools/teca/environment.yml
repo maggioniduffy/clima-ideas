@@ -6,7 +6,7 @@ channels:
 dependencies:
   - python=3.11
   - compilers          # gcc, g++, gfortran (TECA builds Fortran sources)
-  - cmake
+  - cmake>=3.20,<4  # TECA 6.0.0 submodules use cmake_minimum_required < 3.5, removed in CMake 4
   - make
   - ccache
   - pkg-config

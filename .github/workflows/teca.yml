@@ -76,6 +76,7 @@ jobs:
       - name: Configure
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
+          set -o pipefail
           mkdir -p teca-logs "$RUNNER_TEMP/teca-build"
           cd "$RUNNER_TEMP/teca-build"
           cmake "$RUNNER_TEMP/teca-src" \

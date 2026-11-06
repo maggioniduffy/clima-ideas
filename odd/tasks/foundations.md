@@ -31,7 +31,7 @@ Quoted verbatim from `plan/00-foundations.md` (column "Hecho cuando").
 | T7 F0.4 | S4 | builder | done | RED: Shell unresolved; GREEN: vitest 13, e2e shell 1 passed (fixed boxes across themes, no reload) |
 | T8 F0.7 | S7 | builder | done | no RED recorded (tests written with code); GREEN: pytest api 41, vitest 24, e2e 2 passed; /data guard = manifest allowlist |
 | T9 F0.5 | S5 | builder (data, then layer) | done | relief visible (screenshot, 1/8 subset under SwiftShader); vitest 30, e2e 3; follow-ups: contrast, license overflow; | 24 tiles 947 MB; relief.bin 9.67 MB, 805800 pts, 130–4641 m; period = 2021 release (assumption) |
-| T10 F0.2 | S2 | builder | done (local) | yaml ok; all job commands pass locally (pytest 54, vitest 24, e2e 2); green PR run pending push |
+| T10 F0.2 | S2 | builder | done (local), PR #6 open | yaml ok; all job commands pass locally (pytest 54, vitest 24, e2e 2); green PR run pending push |
 
 Route reason: user's model-roles override (Sonnet implements, Opus reviews).
 
@@ -51,3 +51,6 @@ Route reason: user's model-roles override (Sonnet implements, Opus reviews).
 - L12 (2026-11-05) Another freeze 22:58. User applied nvme_core.default_ps_max_latency_us=0 (confirmed 0). User: "resume work now, not agressive though": slice 4G + CPUQuota 300%, nice 10, one job at a time.
 - L13 (2026-11-05) User: "can we run this TECA phase on the cloud or github actions?" → workflow_dispatch workflow. User set repo secret CDSAPI_KEY via gh (value never seen). Local TECA build stopped.
 - L14 (2026-11-05) Freeze at 23:19 with both kernel params active and only a light builder (web reads, no compile). Resumed.
+- L15 (2026-11-05) Branch pushed; PR https://github.com/maggioniduffy/clima-ideas/pull/6 opened (ready). Auto-fix on.
+- L16 (2026-11-05) User: "merged done". PR #6 merged 02:27Z. Launched teca.yml run 42150504752 (year 2023, run_bard=true, 6-hourly).
+- L17 (2026-11-05) Run 42150504752 failed: CMake 4 rejects cmake_minimum_required < 3.5 in TECA 6.0.0; configure error hidden by tee (no pipefail). Fix on fm/teca-cmake-pin: pin cmake>=3.20,<4, pipefail in Configure.
