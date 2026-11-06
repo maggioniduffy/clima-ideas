@@ -31,7 +31,7 @@ Quoted verbatim from `plan/00-foundations.md` (column "Hecho cuando").
 | T7 F0.4 | S4 | builder | done | RED: Shell unresolved; GREEN: vitest 13, e2e shell 1 passed (fixed boxes across themes, no reload) |
 | T8 F0.7 | S7 | builder | done | no RED recorded (tests written with code); GREEN: pytest api 41, vitest 24, e2e 2 passed; /data guard = manifest allowlist |
 | T9 F0.5 | S5 | opencode (data) + builder (layer) | pending | |
-| T10 F0.2 | S2 | builder | pending | |
+| T10 F0.2 | S2 | builder | done (local) | yaml ok; all job commands pass locally (pytest 54, vitest 24, e2e 2); green PR run pending push |
 
 Route reason: user's model-roles override (Sonnet implements, Opus reviews).
 
