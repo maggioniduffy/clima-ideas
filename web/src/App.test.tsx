@@ -1,6 +1,9 @@
+import { vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { App } from "./App";
 import { es } from "./i18n/es";
+
+vi.mock("@deck.gl/react", () => ({ default: () => <div /> }));
 
 test("renders the app title from es.ts", () => {
   render(<App />);

@@ -28,7 +28,7 @@ Quoted verbatim from `plan/00-foundations.md` (column "Hecho cuando").
 | T4 F0.6 | S6 | builder | done | RED: import errors; GREEN: 33 passed, ruff clean |
 | T5 F0.10 | S10 | builder | done | RED: ModuleNotFound; GREEN: full suite 36 passed; real parquet 921 rows 1950-01..2026-09 |
 | T6 F0.3 | S3 | builder | done | RED: missing modules; GREEN: 11 tests, lint rule fired on deliberate violation |
-| T7 F0.4 | S4 | builder | pending | |
+| T7 F0.4 | S4 | builder | done | RED: Shell unresolved; GREEN: vitest 13, e2e shell 1 passed (fixed boxes across themes, no reload) |
 | T8 F0.7 | S7 | builder | pending | |
 | T9 F0.5 | S5 | opencode (data) + builder (layer) | pending | |
 | T10 F0.2 | S2 | builder | pending | |
