@@ -50,14 +50,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
           df -h /
 
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: tools/teca/environment.yml
           environment-name: teca
@@ -66,14 +66,14 @@ jobs:
 
       - name: Restore TECA install
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.TECA_PREFIX }}
           key: teca-${{ env.TECA_TAG }}-generic-${{ hashFiles('tools/teca/environment.yml') }}
 
       - name: Restore ccache
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.ccache
           key: ccache-${{ env.TECA_TAG }}-${{ github.run_id }}
@@ -130,7 +130,7 @@ jobs:
 
       - name: Save ccache
         if: always() && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.ccache
           key: ccache-${{ env.TECA_TAG }}-${{ github.run_id }}
@@ -146,7 +146,7 @@ jobs:
           } | tee teca-logs/verify.txt
           grep -q input_regex teca-logs/verify.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: teca-build-logs
@@ -159,9 +159,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: tools/teca/environment.yml
           environment-name: teca
@@ -169,7 +169,7 @@ jobs:
           init-shell: bash
 
       - name: Restore TECA install
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.TECA_PREFIX }}
           key: teca-${{ env.TECA_TAG }}-generic-${{ hashFiles('tools/teca/environment.yml') }}
@@ -183,7 +183,7 @@ jobs:
         run: echo "prefix=ivt-${{ inputs.year }}-${HOURS//,/_}-" >> "$GITHUB_OUTPUT"
 
       - name: Restore fetched IVT
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: data/ivt
           key: ${{ steps.ivtkey.outputs.prefix }}${{ github.run_id }}
@@ -215,7 +215,7 @@ jobs:
 
       - name: Save fetched IVT
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: data/ivt
           key: ${{ steps.ivtkey.outputs.prefix }}${{ github.run_id }}
@@ -247,7 +247,7 @@ jobs:
         if: always()
         run: rm -f ~/.cdsapirc
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: bard-${{ inputs.year }}
