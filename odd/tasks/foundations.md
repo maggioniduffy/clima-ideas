@@ -22,7 +22,7 @@ Quoted verbatim from `plan/00-foundations.md` (column "Hecho cuando").
 
 | ID | Specs | Route | Status | Evidence |
 |---|---|---|---|---|
-| T1 F0.8 | S8 | opencode + Haiku explorer (gap pass) | reopened | docs/research/data-access.md, 24 items; websearch failed so many "sin verificar" (BDHI, SMN hourly, CAMELS-CL, GEFS, SINARAME, debris inventory, SCS-CN) |
+| T1 F0.8 | S8 | opencode + 2 Haiku passes | done | gaps per phase listed in data-access.md; remaining "sin verificar" need formal requests (SMN radar, AIC, SNIH IDs) | docs/research/data-access.md, 24 items; websearch failed so many "sin verificar" (BDHI, SMN hourly, CAMELS-CL, GEFS, SINARAME, debris inventory, SCS-CN) |
 | T2 F0.9 | S9 | opencode (background) | running | resumed same opencode session, install-only, max 3 attempts |
 | T3 F0.1 | S1 | builder (Sonnet) | done | make dev: /health ok, :5173 200, proxy ok; pytest 1, vitest 1, lint+tsc clean |
 | T4 F0.6 | S6 | builder | done | RED: import errors; GREEN: 33 passed, ruff clean |

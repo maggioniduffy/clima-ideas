@@ -1,6 +1,6 @@
 # F0.8 — Acceso a datos · Neuquén (lluvia extrema / inundación / flujo de detritos)
 
-Fecha de verificación: 2026-11-06
+Fecha de verificación: 2026-11-05
 
 Método: verificación por `webfetch` sobre fuentes primarias (portales oficiales del proveedor). `websearch` devolvió "cancelled" en todos los intentos, por lo que no se usaron resultados de búsqueda. Todo lo que no se confirmó en la página primaria consultada queda como **sin verificar**. No se descargaron datasets.
 
@@ -44,3 +44,35 @@ Notas:
 * CPC índices: página https://www.cpc.ncep.noaa.gov/data/indices/ define ONI como media trimestral Niño 3.4 ERSSTv6; Niño 3.4 mensual vía detrend.nino34.ascii.txt; SOI Tahiti − Darwin. Archivo SOI https://www.cpc.ncep.noaa.gov/data/indices/soi incluye columnas de anomalía y estandarizado (1951–presente).
 * IRI: https://iri.columbia.edu/ anuncia cierre de Data Library y tránsito de pronósticos a https://forecast.ccsr.columbia.edu, con enlace a pronóstico ENSO actual en https://iri.columbia.edu/our-expertise/climate/forecasts/enso/current/. No se verificó API, licencia ni resolución.
 * C3S: https://climate.copernicus.eu/ confirma CDS en https://cds.climate.copernicus.eu/ implementado por ECMWF; el dataset específico de pronóstico estacional ENSO no se confirmó (404).
+
+## Pasadas 2 y 3 (2026-11-05, con búsqueda web)
+
+Estas pasadas reemplazan las filas equivalentes de la tabla de arriba cuando hay conflicto. Los snippets de búsqueda
+son indicios, no verificación: lo que no se leyó en la página primaria sigue "sin verificar".
+
+| Ítem | Estado | URL de acceso | Método | Resolución | Licencia | Latencia / retención | Fase |
+|---|---|---|---|---|---|---|---|
+| SNIH (contiene la BDHI) | available, con aceptación de términos | https://snih.hidricosargentina.gob.ar | Web, pestaña "Datos Históricos" por estación | diario/horario sin verificar; IDs de estaciones (Limay, Neuquén, Agrio, Curí Leuvú, Chos Malal, Andacollo) sin verificar | términos de uso, texto sin leer | red estadística, no de alerta (dice la página) | 2 |
+| AIC caudales y lluvia | restricted | https://www.aic.gob.ar/estaciones.aspx ; https://www.aic.gob.ar/terminos-condiciones.aspx | Listado web; series por solicitud/acuerdo (según vignette de hydrotoolbox, snippet) | medias diarias; lluvia 06–06 | reproducción citando "la AIC como fuente" y fecha; no es licencia abierta | sin verificar | 2 |
+| Radar SMN Neuquén (RM7/RMA7, SINARAME) | available (imágenes); volúmenes sin verificar | smn.gob.ar (no se pudo leer: 402/403) | Visualización web y app; volúmenes: pedido a SMN, procedimiento sin verificar | alcance 240 km (hasta 400 km con menor precisión); banda sin verificar | sin verificar | sin verificar | 3 |
+| Archivo de volúmenes RMA (referencia) | restricted | https://data.eol.ucar.edu/dataset/553.022 | FTP con acuerdo de usuario, CFRadial | solo RMA1 Córdoba; ~0,5 GB/h | acuerdo de usuario | — | 3 |
+| SMN horario Neuquén Aero (87715) | sin verificar | https://www.smn.gob.ar/descarga-de-datos (402) | sin verificar | sin verificar | Disposición 25 SMN: acceso libre bajo CC (versión sin verificar, fuente secundaria) | sin verificar | 3 |
+| NOAA ISD 877150 (Neuquén Aero, alternativa) | sin verificar | https://noaa-isd-pds.s3.amazonaws.com/index.html | S3 anónimo | horaria (según Tutiempo) | sin verificar | sin verificar | 3 |
+| GEFS operativo | available | https://registry.opendata.aws/noaa-gefs/ (s3://noaa-gefs-pds) | S3 anónimo | 21 miembros, 4 corridas/día, 16 días; GRIB2 0,5° y 0,25° | datos NOAA abiertos, con atribución | latencia y retención no declaradas; archivo desde 2018 visto | 6 |
+| C3S estacional (Niño 3.4) | available | https://climate.copernicus.eu/seasonal-forecasts | Gráficos; datos vía CDS (cuenta) | mensual, publicado el día 10 | términos del CDS (sin verificar en página) | — | 5, 6 |
+| IRI ENSO | available (solo visualización) | https://iri.columbia.edu/our-expertise/climate/forecasts/enso/current/ | Sin descarga ("no longer providing forecast data") | trimestral, 27 modelos | CC BY 4.0 (página quick look) | mensual, día 19 | 5 |
+| CAMELS-CL | available; solo Chile (inferido) | http://camels.cr2.cl ; DOI 10.1594/PANGAEA.894885 | Descarga PANGAEA | 516 cuencas | CC-BY-4.0 (snippet) | — | 2 |
+| Suelos INTA (GeoINTA) | available; licencia sin verificar | https://geo.inta.gob.ar/ | Visor y geoservicios | por capa, sin verificar | sin texto de licencia | — | 4 |
+| SoilGrids 250 m | available | https://soilgrids.org/ | GeoTIFF, WCS | 250 m | CC-BY-4.0 (snippet) | — | 4 |
+| ESA WorldCover 2021 | available | https://worldcover2021.esa.int/download | Descarga, AWS | 10 m | CC-BY-4.0 (snippet) | — | 4 |
+| MapBiomas Argentina | sin verificar (503) | https://argentina.mapbiomas.org | Descarga, GEE | anual 1985–2024 (snippet) | acceso abierto, tipo sin especificar | — | 4 |
+| Inventario de remoción en masa | parcial | https://repositorio.segemar.gob.ar/handle/308849217/4372 ; .../4416 | PDFs SEGEMAR (Ruta 7 Lagos; Cerro de la Virgen, Chos Malal 2023) | por tramo / evento | sin verificar | — | 4 |
+| NASA Global Landslide Catalog | available | https://catalog.data.gov/dataset/global-landslide-catalog-export | CSV, SHP | evento puntual | no indicada | — | 4 |
+| DesInventar Argentina | sin verificar para Neuquén | https://online.desinventar.org | Consulta web | base de prensa desde 1995 (snippet) | sin verificar | — | 4 |
+
+Eventos verificados: remoción en masa en Cerro de la Virgen (RP43, Chos Malal), 1 de agosto de 2023, 4 heridos, sin
+volumen (informe SEGEMAR y prensa). Crecidas del Curí Leuvú y decreto de desastre hídrico (julio 2023): solo snippets.
+
+Pendientes para las fases que los usan (no bloquean la fase 0): pedido formal de volúmenes del radar de Neuquén al SMN
+(fase 3); IDs y términos de SNIH para Limay, Neuquén, Agrio y Curí Leuvú (fase 2); acuerdo de datos con la AIC
+(fase 2); serie horaria de Neuquén Aero por SMN o ISD (fase 3); inventario de aluviones del norte (fase 4).
