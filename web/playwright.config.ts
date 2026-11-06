@@ -16,5 +16,14 @@ export default defineConfig({
     },
   ],
   use: { baseURL: "http://localhost:5173" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Software WebGL (SwiftShader): keeps e2e off the GPU.
+        launchOptions: { args: ["--use-angle=swiftshader", "--use-gl=angle", "--enable-unsafe-swiftshader"] },
+      },
+    },
+  ],
 });

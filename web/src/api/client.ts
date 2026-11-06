@@ -37,3 +37,10 @@ export const fetchLayerData = <T = PointFeature[]>(id: string, file?: string) =>
     `${BASE}/layers/${encodeURIComponent(id)}/data` +
       (file ? `?file=${encodeURIComponent(file)}` : ""),
   );
+
+export async function fetchLayerBinary(id: string, file: string): Promise<ArrayBuffer> {
+  const url = `${BASE}/layers/${encodeURIComponent(id)}/data?file=${encodeURIComponent(file)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: ${res.status}`);
+  return res.arrayBuffer();
+}

@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { fetchLayer, fetchLayerData, fetchLayers } from "./client";
+import { fetchLayer, fetchLayerBinary, fetchLayerData, fetchLayers } from "./client";
 
 function mockFetch(body: unknown, ok = true) {
   const f = vi.fn().mockResolvedValue({ ok, status: ok ? 200 : 404, json: async () => body });
@@ -31,4 +31,12 @@ test("fetchLayerData hits /data with optional file", async () => {
 test("non-ok responses reject", async () => {
   mockFetch({}, false);
   await expect(fetchLayers()).rejects.toThrow("404");
+});
+
+test("fetchLayerBinary returns the ArrayBuffer of a data file", async () => {
+  const buf = new ArrayBuffer(12);
+  const f = vi.fn().mockResolvedValue({ ok: true, status: 200, arrayBuffer: async () => buf });
+  vi.stubGlobal("fetch", f);
+  expect(await fetchLayerBinary("relief", "relief.bin")).toBe(buf);
+  expect(f).toHaveBeenCalledWith("/api/layers/relief/data?file=relief.bin");
 });

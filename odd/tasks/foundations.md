@@ -30,7 +30,7 @@ Quoted verbatim from `plan/00-foundations.md` (column "Hecho cuando").
 | T6 F0.3 | S3 | builder | done | RED: missing modules; GREEN: 11 tests, lint rule fired on deliberate violation |
 | T7 F0.4 | S4 | builder | done | RED: Shell unresolved; GREEN: vitest 13, e2e shell 1 passed (fixed boxes across themes, no reload) |
 | T8 F0.7 | S7 | builder | done | no RED recorded (tests written with code); GREEN: pytest api 41, vitest 24, e2e 2 passed; /data guard = manifest allowlist |
-| T9 F0.5 | S5 | builder (data, then layer) | data done, layer pending | 24 tiles 947 MB; relief.bin 9.67 MB, 805800 pts, 130–4641 m; period = 2021 release (assumption) |
+| T9 F0.5 | S5 | builder (data, then layer) | done | relief visible (screenshot, 1/8 subset under SwiftShader); vitest 30, e2e 3; follow-ups: contrast, license overflow; | 24 tiles 947 MB; relief.bin 9.67 MB, 805800 pts, 130–4641 m; period = 2021 release (assumption) |
 | T10 F0.2 | S2 | builder | done (local) | yaml ok; all job commands pass locally (pytest 54, vitest 24, e2e 2); green PR run pending push |
 
 Route reason: user's model-roles override (Sonnet implements, Opus reviews).
@@ -47,3 +47,5 @@ Route reason: user's model-roles override (Sonnet implements, Opus reviews).
 - L8 (2026-11-05) User: "What? There should be more data for that / Or it will be done on other phases? Same for the other points open / Continue with F0" and "But continue with F0.9 too". Second Haiku pass launched with concrete leads (SINARAME RMA, SNIH, SMN 87715, inventories, DesInventar); F0.9 resumed.
 - L9 (2026-11-05) Session crashed mid-commit of F0.3 (22:13): branch ref + 20 loose objects empty. Moved empties to ~/git-empty-objects-backup-20261105, reset ref to 1f93e9b, fsck clean, re-committed. User: "resume, max ram 6gb".
 - L10 (2026-11-05) Second crash (RAM). Git intact. User: "Resume work, cap the sum of work to 6gb or run only 2 at a time (1 if it's too heavy)". Runtime slice `clima.slice` MemoryMax=6G shared; heavy jobs run one at a time: F0.5 first, then F0.9 TECA build (at 32%).
+- L11 (2026-11-05) Freeze investigation: abrupt boots since at least Nov 2, before this work; no OOM/oomd/kernel errors; likely NVIDIA 580/X11 display stack (unproven). User: "Resume, safe mode": shared slice, one heavy job, Playwright on SwiftShader.
+- L12 (2026-11-05) Another freeze 22:58. User applied nvme_core.default_ps_max_latency_us=0 (confirmed 0). User: "resume work now, not agressive though": slice 4G + CPUQuota 300%, nice 10, one job at a time.
