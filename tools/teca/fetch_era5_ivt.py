@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import argparse
 import calendar
+import shutil
 import sys
+import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -123,8 +125,13 @@ def _parse_months(text: str) -> list[int]:
     return sorted(months)
 
 
-def _download_month(year: int, month: int, hours: list[str], raw: Path, retries: int) -> Path:
-    """Queue and download one month. Runs in a worker thread (own client per thread)."""
+def _download_month(
+    year: int, month: int, hours: list[str], raw: Path, retries: int, retry_wait: float = 60
+) -> Path:
+    """Queue and download one month. Runs in a worker thread (own client per thread).
+
+    Waits ``retry_wait * attempt`` seconds between attempts; a month that gives up leaves no raw file.
+    """
     import cdsapi  # reads ~/.cdsapirc
 
     client = cdsapi.Client()
@@ -135,7 +142,9 @@ def _download_month(year: int, month: int, hours: list[str], raw: Path, retries:
         except Exception as exc:
             print(f"month {month:02d} attempt {attempt} failed: {exc}", file=sys.stderr, flush=True)
             if attempt == retries:
+                raw.unlink(missing_ok=True)
                 raise
+            time.sleep(retry_wait * attempt)
     raise AssertionError("unreachable")
 
 
@@ -147,6 +156,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--retries", type=int, default=3)
     parser.add_argument(
+        "--retry-wait", type=float, default=60,
+        help="base seconds between retries; attempt N waits retry-wait * N (linear backoff)",
+    )
+    parser.add_argument(
         "--workers", type=int, default=4,
         help="parallel CDS requests; the CDS queue wait dominates, so overlapping requests saves hours",
     )
@@ -154,6 +167,12 @@ def main(argv: list[str] | None = None) -> int:
 
     hours = [h.strip().zfill(2) for h in args.hours.split(",") if h.strip()]
     args.out.mkdir(parents=True, exist_ok=True)
+
+    # A cancelled run can leave partial downloads behind; they must never be mistaken for data.
+    for stale in args.out.glob("raw_*.nc"):
+        stale.unlink()
+    for stale in args.out.glob("raw_*_unz"):
+        shutil.rmtree(stale, ignore_errors=True)
 
     pending: list[int] = []
     for month in _parse_months(args.months):
@@ -169,7 +188,8 @@ def main(argv: list[str] | None = None) -> int:
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
         futures = {
             pool.submit(
-                _download_month, args.year, m, hours, args.out / f"raw_{args.year}-{m:02d}.nc", args.retries
+                _download_month,
+                args.year, m, hours, args.out / f"raw_{args.year}-{m:02d}.nc", args.retries, args.retry_wait,
             ): m
             for m in pending
         }

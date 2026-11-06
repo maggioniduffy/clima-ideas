@@ -33,3 +33,10 @@ dueña del token y definir el secreto de repositorio `CDSAPI_KEY` (token persona
 
 Tamaño estimado por año (4 horas/día, grilla 0.25°, 301x221 puntos): descarga ~0.4-0.8 GB, IVT ~0.2-0.4 GB comprimido,
 salida BARD de orden 0.3-1 GB. Estimación sin verificar.
+
+## Caché y reintentos
+
+Los meses descargados se cachean con clave `ivt-<año>-<horas>-<run_id>`. Agregar una versión (`ivt-v2-`) cuando cambien `AREA` o
+`VARIABLES` en `fetch_era5_ivt.py`, para no reutilizar archivos viejos. Los `raw_*` parciales se borran antes de guardar
+la caché. Los reintentos de CDS esperan `--retry-wait` × intento (60 s por defecto). Un solo run por rama a la vez
+(`concurrency`). Si BARD no produce ningún `bard_*.nc`, el paso falla.

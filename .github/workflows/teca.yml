@@ -28,6 +28,11 @@ on:
 permissions:
   contents: read
 
+# One run per ref at a time: parallel dispatches would race on the CDS quota and the caches.
+concurrency:
+  group: teca-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   TECA_TAG: "6.0.0"
   # Absolute path: actions/cache rejects paths containing "..".
@@ -174,6 +179,7 @@ jobs:
         id: ivtkey
         env:
           HOURS: ${{ inputs.hours }}
+        # Add a version (ivt-v2-) when AREA or VARIABLES in fetch_era5_ivt.py change.
         run: echo "prefix=ivt-${{ inputs.year }}-${HOURS//,/_}-" >> "$GITHUB_OUTPUT"
 
       - name: Restore fetched IVT
@@ -203,6 +209,10 @@ jobs:
             --out data/ivt 2>&1 | tee teca-logs/fetch.log
           du -sh data/ivt | tee -a teca-logs/fetch.log
 
+      - name: Drop partial downloads
+        if: always()
+        run: rm -rf data/ivt/raw_*
+
       - name: Save fetched IVT
         if: always()
         uses: actions/cache/save@v4
@@ -214,6 +224,7 @@ jobs:
         env:
           YEAR: ${{ inputs.year }}
         run: |
+          set -o pipefail
           mkdir -p bard-out
           export LD_LIBRARY_PATH="$TECA_PREFIX/lib:$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
           "$TECA_PREFIX/bin/teca_bayesian_ar_detect" \
@@ -227,6 +238,10 @@ jobs:
             --verbose 1 \
             2>&1 | tee teca-logs/bard.log
           ls -lh bard-out | tee -a teca-logs/bard.log
+          if ! compgen -G "bard-out/bard_*.nc" > /dev/null; then
+            echo "::error::BARD produced no bard_*.nc files in bard-out/"
+            exit 1
+          fi
 
       - name: Remove credentials
         if: always()
