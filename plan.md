@@ -8,7 +8,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 
 | # | Fase | Archivo | Depende de | Estado |
 |---|---|---|---|---|
-| 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | pendiente |
+| 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | en curso: falta CI verde en PR y TECA en Actions |
 | 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | pendiente |
 | 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, datos de caudal | pendiente |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | pendiente |

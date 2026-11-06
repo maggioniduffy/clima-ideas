@@ -1,6 +1,6 @@
 # Fase 0 — Bases
 
-Estado: pendiente · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
+Estado: en curso (falta F0.2 CI verde en un PR y F0.9 corrida en GitHub Actions) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
 
 ## Objetivo
 

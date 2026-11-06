@@ -1,0 +1,77 @@
+/* Fixed layout, identical in both themes: only color tokens change. */
+.shell {
+  display: grid;
+  height: 100vh;
+  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  grid-template-rows: 48px minmax(0, 1fr) 120px;
+  grid-template-areas:
+    "top top top"
+    "layers canvas inspector"
+    "time time time";
+  background: var(--bg);
+  color: var(--text);
+}
+
+.shell-topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.shell-topbar h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.shell-layers,
+.shell-inspector,
+.shell-timeline {
+  background: var(--surface);
+  padding: var(--space-4);
+  overflow: auto;
+}
+
+.shell-layers { grid-area: layers; border-right: 1px solid var(--border); }
+.shell-inspector { grid-area: inspector; border-left: 1px solid var(--border); }
+.shell-timeline { grid-area: time; border-top: 1px solid var(--border); }
+
+.shell-canvas {
+  grid-area: canvas;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.layer-list,
+.feature-list { list-style: none; margin: 0; padding: 0; }
+.layer-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; }
+.layer-item[data-selected="true"] .layer-title { font-weight: 600; }
+.layer-title { background: none; border: 0; color: inherit; cursor: pointer; padding: 0; font: inherit; text-align: left; }
+.inspector-title { margin: 0 0 var(--space-2); font-size: 15px; }
+.inspector-meta,
+.inspector-point { margin: 0 0 var(--space-3); }
+.inspector-meta dt,
+.inspector-point dt { color: var(--text-muted); font-size: 12px; }
+.inspector-meta dd,
+.inspector-point dd { margin: 0 0 var(--space-2); }

@@ -1,0 +1,10 @@
+{
+  "id": "relief",
+  "title": "Relieve",
+  "kind": "points",
+  "source": "Relieve falso de prueba",
+  "period": "2021-01-01/2021-12-31",
+  "license": "CC0",
+  "updated_at": "2026-01-01T00:00:00Z",
+  "files": ["relief.bin", "relief.meta.json"]
+}

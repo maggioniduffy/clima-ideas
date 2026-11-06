@@ -1,0 +1,24 @@
+# Build and run environment for TECA 6.0.0 (C++ apps only: BARD, no MPI, no Python bindings)
+# plus the Python tooling used to fetch ERA5 and compute IVT.
+name: teca
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - compilers          # gcc, g++, gfortran (TECA builds Fortran sources)
+  - cmake
+  - make
+  - ccache
+  - pkg-config
+  - swig               # TECA's CMakeLists requires swig to be found even without Python
+  - libnetcdf=*=nompi_*
+  - hdf5=*=nompi_*
+  - udunits2
+  - libboost-devel     # program_options
+  - openssl
+  - zlib
+  # fetch_era5_ivt.py
+  - numpy
+  - xarray
+  - netcdf4
+  - cdsapi

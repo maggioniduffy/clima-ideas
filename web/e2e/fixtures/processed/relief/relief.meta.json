@@ -1,0 +1,1 @@
+{"count": 10, "stride": 3, "fields": ["lon", "lat", "elev_m"], "dtype": "float32-le", "bbox": [-70, -39, -69, -38], "elev_min": 200, "elev_max": 2000, "step": 0.1}
