@@ -23,7 +23,7 @@ Quoted verbatim from `plan/00-foundations.md` (column "Hecho cuando").
 | ID | Specs | Route | Status | Evidence |
 |---|---|---|---|---|
 | T1 F0.8 | S8 | opencode + 2 Haiku passes | done | gaps per phase listed in data-access.md; remaining "sin verificar" need formal requests (SMN radar, AIC, SNIH IDs) | docs/research/data-access.md, 24 items; websearch failed so many "sin verificar" (BDHI, SMN hourly, CAMELS-CL, GEFS, SINARAME, debris inventory, SCS-CN) |
-| T2 F0.9 | S9 | opencode (background) | queued | TECA build 32%, waits for F0.5 (one heavy job at a time) |
+| T2 F0.9 | S9 | builder → GitHub Actions (manual) | workflow written, run pending merge to main | local build abandoned (coincided with freezes); CDSAPI_KEY secret set by user |
 | T3 F0.1 | S1 | builder (Sonnet) | done | make dev: /health ok, :5173 200, proxy ok; pytest 1, vitest 1, lint+tsc clean |
 | T4 F0.6 | S6 | builder | done | RED: import errors; GREEN: 33 passed, ruff clean |
 | T5 F0.10 | S10 | builder | done | RED: ModuleNotFound; GREEN: full suite 36 passed; real parquet 921 rows 1950-01..2026-09 |
@@ -49,3 +49,5 @@ Route reason: user's model-roles override (Sonnet implements, Opus reviews).
 - L10 (2026-11-05) Second crash (RAM). Git intact. User: "Resume work, cap the sum of work to 6gb or run only 2 at a time (1 if it's too heavy)". Runtime slice `clima.slice` MemoryMax=6G shared; heavy jobs run one at a time: F0.5 first, then F0.9 TECA build (at 32%).
 - L11 (2026-11-05) Freeze investigation: abrupt boots since at least Nov 2, before this work; no OOM/oomd/kernel errors; likely NVIDIA 580/X11 display stack (unproven). User: "Resume, safe mode": shared slice, one heavy job, Playwright on SwiftShader.
 - L12 (2026-11-05) Another freeze 22:58. User applied nvme_core.default_ps_max_latency_us=0 (confirmed 0). User: "resume work now, not agressive though": slice 4G + CPUQuota 300%, nice 10, one job at a time.
+- L13 (2026-11-05) User: "can we run this TECA phase on the cloud or github actions?" → workflow_dispatch workflow. User set repo secret CDSAPI_KEY via gh (value never seen). Local TECA build stopped.
+- L14 (2026-11-05) Freeze at 23:19 with both kernel params active and only a light builder (web reads, no compile). Resumed.

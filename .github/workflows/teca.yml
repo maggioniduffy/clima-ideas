@@ -1,0 +1,205 @@
+name: TECA / BARD
+
+# Manual only: builds TECA and (optionally) runs BARD over one year of ERA5.
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "ERA5 year"
+        default: "2023"
+        type: string
+      run_bard:
+        description: "Run BARD after the build"
+        default: false
+        type: boolean
+      hours:
+        description: "UTC hours to download"
+        default: "00,06,12,18"
+        type: choice
+        options:
+          - "00,06,12,18"
+          - "00,12"
+          - "00,03,06,09,12,15,18,21"
+
+permissions:
+  contents: read
+
+env:
+  TECA_TAG: "6.0.0"
+  TECA_PREFIX: ${{ github.workspace }}/../teca-install
+
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: tools/teca/environment.yml
+          environment-name: teca
+          cache-environment: true
+          init-shell: bash
+
+      - name: Restore TECA install
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TECA_PREFIX }}
+          key: teca-${{ env.TECA_TAG }}-${{ hashFiles('tools/teca/environment.yml') }}
+
+      - name: Restore ccache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ env.TECA_TAG }}-${{ github.run_id }}
+          restore-keys: ccache-${{ env.TECA_TAG }}-
+
+      - name: Clone TECA
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p teca-logs
+          git clone --depth 1 --branch "$TECA_TAG" --recurse-submodules --shallow-submodules \
+            https://github.com/LBL-EESA/TECA.git "$RUNNER_TEMP/teca-src"
+
+      - name: Configure
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p teca-logs "$RUNNER_TEMP/teca-build"
+          cd "$RUNNER_TEMP/teca-build"
+          cmake "$RUNNER_TEMP/teca-src" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$TECA_PREFIX" \
+            -DCMAKE_PREFIX_PATH="$CONDA_PREFIX" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_Fortran_COMPILER_LAUNCHER=ccache \
+            -DBUILD_TESTING=OFF -DREQUIRE_TECA_DATA=FALSE \
+            -DREQUIRE_MPI=FALSE -DTECA_HAS_MPI=OFF -DREQUIRE_NETCDF_MPI=FALSE \
+            -DREQUIRE_PYTHON=FALSE -DTECA_HAS_PYTHON=OFF \
+            -DREQUIRE_OPENSSL=FALSE \
+            -DREQUIRE_NETCDF=TRUE -DREQUIRE_UDUNITS=TRUE -DREQUIRE_BOOST=TRUE \
+            2>&1 | tee "$GITHUB_WORKSPACE/teca-logs/cmake.log"
+
+      - name: Build and install
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          cd "$RUNNER_TEMP/teca-build"
+          set -o pipefail
+          cmake --build . -j2 2>&1 | tee "$RUNNER_TEMP/build.log" | tail -n 5
+          cmake --install . 2>&1 | tee -a "$RUNNER_TEMP/build.log" | tail -n 5
+
+      - name: Collect build log tail
+        if: always()
+        run: |
+          mkdir -p teca-logs
+          [ -f "$RUNNER_TEMP/build.log" ] && tail -n 400 "$RUNNER_TEMP/build.log" > teca-logs/build-tail.txt || true
+          [ -f "$RUNNER_TEMP/build.log" ] && gzip -c "$RUNNER_TEMP/build.log" > teca-logs/build-full.log.gz || true
+          ccache -s > teca-logs/ccache.txt 2>&1 || true
+
+      - name: Save ccache
+        if: always() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ env.TECA_TAG }}-${{ github.run_id }}
+
+      - name: Verify teca_bayesian_ar_detect
+        run: |
+          mkdir -p teca-logs
+          export LD_LIBRARY_PATH="$TECA_PREFIX/lib:$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+          {
+            echo "TECA tag: $TECA_TAG"
+            "$TECA_PREFIX/bin/teca_bayesian_ar_detect" --help 2>&1
+            echo "exit code: $?"
+          } | tee teca-logs/verify.txt
+          grep -q input_regex teca-logs/verify.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: teca-build-logs
+          path: teca-logs/
+          if-no-files-found: warn
+
+  bard:
+    needs: build
+    if: inputs.run_bard
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: tools/teca/environment.yml
+          environment-name: teca
+          cache-environment: true
+          init-shell: bash
+
+      - name: Restore TECA install
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.TECA_PREFIX }}
+          key: teca-${{ env.TECA_TAG }}-${{ hashFiles('tools/teca/environment.yml') }}
+          fail-on-cache-miss: true
+
+      - name: Write CDS credentials
+        env:
+          CDSAPI_KEY: ${{ secrets.CDSAPI_KEY }}
+        run: |
+          umask 077
+          printf 'url: https://cds.climate.copernicus.eu/api\nkey: %s\n' "$CDSAPI_KEY" > ~/.cdsapirc
+
+      - name: Fetch ERA5 and compute IVT
+        env:
+          YEAR: ${{ inputs.year }}
+          HOURS: ${{ inputs.hours }}
+        run: |
+          mkdir -p teca-logs data/ivt
+          python tools/teca/fetch_era5_ivt.py --year "$YEAR" --hours "$HOURS" --out data/ivt \
+            2>&1 | tee teca-logs/fetch.log
+          du -sh data/ivt | tee -a teca-logs/fetch.log
+
+      - name: Run BARD
+        env:
+          YEAR: ${{ inputs.year }}
+        run: |
+          mkdir -p bard-out
+          export LD_LIBRARY_PATH="$TECA_PREFIX/lib:$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+          "$TECA_PREFIX/bin/teca_bayesian_ar_detect" \
+            --input_regex "$GITHUB_WORKSPACE/data/ivt/ivt_${YEAR}-[0-9][0-9]\.nc" \
+            --ivt IVT \
+            --periodic_in_x 0 \
+            --segment_ar_probability \
+            --output_file "$GITHUB_WORKSPACE/bard-out/bard_%t%.nc" \
+            --file_layout monthly \
+            --n_bard_threads 2 --n_writer_threads 1 \
+            --verbose 1 \
+            2>&1 | tee teca-logs/bard.log
+          ls -lh bard-out | tee -a teca-logs/bard.log
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f ~/.cdsapirc
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bard-${{ inputs.year }}
+          path: |
+            bard-out/
+            teca-logs/
+          if-no-files-found: warn
+          compression-level: 6
