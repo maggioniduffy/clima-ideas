@@ -11,6 +11,8 @@ dependencies = [
     "pyarrow",
     "httpx",
     "typer",
+    "rasterio>=1.5.2",
+    "numpy>=2.5.4",
 ]
 
 [project.scripts]

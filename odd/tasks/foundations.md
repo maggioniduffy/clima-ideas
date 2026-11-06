@@ -23,14 +23,14 @@ Quoted verbatim from `plan/00-foundations.md` (column "Hecho cuando").
 | ID | Specs | Route | Status | Evidence |
 |---|---|---|---|---|
 | T1 F0.8 | S8 | opencode + 2 Haiku passes | done | gaps per phase listed in data-access.md; remaining "sin verificar" need formal requests (SMN radar, AIC, SNIH IDs) | docs/research/data-access.md, 24 items; websearch failed so many "sin verificar" (BDHI, SMN hourly, CAMELS-CL, GEFS, SINARAME, debris inventory, SCS-CN) |
-| T2 F0.9 | S9 | opencode (background) | running | resumed same opencode session, install-only, max 3 attempts |
+| T2 F0.9 | S9 | opencode (background) | queued | TECA build 32%, waits for F0.5 (one heavy job at a time) |
 | T3 F0.1 | S1 | builder (Sonnet) | done | make dev: /health ok, :5173 200, proxy ok; pytest 1, vitest 1, lint+tsc clean |
 | T4 F0.6 | S6 | builder | done | RED: import errors; GREEN: 33 passed, ruff clean |
 | T5 F0.10 | S10 | builder | done | RED: ModuleNotFound; GREEN: full suite 36 passed; real parquet 921 rows 1950-01..2026-09 |
 | T6 F0.3 | S3 | builder | done | RED: missing modules; GREEN: 11 tests, lint rule fired on deliberate violation |
 | T7 F0.4 | S4 | builder | done | RED: Shell unresolved; GREEN: vitest 13, e2e shell 1 passed (fixed boxes across themes, no reload) |
 | T8 F0.7 | S7 | builder | done | no RED recorded (tests written with code); GREEN: pytest api 41, vitest 24, e2e 2 passed; /data guard = manifest allowlist |
-| T9 F0.5 | S5 | opencode (data) + builder (layer) | pending | |
+| T9 F0.5 | S5 | builder (data, then layer) | data done, layer pending | 24 tiles 947 MB; relief.bin 9.67 MB, 805800 pts, 130–4641 m; period = 2021 release (assumption) |
 | T10 F0.2 | S2 | builder | done (local) | yaml ok; all job commands pass locally (pytest 54, vitest 24, e2e 2); green PR run pending push |
 
 Route reason: user's model-roles override (Sonnet implements, Opus reviews).
@@ -46,3 +46,4 @@ Route reason: user's model-roles override (Sonnet implements, Opus reviews).
 - L7 (2026-11-05) Stopping the client did not stop the opencode service session (it kept installing torch); killed service + pip. Disk freed by user: 69 GB free.
 - L8 (2026-11-05) User: "What? There should be more data for that / Or it will be done on other phases? Same for the other points open / Continue with F0" and "But continue with F0.9 too". Second Haiku pass launched with concrete leads (SINARAME RMA, SNIH, SMN 87715, inventories, DesInventar); F0.9 resumed.
 - L9 (2026-11-05) Session crashed mid-commit of F0.3 (22:13): branch ref + 20 loose objects empty. Moved empties to ~/git-empty-objects-backup-20261105, reset ref to 1f93e9b, fsck clean, re-committed. User: "resume, max ram 6gb".
+- L10 (2026-11-05) Second crash (RAM). Git intact. User: "Resume work, cap the sum of work to 6gb or run only 2 at a time (1 if it's too heavy)". Runtime slice `clima.slice` MemoryMax=6G shared; heavy jobs run one at a time: F0.5 first, then F0.9 TECA build (at 32%).
