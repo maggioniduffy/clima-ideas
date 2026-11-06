@@ -174,7 +174,10 @@ def test_arco_writes_only_requested_hours_over_area_with_negative_lons(monkeypat
     import xarray as xr
 
     state = _fake_arco(monkeypatch)
-    argv = ["--year", "2023", "--months", "1", "--hours", "00,12", "--out", str(tmp_path), "--source", "arco"]
+    argv = [
+        "--year", "2023", "--months", "1", "--hours", "00,12", "--out", str(tmp_path), "--source", "arco",
+        "--area=-15,-95,-60,-40",
+    ]
     assert fetch.main(argv) == 0
     assert state.opened >= 1
     assert sorted(p.name for p in tmp_path.iterdir()) == ["ivt_2023-01.nc"]
@@ -255,11 +258,11 @@ def test_arco_full_circle_area_covers_every_longitude_once(monkeypatch, tmp_path
         assert np.allclose(out["IVT"].values, 5.0)
 
 
-def test_arco_default_area_is_unchanged(monkeypatch):
+def test_arco_default_area_is_the_southern_hemisphere_ring(monkeypatch):
     _fake_arco(monkeypatch)
     ds = fetch._arco_subset(2023, 1, ["00"])
-    assert float(ds["longitude"].min()) == -95 and float(ds["longitude"].max()) == -40
-    assert float(ds["latitude"].min()) == -60 and float(ds["latitude"].max()) == -15
+    assert float(ds["longitude"].min()) == -180 and float(ds["longitude"].max()) == 175
+    assert float(ds["latitude"].min()) == -80 and float(ds["latitude"].max()) == -10
 
 
 @pytest.mark.parametrize("area", ["-80,-180,-10,179", "-10,-180,-80", "-10,-180,-80,179,1", "a,b,c,d", "-10,10,-80,-10"])
@@ -280,6 +283,6 @@ def test_cds_request_carries_the_given_area(monkeypatch, tmp_path):
 
     monkeypatch.setitem(sys.modules, "cdsapi", types.SimpleNamespace(Client=Client))
     base = ["--year", "2023", "--months", "1", "--out", str(tmp_path), "--source", "cds", "--retries", "1"]
-    assert fetch.main(base + ["--area=-10,-180,-80,179.75"]) == 1
+    assert fetch.main(base + ["--area=-15,-95,-60,-40"]) == 1
     assert fetch.main(base) == 1
-    assert seen == [[-10.0, -180.0, -80.0, 179.75], [-15, -95, -60, -40]]
+    assert seen == [[-15.0, -95.0, -60.0, -40.0], [-10, -180, -80, 179.75]]

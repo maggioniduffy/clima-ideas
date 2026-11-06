@@ -27,8 +27,10 @@ VARIABLES = [
     "vertical_integral_of_eastward_water_vapour_flux",
     "vertical_integral_of_northward_water_vapour_flux",
 ]
-# North, West, South, East: Neuquen, the Andes and the Pacific inflow.
-AREA = [-15, -95, -60, -40]
+# North, West, South, East: the whole Southern Hemisphere ring. BARD needs a wide domain: on the Neuquen window
+# (-15, -95, -60, -40) its AR probability never passed ~0.38 (run 42277026996), on this ring it tags ARs over
+# Neuquen (run 42285391428). Crop to the region after BARD.
+AREA = [-10, -180, -80, 179.75]
 ARCO_STORE = "gs://gcp-public-data-arco-era5/ar/full_37-1h-0p25deg-chunk-1.zarr-v3"
 SOURCE_ATTRS = {
     "arco": "ERA5 (Copernicus Climate Change Service) via ARCO-ERA5 (Google Cloud public dataset), CC-BY 4.0",

@@ -42,9 +42,10 @@ mes a mes; `fetch_era5_ivt.py` calcula `IVT` = |(u, v)| en kg m-1 s-1. Fuente: E
   https://cds.climate.copernicus.eu/api); el workflow solo escribe las credenciales con `source: cds`.
 
 `--area=N,W,S,E` (grados, O/E en -180..180; usar `=` porque los valores empiezan con `-`) cambia el área en ambas fuentes; por defecto
-`-15,-95,-60,-40`. Círculo completo del hemisferio sur: `--area=-10,-180,-80,179.75` (con `arco` no cuesta más descarga, los chunks
-ya son globales). En el workflow es el input `area`. Motivo: en el run 42277026996 (2023, ventana regional) `ar_probability`
-nunca pasó de ~0.39, y se prueba si BARD, entrenado con campos globales, subdetecta en ventanas chicas (hipótesis sin verificar).
+el círculo completo del hemisferio sur, `-10,-180,-80,179.75` (con `arco` no cuesta más descarga, los chunks ya son
+globales). En el workflow es el input `area`. Motivo: BARD necesita un dominio amplio. En la ventana regional `-15,-95,-60,-40`
+(run 42277026996, 2023) `ar_probability` nunca pasó de ~0.39 y no marcó ningún río atmosférico; con el hemisferio sur (run
+42285391428, junio-julio 2023) llega a 1.0 y marca 30 de 244 pasos en una caja sobre Neuquén. Recortar a la región después de BARD.
 
 Tamaño estimado por año (4 horas/día, grilla 0.25°, 221x181 puntos lon x lat): descarga con CDS ~0.4-0.8 GB (con `arco`, ~9 GB, ver arriba), IVT ~0.2-0.4 GB comprimido,
 salida BARD de orden 0.3-1 GB. Estimación sin verificar.

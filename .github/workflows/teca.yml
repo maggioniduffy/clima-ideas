@@ -25,7 +25,7 @@ on:
           - cds
       area:
         description: 'Area N,W,S,E in degrees (W/E in -180..180); full circle example "-10,-180,-80,179.75"'
-        default: "-15,-95,-60,-40"
+        default: "-10,-180,-80,179.75"
         type: string
       hours:
         description: "UTC hours to download"
