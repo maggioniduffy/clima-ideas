@@ -1,6 +1,6 @@
 # Fase 0 — Bases
 
-Estado: en curso (falta F0.2 CI verde en un PR) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
+Estado: hecha (F0.2: CI verde en el PR #7, 2026-11-07) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
 
 ## Objetivo
 
