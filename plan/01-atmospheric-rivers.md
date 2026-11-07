@@ -14,8 +14,8 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
-| F1.1 | Script de descarga ERA5 (cdsapi) por recorte y variables, idempotente | Sonnet escribe, opencode corre | Zarr completo en `data/raw/era5/` |
-| F1.2 | Detección con TECA BARD (o detector por umbral de IVT si F0.9 falló) | opencode corre, Opus valida | Máscara diaria de ríos atmosféricos |
+| F1.1 | Script de descarga ERA5 desde ARCO-ERA5 (Zarr público en Google Cloud, sin cola ni clave; `tools/teca/fetch_era5_ivt.py --source arco`) por recorte y variables, idempotente | Sonnet escribe, opencode corre | Zarr completo en `data/raw/era5/` |
+| F1.2 | Detección con TECA BARD en jobs paralelos (matriz de GitHub Actions por año o por mes; BARD tarda ~2,5 h por año en el hemisferio sur) | opencode corre, Opus valida | Máscara diaria de ríos atmosféricos |
 | F1.3 | Catálogo: eventos que tocan el polígono de cordillera (fecha, duración, IVT máx., isoterma 0 °C) | Sonnet | Parquet + unit tests con máscara sintética |
 | F1.4 | Fracción de días de lluvia extrema (p99) que coinciden con un evento | opencode | Informe con cifras, fuente y período |
 | F1.5 | Contraste con literatura de ríos atmosféricos en los Andes | opencode | Tabla: nuestro conteo vs. publicado |
