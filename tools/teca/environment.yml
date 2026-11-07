@@ -1,4 +1,4 @@
-# Build and run environment for TECA 6.0.0 (C++ apps only: BARD, no MPI, no Python bindings)
+# Build and run environment for TECA 6.0.0 (C++ apps only: BARD; MPI on, since 6.0.0 does not compile without it; no Python bindings)
 # plus the Python tooling used to fetch ERA5 and compute IVT.
 name: teca
 channels:
@@ -6,11 +6,12 @@ channels:
 dependencies:
   - python=3.11
   - compilers          # gcc, g++, gfortran (TECA builds Fortran sources)
-  - cmake
+  - cmake>=3.20,<4  # TECA 6.0.0 submodules use cmake_minimum_required < 3.5, removed in CMake 4
   - make
   - ccache
   - pkg-config
   - swig               # TECA's CMakeLists requires swig to be found even without Python
+  - openmpi
   - libnetcdf=*=nompi_*
   - hdf5=*=nompi_*
   - udunits2
@@ -21,4 +22,6 @@ dependencies:
   - numpy
   - xarray
   - netcdf4
-  - cdsapi
+  - cdsapi            # --source cds
+  - zarr>=3           # --source arco (ARCO-ERA5 is Zarr v2; zarr 3 reads it and is what current xarray expects)
+  - gcsfs

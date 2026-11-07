@@ -12,6 +12,21 @@ on:
         description: "Run BARD after the build"
         default: false
         type: boolean
+      months:
+        description: 'Months to fetch, e.g. "1-12", "3" or "1,2,5-7"'
+        default: "1-12"
+        type: string
+      source:
+        description: "ERA5 source: arco (public ARCO-ERA5 on Google Cloud, no queue) or cds (Copernicus CDS API)"
+        default: arco
+        type: choice
+        options:
+          - arco
+          - cds
+      area:
+        description: 'Area N,W,S,E in degrees (W/E in -180..180); full circle example "-10,-180,-80,179.75"'
+        default: "-10,-180,-80,179.75"
+        type: string
       hours:
         description: "UTC hours to download"
         default: "00,06,12,18"
@@ -24,9 +39,18 @@ on:
 permissions:
   contents: read
 
+# One run per ref at a time: parallel dispatches would race on the CDS quota and the caches.
+concurrency:
+  group: teca-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   TECA_TAG: "6.0.0"
-  TECA_PREFIX: ${{ github.workspace }}/../teca-install
+  # Absolute path: actions/cache rejects paths containing "..".
+  TECA_PREFIX: /home/runner/teca-install
+  # Single-node runs: use the ob1 PML instead of UCX, which fails on hosted runners.
+  OMPI_MCA_pml: ob1
+  OMPI_MCA_osc: ^ucx
 
 defaults:
   run:
@@ -37,14 +61,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
           df -h /
 
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: tools/teca/environment.yml
           environment-name: teca
@@ -53,14 +77,14 @@ jobs:
 
       - name: Restore TECA install
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.TECA_PREFIX }}
-          key: teca-${{ env.TECA_TAG }}-${{ hashFiles('tools/teca/environment.yml') }}
+          key: teca-${{ env.TECA_TAG }}-generic-${{ hashFiles('tools/teca/environment.yml') }}
 
       - name: Restore ccache
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.ccache
           key: ccache-${{ env.TECA_TAG }}-${{ github.run_id }}
@@ -75,7 +99,13 @@ jobs:
 
       - name: Configure
         if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          # TECA defaults to -march=native, but the install is cached and reused on other
+          # runner CPUs ("Illegal instruction"). Setting the flags explicitly skips that default.
+          CXX_FLAGS: -fPIC -std=c++17 -Wall -Wextra -Wno-unknown-pragmas -O3 -march=x86-64-v2 -mtune=generic -fno-trapping-math -fno-math-errno -fno-signaling-nans
+          FC_FLAGS: -Wall -Wextra -Wno-conversion -Wno-compare-reals -DNDEBUG -O3 -march=x86-64-v2 -mtune=generic -fno-trapping-math -fno-signaling-nans -fno-math-errno
         run: |
+          set -o pipefail
           mkdir -p teca-logs "$RUNNER_TEMP/teca-build"
           cd "$RUNNER_TEMP/teca-build"
           cmake "$RUNNER_TEMP/teca-src" \
@@ -85,8 +115,9 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_Fortran_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_FLAGS="$CXX_FLAGS" -DCMAKE_Fortran_FLAGS="$FC_FLAGS" \
             -DBUILD_TESTING=OFF -DREQUIRE_TECA_DATA=FALSE \
-            -DREQUIRE_MPI=FALSE -DTECA_HAS_MPI=OFF -DREQUIRE_NETCDF_MPI=FALSE \
+            -DREQUIRE_MPI=TRUE -DREQUIRE_NETCDF_MPI=FALSE \
             -DREQUIRE_PYTHON=FALSE -DTECA_HAS_PYTHON=OFF \
             -DREQUIRE_OPENSSL=FALSE \
             -DREQUIRE_NETCDF=TRUE -DREQUIRE_UDUNITS=TRUE -DREQUIRE_BOOST=TRUE \
@@ -110,7 +141,7 @@ jobs:
 
       - name: Save ccache
         if: always() && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.ccache
           key: ccache-${{ env.TECA_TAG }}-${{ github.run_id }}
@@ -126,7 +157,7 @@ jobs:
           } | tee teca-logs/verify.txt
           grep -q input_regex teca-logs/verify.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: teca-build-logs
@@ -139,9 +170,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: tools/teca/environment.yml
           environment-name: teca
@@ -149,13 +180,35 @@ jobs:
           init-shell: bash
 
       - name: Restore TECA install
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.TECA_PREFIX }}
-          key: teca-${{ env.TECA_TAG }}-${{ hashFiles('tools/teca/environment.yml') }}
+          key: teca-${{ env.TECA_TAG }}-generic-${{ hashFiles('tools/teca/environment.yml') }}
           fail-on-cache-miss: true
 
+      - name: Compute IVT cache key
+        id: ivtkey
+        env:
+          HOURS: ${{ inputs.hours }}
+          AREA: ${{ inputs.area }}
+        # The area is part of the key so different domains never mix. Add a version (ivt-v2-) when VARIABLES
+        # or the default AREA in fetch_era5_ivt.py change.
+        run: |
+          tag="${AREA// /}"
+          tag="${tag//,/_}"
+          tag="${tag//./p}"
+          echo "areatag=$tag" >> "$GITHUB_OUTPUT"
+          echo "prefix=ivt-${{ inputs.year }}-${HOURS//,/_}-a${tag}-" >> "$GITHUB_OUTPUT"
+
+      - name: Restore fetched IVT
+        uses: actions/cache/restore@v6
+        with:
+          path: data/ivt
+          key: ${{ steps.ivtkey.outputs.prefix }}${{ github.run_id }}
+          restore-keys: ${{ steps.ivtkey.outputs.prefix }}
+
       - name: Write CDS credentials
+        if: inputs.source == 'cds'
         env:
           CDSAPI_KEY: ${{ secrets.CDSAPI_KEY }}
         run: |
@@ -163,25 +216,47 @@ jobs:
           printf 'url: https://cds.climate.copernicus.eu/api\nkey: %s\n' "$CDSAPI_KEY" > ~/.cdsapirc
 
       - name: Fetch ERA5 and compute IVT
+        timeout-minutes: 180
         env:
           YEAR: ${{ inputs.year }}
           HOURS: ${{ inputs.hours }}
+          MONTHS: ${{ inputs.months }}
+          SOURCE: ${{ inputs.source }}
+          AREA: ${{ inputs.area }}
         run: |
+          set -o pipefail
           mkdir -p teca-logs data/ivt
-          python tools/teca/fetch_era5_ivt.py --year "$YEAR" --hours "$HOURS" --out data/ivt \
-            2>&1 | tee teca-logs/fetch.log
+          python tools/teca/fetch_era5_ivt.py --year "$YEAR" --hours "$HOURS" --months "$MONTHS" \
+            --source "$SOURCE" --area="${AREA// /}" --out data/ivt 2>&1 | tee teca-logs/fetch.log
           du -sh data/ivt | tee -a teca-logs/fetch.log
+
+      - name: Drop partial downloads
+        if: always()
+        run: rm -rf data/ivt/raw_*
+
+      - name: Save fetched IVT
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: data/ivt
+          key: ${{ steps.ivtkey.outputs.prefix }}${{ github.run_id }}
 
       - name: Run BARD
         env:
           YEAR: ${{ inputs.year }}
+          AREA: ${{ inputs.area }}
         run: |
+          set -o pipefail
           mkdir -p bard-out
+          # Wrap around the globe only when the area spans the full circle (E - W >= 359).
+          IFS=, read -r _ west _ east <<< "${AREA// /}"
+          periodic=$(awk -v w="$west" -v e="$east" 'BEGIN { print (e - w >= 359) ? 1 : 0 }')
+          echo "periodic_in_x=$periodic (area $AREA)" | tee -a teca-logs/bard.log
           export LD_LIBRARY_PATH="$TECA_PREFIX/lib:$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
           "$TECA_PREFIX/bin/teca_bayesian_ar_detect" \
             --input_regex "$GITHUB_WORKSPACE/data/ivt/ivt_${YEAR}-[0-9][0-9]\.nc" \
             --ivt IVT \
-            --periodic_in_x 0 \
+            --periodic_in_x "$periodic" \
             --segment_ar_probability \
             --output_file "$GITHUB_WORKSPACE/bard-out/bard_%t%.nc" \
             --file_layout monthly \
@@ -189,15 +264,19 @@ jobs:
             --verbose 1 \
             2>&1 | tee teca-logs/bard.log
           ls -lh bard-out | tee -a teca-logs/bard.log
+          if ! compgen -G "bard-out/bard_*.nc" > /dev/null; then
+            echo "::error::BARD produced no bard_*.nc files in bard-out/"
+            exit 1
+          fi
 
       - name: Remove credentials
         if: always()
         run: rm -f ~/.cdsapirc
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: bard-${{ inputs.year }}
+          name: bard-${{ inputs.year }}-${{ steps.ivtkey.outputs.areatag }}
           path: |
             bard-out/
             teca-logs/

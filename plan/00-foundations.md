@@ -1,6 +1,6 @@
 # Fase 0 — Bases
 
-Estado: en curso (falta F0.2 CI verde en un PR y F0.9 corrida en GitHub Actions) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
+Estado: hecha (F0.2: CI verde en el PR #7, 2026-11-07) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
 
 ## Objetivo
 
@@ -34,4 +34,9 @@ Unit: manifiesto, carga del relieve, store de tema, fase ENSO. e2e: shell, tema,
 
 ## Abierto
 
-- Si TECA no instala (F0.9), Opus decide: reintento con contenedor o detector propio en la fase 1.
+- F0.9 hecha (2026-11-07): run 42296570089 de `.github/workflows/teca.yml` corrió BARD (TECA 6.0.0) sobre ERA5 2023, 6 h,
+  hemisferio sur completo (`-10,-180,-80,179.75`), fuente ARCO-ERA5 (CDS rechaza pedidos por cola llena). Salida: 12 archivos
+  mensuales, 1460 pasos, artefacto `bard-2023--10_-180_-80_179p75` (vence 2027-02-04). En una caja sobre Neuquén (36–42S,
+  68–72O) hay 62 pasos con río atmosférico (prob. > 0.67), casi todos en invierno (jun 24, ago 15, sep 9, jul 6). BARD
+  necesita dominio amplio: en la ventana regional `-15,-95,-60,-40` nunca pasa de ~0.39. Para la fase 1: correr en el
+  hemisferio y recortar después; BARD tarda ~2,5 h por año en el runner (correr por mes para ver avance).
