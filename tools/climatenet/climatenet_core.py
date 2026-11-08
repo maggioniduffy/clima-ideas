@@ -131,14 +131,7 @@ def extract_state_dict(obj: dict) -> dict:
     return obj
 
 
-def config_name_for(weights_name: str) -> str:
-    """Config published next to a weights file: weights.pth -> config.json, weights_new.pth -> config_new.json.
-
-    The NERSC folder climatenet_new/model/ holds two pairs (config.json + weights.pth, config_new.json +
-    weights_new.pth); the suffix after "weights" ties each config to its weights.
-    """
-    stem = weights_name.rsplit(".", 1)[0]
-    return "config" + stem[len("weights"):] + ".json" if stem.startswith("weights") else "config.json"
+from fetch_weights import config_name_for  # noqa: E402,F401  (re-export; stdlib only)
 
 
 def model_inputs_from_config(cfg: dict) -> tuple[dict, int]:
