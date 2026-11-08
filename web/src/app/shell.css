@@ -22,6 +22,14 @@
   border-bottom: 1px solid var(--border);
 }
 
+.topbar-actions { display: flex; align-items: center; gap: var(--space-2); }
+.drawer-toggle, .drawer-scrim { display: none; }
+.drawer-toggle {
+  height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--border);
+  background: var(--raised); color: var(--text); cursor: pointer; font: inherit; font-size: 12px;
+}
+.drawer-toggle[aria-expanded="true"] { border-color: var(--accent); font-weight: 600; }
+
 .shell-topbar h1 {
   margin: 0;
   font-size: 15px;
@@ -141,3 +149,34 @@
 .map-legend-source { margin-top: 4px; color: var(--text-muted); font-size: 10px; }
 .inspector-meta { grid-template-columns: auto minmax(0, 1fr); }
 .inspector-meta dd:not(.kv-wide) { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+
+/* Narrow screens (<= 800 px): the map takes the full width; layer panel and inspector become drawers over it. */
+@media (max-width: 800px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 48px minmax(0, 1fr) 136px;
+    grid-template-areas: "top" "canvas" "time";
+    position: relative;
+  }
+  .shell-topbar { gap: var(--space-2); padding: 0 var(--space-3); }
+  .shell-topbar h1 { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drawer-toggle { display: inline-block; }
+  .shell-layers, .shell-inspector {
+    position: fixed; top: 48px; bottom: 136px; z-index: 5; width: min(320px, 86vw); box-sizing: border-box;
+    visibility: hidden; transition: transform 0.18s ease, visibility 0.18s;
+  }
+  .shell-layers { left: 0; transform: translateX(-100%); border-right: 1px solid var(--border); }
+  .shell-inspector { right: 0; transform: translateX(100%); border-left: 1px solid var(--border); }
+  .shell[data-drawer="layers"] .shell-layers,
+  .shell[data-drawer="inspector"] .shell-inspector { visibility: visible; transform: none; }
+  .shell[data-drawer] .drawer-scrim {
+    display: block; position: fixed; inset: 48px 0 136px; z-index: 4; border: 0; padding: 0;
+    background: var(--bg); opacity: 0.55; cursor: default;
+  }
+  .replay-time { min-width: 0; font-size: 11px; }
+  .map-legend { width: 170px; right: var(--space-2); bottom: var(--space-2); font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-layers, .shell-inspector { transition: none; }
+}

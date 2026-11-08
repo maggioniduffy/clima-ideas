@@ -9,8 +9,8 @@ const STRIDE = 3;
 export const RELIEF_EXAGGERATION = 3;
 /** Grid step (degrees) of relief.bin when it cannot be inferred (relief.meta.json `step`). */
 export const RELIEF_STEP = 0.005;
-/** Elevation (m) of each `tokens.reliefRamp` stop: lowland, steppe, foothills, mountains, high peaks, snow line. */
-export const RELIEF_STOPS_M = [0, 500, 1000, 1800, 2800, 4000] as const;
+/** Elevation (m) of each `tokens.reliefRamp` stop (slate ramp): lowland, mid, high, peaks. */
+export const RELIEF_STOPS_M = [0, 800, 1800, 3000] as const;
 /** Hillshade: sun from the NW (azimuth clockwise from north) at 45 degrees; slopes exaggerated for shading only. */
 export const SUN_AZIMUTH_DEG = 315;
 export const SUN_ALTITUDE_DEG = 45;
@@ -36,7 +36,7 @@ const hex = (h: string): [number, number, number] => [
   parseInt(h.slice(5, 7), 16),
 ];
 
-/** Hypsometric tint for an elevation in meters: piecewise-linear over RELIEF_STOPS_M, theme-specific tokens. */
+/** Slate tint for an elevation in meters: piecewise-linear over RELIEF_STOPS_M, theme-specific tokens. */
 export function reliefColor(elevM: number, theme: Theme): [number, number, number] {
   const stops = tokens.reliefRamp[theme].map(hex);
   const last = RELIEF_STOPS_M.length - 1;
@@ -101,7 +101,7 @@ export function reliefColors(relief: ReliefData, theme: Theme): Uint8Array {
 /**
  * Parse relief.bin. Points sit on a regular lon/lat grid (not in a single row order: tiles are concatenated), so the
  * grid is rebuilt by index to compute the hillshade from neighbouring elevations; only then are points outside
- * `province` (when given) dropped.
+ * `province` (when given; the province + 10 km ring, see provinceClip.ts) dropped.
  */
 export function parseRelief(buffer: ArrayBuffer, province: readonly LonLat[] | null = null, step = RELIEF_STEP): ReliefData {
   if (buffer.byteLength % (STRIDE * 4) !== 0) throw new Error("relief.bin: size is not a multiple of the stride");

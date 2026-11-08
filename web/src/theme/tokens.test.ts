@@ -24,13 +24,13 @@ test.each(["light", "dark"] as const)("%s neutrals match tokens.css", (theme) =>
 
 test.each(["light", "dark"] as const)("%s IVT ramp matches tokens.css", (theme) => {
   const b = block(`:root[data-theme="${theme}"]`);
-  expect(tokens.ivtRamp[theme]).toHaveLength(6);
+  expect(tokens.ivtRamp[theme]).toHaveLength(4);
   tokens.ivtRamp[theme].forEach((v, i) => expect(b[`--ivt-${i}`]).toBe(v));
 });
 
 test.each(["light", "dark"] as const)("%s relief ramp matches tokens.css", (theme) => {
   const b = block(`:root[data-theme="${theme}"]`);
-  expect(tokens.reliefRamp[theme]).toHaveLength(6);
+  expect(tokens.reliefRamp[theme]).toHaveLength(4);
   tokens.reliefRamp[theme].forEach((v, i) => expect(b[`--relief-${i}`]).toBe(v));
 });
 

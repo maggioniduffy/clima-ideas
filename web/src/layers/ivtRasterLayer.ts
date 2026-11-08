@@ -10,7 +10,7 @@ export interface CellRef {
 }
 
 /** IVT raster opacity while relief is drawn below it, so terrain reads through. */
-export const IVT_OVER_RELIEF_OPACITY = 0.65;
+export const IVT_OVER_RELIEF_OPACITY = 0.5;
 
 interface Props {
   layerId: string;

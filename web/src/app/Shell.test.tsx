@@ -60,3 +60,20 @@ test("activating a fetched layer adds the deck layer and shows manifest source/p
   fireEvent.click(screen.getByTestId("layer-toggle-a"));
   expect(screen.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", "");
 });
+
+test("drawer toggles expose aria-expanded/aria-controls and open one panel at a time", () => {
+  render(<Shell />);
+  const layers = screen.getByTestId("drawer-toggle-layers");
+  const inspector = screen.getByTestId("drawer-toggle-inspector");
+  expect(layers).toHaveAttribute("aria-controls", "layer-panel");
+  expect(inspector).toHaveAttribute("aria-controls", "inspector-panel");
+  expect(layers).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(layers);
+  expect(layers).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByTestId("shell")).toHaveAttribute("data-drawer", "layers");
+  fireEvent.click(inspector);
+  expect(layers).toHaveAttribute("aria-expanded", "false");
+  expect(inspector).toHaveAttribute("aria-expanded", "true");
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(screen.getByTestId("shell")).not.toHaveAttribute("data-drawer");
+});

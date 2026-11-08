@@ -3,6 +3,7 @@ import type { Layer } from "@deck.gl/core";
 import { fetchFrames, fetchLayerData, type ArEvent, type FramesIndex, type LayerManifest } from "../api/client";
 import { useTheme } from "../theme/themeStore";
 import { frameTime, frameValue, gridCells, parseFrames } from "./arEvents";
+import { clipCells, useClipRing } from "./provinceClip";
 import { buildIvtRasterLayer, type CellRef } from "./ivtRasterLayer";
 
 /** Milliseconds between replay frames (one frame = one hour). */
@@ -112,6 +113,12 @@ export function useArEvents(layer: LayerManifest | undefined, active: boolean, o
   const step = useCallback((d: number) => seek(frame + d), [seek, frame]);
 
   const cells = useMemo(() => (index ? gridCells(index.grid) : []), [index]);
+  // the raster is drawn only inside the province + 10 km band (undefined while the outline loads, null if unavailable)
+  const clipRing = useClipRing(active);
+  const drawCells = useMemo(
+    () => (clipRing === undefined ? [] : clipRing ? clipCells(cells, clipRing) : cells),
+    [cells, clipRing],
+  );
 
   const deckLayers = useMemo((): Layer[] => {
     if (!layerId || !index || !selectedEventId || !frames) return [];
@@ -120,7 +127,7 @@ export function useArEvents(layer: LayerManifest | undefined, active: boolean, o
         layerId,
         eventId: selectedEventId,
         grid: index.grid,
-        cells,
+        cells: drawCells,
         frames,
         frame,
         theme,
@@ -130,7 +137,7 @@ export function useArEvents(layer: LayerManifest | undefined, active: boolean, o
         onPick: setPicked,
       }),
     ];
-  }, [layerId, index, selectedEventId, frames, cells, frame, theme, picked, opacity]);
+  }, [layerId, index, selectedEventId, frames, drawCells, frame, theme, picked, opacity]);
 
   const startIso = entry?.start;
   const timeMs = startIso ? frameTime(startIso, frame, index?.step_hours) : null;

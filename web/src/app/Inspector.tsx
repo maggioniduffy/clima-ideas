@@ -16,7 +16,7 @@ interface Props {
 export function Inspector({ layer, features, selectedPointId, onSelectPoint, event }: Props) {
   const point = features.find((f) => f.id === selectedPointId) ?? null;
   return (
-    <aside className="shell-inspector" data-testid="inspector">
+    <aside className="shell-inspector" id="inspector-panel" data-testid="inspector">
       {!layer ? (
         <p className="empty">{es.inspector.empty}</p>
       ) : (

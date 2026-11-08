@@ -4,14 +4,7 @@ import { fetchLayerBinary, fetchLayerData, fetchLayers, type LayerManifest, type
 import { buildPointsLayer } from "./pointsLayer";
 import { useTheme } from "../theme/themeStore";
 import { buildReliefLayer, parseRelief, type ReliefData } from "./reliefLayer";
-import { parseRing, PROVINCE_URL, type LonLat } from "./referenceLayers";
-
-/** Province outer ring used to clip the relief; null when it cannot be fetched (relief then shows unclipped). */
-const fetchProvinceRing = (): Promise<LonLat[] | null> =>
-  fetch(PROVINCE_URL)
-    .then((r) => (r.ok ? r.json() : null))
-    .then(parseRing)
-    .catch(() => null);
+import { fetchClipRing } from "./provinceClip";
 
 /** Binary point-cloud layers: kind "points" whose manifest lists a .bin file. */
 const binaryFile = (l: LayerManifest) => (l.kind === "points" ? l.files.find((f) => f.endsWith(".bin")) : undefined);
@@ -57,7 +50,7 @@ export function useLayers() {
         const failed = () => setActiveIds((prev) => new Set([...prev].filter((x) => x !== id)));
         if (bin) {
           if (!reliefs[id]) {
-            Promise.all([fetchLayerBinary(id, bin), fetchProvinceRing()])
+            Promise.all([fetchLayerBinary(id, bin), fetchClipRing()])
               .then(([b, ring]) => setReliefs((prev) => ({ ...prev, [id]: parseRelief(b, ring) })))
               .catch(failed);
           }
