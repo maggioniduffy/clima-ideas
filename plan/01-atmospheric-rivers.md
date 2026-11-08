@@ -1,6 +1,6 @@
 # Fase 1 — Ríos atmosféricos en la cordillera
 
-Estado: casi hecha · Depende de: 0 · Refs: `docs/architecture.md` (contrato de capas)
+Estado: hecha · Depende de: 0 · Refs: `docs/architecture.md` (contrato de capas)
 
 ## Pregunta
 
@@ -18,7 +18,7 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 | F1.2 ✅ | Detección con TECA BARD en jobs paralelos (matriz de GitHub Actions por año o por mes; BARD tarda ~2,5 h por año en el hemisferio sur) | opencode corre, Opus valida | Máscara diaria de ríos atmosféricos |
 | F1.3 ✅ | Catálogo: eventos que tocan el polígono de cordillera (fecha, duración, IVT máx., isoterma 0 °C) | Sonnet | Parquet + unit tests con máscara sintética |
 | F1.4 ✅ | Fracción de días de lluvia extrema (p99) que coinciden con un evento | opencode | Informe con cifras, fuente y período |
-| F1.5 | Contraste con literatura de ríos atmosféricos en los Andes | opencode | Tabla: nuestro conteo vs. publicado |
+| F1.5 ✅ | Contraste con literatura de ríos atmosféricos en los Andes | opencode | Tabla: nuestro conteo vs. publicado |
 | F1.6 ✅ | Capa del visor: eventos en la línea de tiempo + replay de IVT por hora | Sonnet | e2e: elegir evento, reproducir, inspeccionar |
 | F1.7 ✅ | ML (media): detector preentrenado tipo ClimateNet vs. BARD | opencode corre, Sonnet integra | Acuerdo entre métodos medido; opcional |
 | F1.8 ✅ | Ríos atmosféricos por fase ENSO (F0.10): conteo, IVT y lluvia por estación del año; test de permutación | opencode analiza, Sonnet codifica el test | Tabla Niño/Neutro/Niña con p-valor y n de años + unit del test |
@@ -37,8 +37,11 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
 - F1.4 hecha: 63,3 % de los días ≥ p99 (35,5 mm/día, media del polígono) coinciden con un RA (IC 55,8–70,2 %), tasa base
   4,2 %, razón 15,2; p95: 35,3 %; por celda: 70,8 % (`reports/01/F1.4.md`). Umbral p99 confirmado como definición
   principal; p95 y por celda quedan como sensibilidad.
-- F1.5 parcial: `reports/01/F1.5.md`, columna "nuestro valor" completa donde hay cifra comparable; ningún estudio
-  verificado en fuente primaria (la red de la sesión no llega a doi.org ni a las revistas).
+- F1.5 hecha (2026-11-08, entorno `clima-ideas` con acceso a doi.org y revistas): 4 de 7 estudios verificados en texto
+  completo (Viale et al. 2018, Valenzuela y Garreaud 2019, Viale y Nuñez 2011, Saavedra et al. 2020); Guan y Waliser
+  2015, Rutz et al. 2019 y Campos y Rondanelli 2023 siguen sin verificar (Wiley responde 403). Comparación: ≈ 15 días/año
+  con RA vs. 15–20 al este de los Andes al sur de 35° S (Viale 2018); 63,3 % de extremos con RA vs. 27–70 % en Chile
+  centro-sur con umbral ≥ 35 mm/día (Valenzuela y Garreaud 2019).
 - F1.6 hecha en código y con datos: capa `ar-events-layer` (480 eventos, 8538 frames, 42 MB). Falta revisar escala
   (satura en 800 kg m-1 s-1) y contraste con datos reales en el visor.
 - F1.7 hecha para 2023 (run 42503142531): ClimateNet (`climatenet_new/model/weights.pth`) vs. BARD kappa 0,18, peor que
