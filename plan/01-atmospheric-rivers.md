@@ -14,7 +14,7 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
-| F1.1 | Script de descarga ERA5 desde ARCO-ERA5 (Zarr público en Google Cloud, sin cola ni clave; `tools/teca/fetch_era5_ivt.py --source arco`) por recorte y variables, idempotente | Sonnet escribe, opencode corre | Zarr completo en `data/raw/era5/` |
+| F1.1 ✅ | Script de descarga ERA5 desde ARCO-ERA5 (Zarr público en Google Cloud, sin cola ni clave; `tools/teca/fetch_era5_ivt.py --source arco`) por recorte y variables, idempotente | Sonnet escribe, opencode corre | Zarr completo en `data/raw/era5/` |
 | F1.2 | Detección con TECA BARD en jobs paralelos (matriz de GitHub Actions por año o por mes; BARD tarda ~2,5 h por año en el hemisferio sur) | opencode corre, Opus valida | Máscara diaria de ríos atmosféricos |
 | F1.3 | Catálogo: eventos que tocan el polígono de cordillera (fecha, duración, IVT máx., isoterma 0 °C) | Sonnet | Parquet + unit tests con máscara sintética |
 | F1.4 | Fracción de días de lluvia extrema (p99) que coinciden con un evento | opencode | Informe con cifras, fuente y período |
@@ -29,10 +29,17 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
 
 ## Avance
 
-- F1.1 código listo (2026-11-08): `clima-nqn era5 fetch` + workflow `era5.yml` (un job por año, hasta 20 en paralelo,
-  64 lecturas concurrentes). Caja `NEUQUEN_BOX` -34,-74,-43,-66; horario; `viwve`, `viwvn`, `tp`, `deg0l`. Prueba
-  real: enero 2023 a 2 horas/día, 62 pasos, ~80 MB/s en red. Año completo estimado ~15 min (sin verificar en Actions).
-  Falta: `gh workflow run era5.yml -f years=1980-2025`, bajar artefactos y `clima-nqn era5 combine`.
+- F1.1 hecha (2026-11-08): run 42437929137 de `era5.yml`, 1980–2025, 46 jobs verdes en 17 min. Artefactos
+  `era5-neuquen-<año>` (~100 MB c/u, ~4,6 GB total, vencen 2027-02-06): Zarr horario de `viwve`, `viwvn`, `tp`,
+  `deg0l` sobre `NEUQUEN_BOX` -34,-74,-43,-66, fuente ARCO-ERA5 (CC-BY 4.0). Cada job pasa el chequeo de completitud
+  (eje de tiempo y variables). No se revisó el contenido fuera de Actions (esta sesión no llega al almacenamiento de
+  artefactos): F1.3/F1.4 deben bajarlos dentro de Actions (`actions/download-artifact` con `run-id`).
+- F1.3 código listo (2026-11-08): `clima-nqn ar catalog` (`stages/ar/catalog.py`) + workflow `ar-catalog.yml`, que
+  baja los artefactos de BARD y ERA5 por run id. Evento: pasos BARD de 6 h consecutivos con `ar_probability` ≥ 0,67 en
+  alguna celda del polígono de cordillera (rectángulo 71,95–70 O, 36–41,1 S, aproximación sin verificar). Por evento:
+  inicio, fin, duración, prob. máx., fracción de área, IVT máx. (valor, hora, celda), isoterma 0 °C máx. y media, lluvia
+  media acumulada (mm) y fase ENSO del mes de inicio. 22 unit tests con datos sintéticos. Falta: correr sobre el run
+  de BARD 1980–2025.
 - F1.2 código listo (2026-11-08): `teca.yml` con input `years` (matriz por año) y recorte a Neuquén con
   `tools/teca/crop_bard.py` (artefacto `bard-neuquen-<año>`). Falta: corrida 1980–2025 y validar el recorte con salida
   real de BARD.

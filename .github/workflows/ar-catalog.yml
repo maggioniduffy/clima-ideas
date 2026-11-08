@@ -1,0 +1,76 @@
+# Atmospheric-river event catalog (plan/01, F1.3). Manual only.
+# Downloads the BARD crops (teca.yml run) and the regional ERA5 stores (era5.yml run) from earlier
+# runs, builds data/interim/ar/events.parquet and uploads it as artifact `ar-events` (+ CSV copy).
+name: AR event catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      bard_run_id:
+        description: "Run id of the teca.yml run that produced bard-neuquen-<year> artifacts"
+        required: true
+      era5_run_id:
+        description: "Run id of the era5.yml run that produced era5-neuquen-<year> artifacts"
+        default: "42437929137"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - name: Install backend
+        working-directory: backend
+        run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          run-id: ${{ inputs.bard_run_id }}
+          github-token: ${{ github.token }}
+          pattern: bard-neuquen-*
+          path: bard
+      - uses: actions/download-artifact@v7
+        with:
+          run-id: ${{ inputs.era5_run_id }}
+          github-token: ${{ github.token }}
+          pattern: era5-neuquen-*
+          path: era5-artifacts
+      - name: Arrange ERA5 stores as era5/<year>.zarr
+        run: |
+          # each artifact unpacks into era5-artifacts/era5-neuquen-<year>/ holding the zarr contents
+          mkdir -p era5
+          for d in era5-artifacts/era5-neuquen-*/; do
+            year="${d%/}"
+            year="${year##*-}"
+            mv "$d" "era5/${year}.zarr"
+          done
+          ls era5
+          find bard -name 'bard_neuquen_*.nc' | sort | head -n 100
+      - name: Fetch ENSO index (ONI) for enso_phase
+        working-directory: backend
+        run: uv run clima-nqn enso fetch
+      - name: Build catalog
+        working-directory: backend
+        run: >-
+          uv run clima-nqn ar catalog
+          --bard-dir ../bard --era5-dir ../era5
+          --out data/interim/ar/events.parquet
+      - name: CSV copy
+        working-directory: backend
+        run: >-
+          uv run python -c
+          "import pandas as pd; pd.read_parquet('data/interim/ar/events.parquet').to_csv('data/interim/ar/events.csv', index=False)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ar-events
+          path: |
+            backend/data/interim/ar/events.parquet
+            backend/data/interim/ar/events.csv
+          retention-days: 90
+          if-no-files-found: error
