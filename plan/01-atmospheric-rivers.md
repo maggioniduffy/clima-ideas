@@ -56,6 +56,17 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   inspector con campos del evento, fuente, período y valor de IVT por celda. e2e con capa falsa: 4/4. Corre en
   `ar-catalog.yml` (artefacto `ar-events-layer`). Falta: correr con datos reales y revisar escala (satura en
   800 kg m-1 s-1) y contraste del raster.
+- F1.7 código listo (2026-11-08), sin correr el modelo: `tools/climatenet/` (CGNet de github.com/andregraubner/ClimateNet,
+  commit 474bb96, MIT; entradas TMQ, U850, V850, PSL desde ARCO-ERA5, regrilla a 768x1152), baseline simple IVT ≥ 250
+  kg m-1 s-1, comparación con BARD (`python -m clima_nqn.stages.ar.compare`: tabla de contingencia, aciertos, falsas
+  alarmas, kappa, IoU por celda, por estación) y workflow `climatenet.yml`. Los pesos no tienen URL de archivo en el repo
+  (solo el portal de NERSC, bloqueado desde la sesión): el workflow lista el portal y falla claro si no hay un único
+  `.pth`. Sin verificar: pesos, grilla de entrenamiento, ruta del modelo (torch no se pudo instalar acá).
+- F1.8 código listo (2026-11-08): `clima-nqn ar enso` (`stages/ar/enso.py`), corre en `ar-catalog.yml` y sube
+  `F1.8.md` + `F1.8.json`. Por estación-año (DJF con diciembre del año anterior): n eventos, días con RA, IVT, fracción
+  de lluvia por RA; fase ENSO por ONI medio de la estación (umbrales de `io/enso.py`). Test de permutación Niño−Niña
+  (bilateral, p = (k+1)/(n+1)) y de 3 grupos (F de ANOVA), p ajustado por Benjamini-Hochberg; "diferencia sostenida"
+  solo con p < 0,05. 12 unit tests sintéticos. Falta: correr con datos reales.
 - F1.2 código listo (2026-11-08): `teca.yml` con input `years` (matriz por año) y recorte a Neuquén con
   `tools/teca/crop_bard.py` (artefacto `bard-neuquen-<año>`). Falta: corrida 1980–2025 y validar el recorte con salida
   real de BARD.
