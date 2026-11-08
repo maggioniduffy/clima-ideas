@@ -45,6 +45,11 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   días ≥ p99 de todos los días; sensibilidad: p95, p99 por celda sobre días húmedos (≥ 1 mm), ventana ±1 día. Baseline:
   tasa base de días con río atmosférico (cociente frac/tasa base), IC de Wilson 95 %, por estación. 17 unit tests
   sintéticos. Falta: correr y pasar el informe a `reports/01/F1.4.md`.
+- F1.5 parcial (2026-11-08): `reports/01/F1.5.md`, 9 estudios en tabla, **ninguno verificado en fuente primaria**
+  (la red de la sesión no llega a doi.org ni a las revistas; cifras de resúmenes del buscador, marcadas así). Sin
+  estudios con cifras para Neuquén/Comahue. Más comparables: ~50 % de lluvia diaria extrema con RA en Chile
+  centro-sur (Valenzuela y Garreaud 2019) y 40–55 % de la lluvia anual por RA en la costa 37–47 S (Viale et al.
+  2018). Falta: verificar en fuente primaria y completar la columna "nuestro valor" tras F1.3/F1.4.
 - F1.2 código listo (2026-11-08): `teca.yml` con input `years` (matriz por año) y recorte a Neuquén con
   `tools/teca/crop_bard.py` (artefacto `bard-neuquen-<año>`). Falta: corrida 1980–2025 y validar el recorte con salida
   real de BARD.
