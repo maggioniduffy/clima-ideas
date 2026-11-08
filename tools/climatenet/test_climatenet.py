@@ -198,3 +198,55 @@ def test_extract_state_dict_keeps_bare_and_strips_module_prefix():
     bare = {"a.weight": 1}
     assert extract_state_dict(bare) == bare
     assert extract_state_dict({"module.a.weight": 1}) == {"a.weight": 1}
+
+
+def test_config_name_pairs_with_weights():
+    from climatenet_core import config_name_for
+
+    assert config_name_for("weights.pth") == "config.json"
+    assert config_name_for("weights_new.pth") == "config_new.json"
+    assert config_name_for("model.pt") == "config.json"
+
+
+def test_model_inputs_from_config_reads_stats_and_ar_class():
+    from climatenet_core import FIELDS, model_inputs_from_config
+
+    cfg = {
+        "fields": {k: {"mean": i + 1.0, "std": 2.0} for i, k in enumerate(FIELDS)},
+        "labels": ["Background", "Tropical Cyclone", "Atmospheric River"],
+    }
+    stats, ar = model_inputs_from_config(cfg)
+    assert ar == 2 and stats["U850"] == {"mean": 2.0, "std": 2.0}
+
+
+def test_model_inputs_from_config_rejects_other_fields_or_labels():
+    import pytest
+    from climatenet_core import model_inputs_from_config
+
+    with pytest.raises(ValueError, match="fields"):
+        model_inputs_from_config({"fields": {"tcwv": {}, "u": {}}, "labels": ["Atmospheric River"]})
+    with pytest.raises(ValueError, match="Atmospheric River"):
+        cfg = {"fields": {k: {"mean": 0, "std": 1} for k in ("TMQ", "U850", "V850", "PSL")}, "labels": ["AR"]}
+        model_inputs_from_config(cfg)
+
+
+def test_check_cgnet_state_reports_architecture_and_channels():
+    import numpy as np
+    import pytest
+    from climatenet_core import check_cgnet_state
+
+    expected = {"level1_0.conv.weight", "classifier.0.conv.weight"}
+    good = {"level1_0.conv.weight": np.zeros((32, 4, 3, 3)), "classifier.0.conv.weight": np.zeros(1)}
+    check_cgnet_state(good, expected, 4)
+    with pytest.raises(ValueError, match="not a CGNetModule"):
+        check_cgnet_state({"xception_features.conv1.weight": 0}, expected, 4)
+    with pytest.raises(ValueError, match="input channels"):
+        check_cgnet_state({**good, "level1_0.conv.weight": np.zeros((32, 16, 3, 3))}, expected, 4)
+
+
+def test_check_cgnet_state_ignores_num_batches_tracked():
+    import numpy as np
+    from climatenet_core import check_cgnet_state
+
+    expected = {"level1_0.conv.weight", "level1_0.bn.num_batches_tracked"}
+    check_cgnet_state({"level1_0.conv.weight": np.zeros((32, 4, 3, 3))}, expected, 4)

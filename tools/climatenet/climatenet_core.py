@@ -129,3 +129,51 @@ def extract_state_dict(obj: dict) -> dict:
     if obj and all(k.startswith("module.") for k in obj):
         obj = {k[len("module."):]: v for k, v in obj.items()}
     return obj
+
+
+def config_name_for(weights_name: str) -> str:
+    """Config published next to a weights file: weights.pth -> config.json, weights_new.pth -> config_new.json.
+
+    The NERSC folder climatenet_new/model/ holds two pairs (config.json + weights.pth, config_new.json +
+    weights_new.pth); the suffix after "weights" ties each config to its weights.
+    """
+    stem = weights_name.rsplit(".", 1)[0]
+    return "config" + stem[len("weights"):] + ".json" if stem.startswith("weights") else "config.json"
+
+
+def model_inputs_from_config(cfg: dict) -> tuple[dict, int]:
+    """Normalisation stats and AR class id from a ClimateNet config.json; raises ValueError if it does not fit.
+
+    The run reads TMQ, U850, V850 and PSL from ERA5 in that order, so the config must name exactly those fields
+    in that order and label one class "Atmospheric River".
+    """
+    fields = list(cfg.get("fields", {}))
+    if tuple(fields) != FIELDS:
+        raise ValueError(f"config fields {fields} differ from the ERA5 inputs {list(FIELDS)}")
+    labels = list(cfg.get("labels", []))
+    if "Atmospheric River" not in labels:
+        raise ValueError(f"config labels {labels} have no 'Atmospheric River' class")
+    stats = {k: {"mean": float(cfg["fields"][k]["mean"]), "std": float(cfg["fields"][k]["std"])} for k in FIELDS}
+    return stats, labels.index("Atmospheric River")
+
+
+def check_cgnet_state(state: dict, expected_keys: set, channels: int) -> None:
+    """Raise ValueError with a short, readable diagnosis if ``state`` is not a CGNetModule state_dict.
+
+    ``expected_keys`` are the model's own keys. The input channel count is read from the first convolution
+    (level1_0.conv.weight has shape [32, channels, 3, 3]).
+    """
+    # BatchNorm's num_batches_tracked is a counter, absent from weights saved by old torch; load_state_dict copes.
+    def core(ks):
+        return {k for k in ks if not k.endswith("num_batches_tracked")}
+
+    keys, expected_keys = core(state), core(expected_keys)
+    missing, unexpected = sorted(expected_keys - keys), sorted(keys - expected_keys)
+    if missing or unexpected:
+        raise ValueError(
+            f"weights are not a CGNetModule state_dict: {len(missing)} keys missing (e.g. {missing[:3]}), "
+            f"{len(unexpected)} unexpected (e.g. {unexpected[:3]})"
+        )
+    shape = tuple(getattr(state["level1_0.conv.weight"], "shape", ()))
+    if len(shape) != 4 or shape[1] != channels:
+        raise ValueError(f"first convolution expects {shape[1] if len(shape) == 4 else '?'} input channels, run uses {channels}")
