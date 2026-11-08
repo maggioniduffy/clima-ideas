@@ -46,7 +46,9 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   leyenda (satura en 1200 kg m-1 s-1), contorno provincial (Natural Earth 1:10m, dominio público), polígono de
   cordillera y marcador de Neuquén capital; inspector sin scroll a 1400x820.
 - Hallazgo del visor: el polígono de cordillera (71,95–70 O) se sale al oeste del límite provincial, sobre Chile, en
-  buena parte de la cordillera. Afecta F1.3/F1.4; refinarlo (recortar al límite provincial o usar relieve) queda abierto.
+  buena parte de la cordillera. Afecta F1.3/F1.4. Corregido: el polígono ahora es la provincia (Natural Earth 1:10m)
+  recortada al oeste de 70° O (`backend/src/clima_nqn/stages/ar/geo/`, 88 celdas BARD contra 140 del rectángulo);
+  los números de F1.3/F1.4 se rehacen con el catálogo re-corrido. Usar relieve (DEM) queda abierto.
 - F1.7 hecha para 2023 (run 42503142531): ClimateNet (`climatenet_new/model/weights.pth`) vs. BARD kappa 0,18, peor que
   el baseline IVT ≥ 250 (kappa 0,24); ClimateNet marca RA en 25,8 % de los pasos vs. 3,8 % de BARD y se parece más al
   umbral de IVT (kappa 0,54). El ML no mejora al baseline (`reports/01/F1.7.md`).

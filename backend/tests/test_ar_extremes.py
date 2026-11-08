@@ -5,12 +5,13 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from clima_nqn.stages.ar import extremes
+from clima_nqn.stages.ar import catalog, extremes
 
 # Same grid as test_ar_catalog: 40 cells inside the polygon, one far outside.
 LAT = -42.75 + 0.5 * np.arange(17)
 LON = -73.75 + 0.5 * np.arange(16)
 N_INSIDE = 40
+RECT = catalog.LEGACY_RECTANGLE  # the synthetic grid is laid out around the old rectangle
 OUT = (np.flatnonzero(LAT == -34.75)[0], np.flatnonzero(LON == -66.25)[0])
 IN = (np.flatnonzero(LAT == -38.25)[0], np.flatnonzero(LON == -70.75)[0])
 
@@ -44,7 +45,7 @@ def test_daily_boundary_stamp_midnight_belongs_to_previous_day(tmp_path):
         2001,
         {"2001-03-10 00:00": 0.010, "2001-03-10 01:00": 0.002, "2001-03-11 00:00": 0.004},
     )
-    mean, cells = extremes.daily_precip([p])
+    mean, cells = extremes.daily_precip([p], RECT)
     assert mean[pd.Timestamp("2001-03-09")] == pytest.approx(10.0, rel=1e-5)
     assert mean[pd.Timestamp("2001-03-10")] == pytest.approx(6.0, rel=1e-5)  # 01:00 and next 00:00
     assert mean[pd.Timestamp("2001-03-11")] == pytest.approx(0.0)
@@ -59,7 +60,7 @@ def test_daily_cross_year_uses_next_store_and_drops_incomplete_last_day(tmp_path
         2002,
         {"2002-01-01 00:00": 0.005, "2002-01-01 05:00": 0.001},
     )
-    mean, _ = extremes.daily_precip([a, b])
+    mean, _ = extremes.daily_precip([a, b], RECT)
     assert mean[pd.Timestamp("2001-12-31")] == pytest.approx(8.0, rel=1e-5)
     assert mean[pd.Timestamp("2002-01-01")] == pytest.approx(1.0, rel=1e-5)
     # 2002 store ends 2002-12-31 23:00 and there is no 2003 store: Dec 31 has 23 stamps
@@ -70,7 +71,7 @@ def test_daily_cross_year_uses_next_store_and_drops_incomplete_last_day(tmp_path
 
 def test_daily_without_next_store_drops_dec_31_and_first_midnight_is_ignored(tmp_path):
     p = make_store(tmp_path, 2001, {"2001-01-01 00:00": 0.5})
-    mean, _ = extremes.daily_precip([p])
+    mean, _ = extremes.daily_precip([p], RECT)
     assert mean.index[0] == pd.Timestamp("2001-01-01")
     assert mean.index[-1] == pd.Timestamp("2001-12-30")
     assert mean.iloc[0] == pytest.approx(0.0)  # the 00:00 stamp is Dec 31 2000
@@ -82,7 +83,7 @@ def test_polygon_mean_ignores_outside_cells(tmp_path):
         2001,
         {"2001-03-10 02:00": [(OUT[0], OUT[1], 5.0), (IN[0], IN[1], 0.040)]},
     )
-    mean, cells = extremes.daily_precip([p])
+    mean, cells = extremes.daily_precip([p], RECT)
     day = pd.Timestamp("2001-03-10")
     assert mean[day] == pytest.approx(1.0, rel=1e-5)  # 40 mm in 1 of 40 cells
     assert cells.loc[day].max() == pytest.approx(40.0, rel=1e-5)

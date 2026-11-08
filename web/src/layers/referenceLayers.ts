@@ -7,18 +7,6 @@ import { tokens } from "../theme/tokens";
 
 export type LonLat = [number, number];
 
-/**
- * Cordillera polygon used by the AR catalog to pick event cells (lon, lat).
- * Mirrors `CORDILLERA_POLYGON` in backend/src/clima_nqn/stages/ar/catalog.py (referenceLayers.test.ts checks it);
- * an approximation of the Neuquén cordillera, sin verificar.
- */
-export const CORDILLERA_POLYGON: LonLat[] = [
-  [-71.95, -36.0],
-  [-70.0, -36.0],
-  [-70.0, -41.1],
-  [-71.95, -41.1],
-];
-
 /** Neuquén capital (city marker). */
 export const NEUQUEN_CITY = { lon: -68.06, lat: -38.95 };
 
@@ -26,10 +14,16 @@ export const NEUQUEN_CITY = { lon: -68.06, lat: -38.95 };
 export const PROVINCE_URL = "/geo/neuquen-province.geojson";
 export const PROVINCE_SOURCE = "Natural Earth";
 
+/**
+ * Cordillera polygon used by the AR catalog to pick event cells: Neuquén (Natural Earth) west of 70° O. Generated
+ * by backend/src/clima_nqn/stages/ar/geo (`cordillera.geojson`, copied here; referenceLayers.test.ts checks they match).
+ */
+export const CORDILLERA_URL = "/geo/cordillera.geojson";
+
 export const closeRing = (ring: LonLat[]): LonLat[] => [...ring, ring[0]!];
 
 /** Outer ring of the first polygon feature of a GeoJSON FeatureCollection; null when the shape is unexpected. */
-export function parseProvinceRing(json: unknown): LonLat[] | null {
+export function parseRing(json: unknown): LonLat[] | null {
   const geometry = (json as { features?: { geometry?: { type?: string; coordinates?: unknown } }[] } | null)?.features?.[0]
     ?.geometry;
   if (geometry?.type !== "Polygon" || !Array.isArray(geometry.coordinates)) return null;
@@ -39,6 +33,8 @@ export function parseProvinceRing(json: unknown): LonLat[] | null {
     ? (ring as LonLat[])
     : null;
 }
+
+export const parseProvinceRing = parseRing;
 
 const hex = (h: string, alpha = 255): [number, number, number, number] => [
   parseInt(h.slice(1, 3), 16),
@@ -54,13 +50,15 @@ interface Props {
   theme: Theme;
   /** Province outer ring, once loaded (the other references do not depend on it). */
   province: LonLat[] | null;
+  /** Cordillera polygon ring (closed), once loaded. */
+  cordillera?: LonLat[] | null;
 }
 
 /**
  * Thin geographic references over the IVT raster, theme-colored: province outline, cordillera polygon and Neuquén
  * city marker with labels. A bg-colored halo under each line keeps it readable over any ramp color.
  */
-export function buildReferenceLayers({ theme, province }: Props): Layer[] {
+export function buildReferenceLayers({ theme, province, cordillera = null }: Props): Layer[] {
   const t = tokens[theme];
   const halo = hex(t.bg, 200);
   const line = hex(t.text, 235);
@@ -78,17 +76,19 @@ export function buildReferenceLayers({ theme, province }: Props): Layer[] {
       parameters: FLAT,
       updateTriggers: { getColor: [theme] },
     });
-  const cordillera = closeRing(CORDILLERA_POLYGON);
+  // label at the westernmost vertex of the polygon
+  const west = cordillera?.reduce((a, p) => (p[0] < a[0] ? p : a));
   const labels = [
-    { text: es.map.cordillera, position: [CORDILLERA_POLYGON[0]![0], CORDILLERA_POLYGON[0]![1]], anchor: "start" as const, size: 11 },
+    ...(west ? [{ text: es.map.cordillera, position: west, anchor: "start" as const, size: 11 }] : []),
     { text: es.map.city, position: [NEUQUEN_CITY.lon, NEUQUEN_CITY.lat], anchor: "start" as const, size: 12 },
   ];
   return [
     ...(province
       ? [path("ref-province-halo", province, halo, 4), path("ref-province", province, line, 1.75)]
       : []),
-    path("ref-cordillera-halo", cordillera, halo, 3),
-    path("ref-cordillera", cordillera, ref, 1.25),
+    ...(cordillera
+      ? [path("ref-cordillera-halo", cordillera, halo, 3), path("ref-cordillera", cordillera, ref, 1.25)]
+      : []),
     new ScatterplotLayer<{ lon: number; lat: number }>({
       id: "ref-city",
       data: [NEUQUEN_CITY],
@@ -124,20 +124,27 @@ export function buildReferenceLayers({ theme, province }: Props): Layer[] {
   ];
 }
 
-/** Reference layers while `active`; the province outline loads once and is skipped if it cannot be fetched. */
+/** Reference layers while `active`; the outlines load once and are skipped if they cannot be fetched. */
 export function useReferenceLayers(active: boolean): Layer[] {
   const theme = useTheme();
   const [province, setProvince] = useState<LonLat[] | null>(null);
+  const [cordillera, setCordillera] = useState<LonLat[] | null>(null);
   useEffect(() => {
-    if (!active || province) return;
+    if (!active || (province && cordillera)) return;
     let cancelled = false;
-    fetch(PROVINCE_URL)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => !cancelled && setProvince(parseProvinceRing(j)))
-      .catch(() => undefined);
+    const load = (url: string, set: (r: LonLat[] | null) => void) =>
+      fetch(url)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => !cancelled && set(parseRing(j)))
+        .catch(() => undefined);
+    if (!province) void load(PROVINCE_URL, setProvince);
+    if (!cordillera) void load(CORDILLERA_URL, setCordillera);
     return () => {
       cancelled = true;
     };
-  }, [active, province]);
-  return useMemo(() => (active ? buildReferenceLayers({ theme, province }) : []), [active, theme, province]);
+  }, [active, province, cordillera]);
+  return useMemo(
+    () => (active ? buildReferenceLayers({ theme, province, cordillera }) : []),
+    [active, theme, province, cordillera],
+  );
 }

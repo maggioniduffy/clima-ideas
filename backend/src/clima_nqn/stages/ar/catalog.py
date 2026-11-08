@@ -23,8 +23,13 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import xarray as xr
 
-# aproximación de la cordillera neuquina, sin verificar; refinar con DEM o límite provincial
-CORDILLERA_POLYGON: list[tuple[float, float]] = [  # (lon, lat)
+from clima_nqn.stages.ar import geo
+
+# aproximación de la cordillera neuquina, sin verificar: provincia de Neuquén (Natural Earth 1:10m) al oeste de
+# 70° O, generada por ``python -m clima_nqn.stages.ar.geo`` (ver geo/README.md); refinar con DEM
+CORDILLERA_POLYGON: list[tuple[float, float]] = geo.load_cordillera()  # (lon, lat)
+# the rectangle used before F1.3 was refined; it reached into Chile (kept for comparison and tests)
+LEGACY_RECTANGLE: list[tuple[float, float]] = [
     (-71.95, -36.0),
     (-70.0, -36.0),
     (-70.0, -41.1),
@@ -65,12 +70,19 @@ def _points_in_polygon(x: np.ndarray, y: np.ndarray, polygon: Sequence[tuple[flo
 def polygon_mask(
     lat: np.ndarray,
     lon: np.ndarray,
-    polygon: Sequence[tuple[float, float]] = CORDILLERA_POLYGON,
+    polygon: Sequence[tuple[float, float]]
+    | Sequence[Sequence[tuple[float, float]]] = CORDILLERA_POLYGON,
 ) -> xr.DataArray:
-    """Boolean (lat, lon) mask of the grid cells whose centers fall inside ``polygon`` (lon, lat)."""
+    """Boolean (lat, lon) mask of the grid cells whose centers fall inside ``polygon`` (lon, lat).
+
+    ``polygon`` is one ring of (lon, lat) vertices or, for a multipolygon, a sequence of such rings (union).
+    """
     lat, lon = np.asarray(lat, dtype=float), np.asarray(lon, dtype=float)
     lon2d, lat2d = np.meshgrid(lon, lat)
-    values = _points_in_polygon(lon2d, lat2d, polygon)
+    rings = [polygon] if np.ndim(polygon[0]) == 1 else polygon
+    values = np.zeros(lon2d.shape, dtype=bool)
+    for ring in rings:
+        values |= _points_in_polygon(lon2d, lat2d, ring)
     return xr.DataArray(values, dims=("lat", "lon"), coords={"lat": lat, "lon": lon}, name="mask")
 
 
