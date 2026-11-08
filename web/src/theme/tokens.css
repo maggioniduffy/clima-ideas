@@ -28,6 +28,13 @@
   --border: #D3CDBF;
   --text: #2A343B;
   --text-muted: #6E7377;
+  /* IVT sequential ramp, low to high over [0, IVT_SCALE_MAX]: pale to deep (light), dim to bright (dark) */
+  --ivt-0: #DCE6BE;
+  --ivt-1: #8CCBB0;
+  --ivt-2: #3FA3B8;
+  --ivt-3: #2B6FB0;
+  --ivt-4: #38399A;
+  --ivt-5: #5A1A72;
 }
 
 :root[data-theme="dark"] {
@@ -38,6 +45,12 @@
   --border: #3E505B;
   --text: #ECE7DC;
   --text-muted: #A3AEB4;
+  --ivt-0: #22384A;
+  --ivt-1: #2B5F80;
+  --ivt-2: #1E9A9C;
+  --ivt-3: #6BCB6C;
+  --ivt-4: #E3E24A;
+  --ivt-5: #F8F5B4;
 }
 
 html,

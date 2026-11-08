@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Layer } from "@deck.gl/core";
 import { fetchFrames, fetchLayerData, type ArEvent, type FramesIndex, type LayerManifest } from "../api/client";
+import { useTheme } from "../theme/themeStore";
 import { frameTime, frameValue, gridCells, parseFrames } from "./arEvents";
 import { buildIvtRasterLayer, type CellRef } from "./ivtRasterLayer";
 
@@ -29,6 +30,7 @@ export function useArEvents(layer: LayerManifest | undefined, active: boolean) {
   const [hover, setHover] = useState<CellRef | null>(null);
   const [picked, setPicked] = useState<CellRef | null>(null);
   const [wasActive, setWasActive] = useState(active);
+  const theme = useTheme();
   const requested = useRef(new Set<string>());
 
   // Turning the layer off clears the selection and stops the replay (state adjusted during render).
@@ -121,12 +123,13 @@ export function useArEvents(layer: LayerManifest | undefined, active: boolean) {
         cells,
         frames,
         frame,
+        theme,
         picked,
         onHover: setHover,
         onPick: setPicked,
       }),
     ];
-  }, [layerId, index, selectedEventId, frames, cells, frame, picked]);
+  }, [layerId, index, selectedEventId, frames, cells, frame, theme, picked]);
 
   const startIso = entry?.start;
   const timeMs = startIso ? frameTime(startIso, frame, index?.step_hours) : null;

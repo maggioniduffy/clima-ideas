@@ -17,4 +17,9 @@ export const tokens = {
     text: "#ECE7DC",
     "text-muted": "#A3AEB4",
   },
+  /** IVT sequential ramp stops, low to high (evenly spaced over [0, IVT_SCALE_MAX]); `--ivt-0..5` in tokens.css. */
+  ivtRamp: {
+    light: ["#DCE6BE", "#8CCBB0", "#3FA3B8", "#2B6FB0", "#38399A", "#5A1A72"],
+    dark: ["#22384A", "#2B5F80", "#1E9A9C", "#6BCB6C", "#E3E24A", "#F8F5B4"],
+  },
 } as const;

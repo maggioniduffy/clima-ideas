@@ -22,8 +22,15 @@ test.each(["light", "dark"] as const)("%s neutrals match tokens.css", (theme) =>
   for (const [k, v] of Object.entries(tokens[theme])) expect(b[`--${k}`]).toBe(v);
 });
 
+test.each(["light", "dark"] as const)("%s IVT ramp matches tokens.css", (theme) => {
+  const b = block(`:root[data-theme="${theme}"]`);
+  expect(tokens.ivtRamp[theme]).toHaveLength(6);
+  tokens.ivtRamp[theme].forEach((v, i) => expect(b[`--ivt-${i}`]).toBe(v));
+});
+
 test("no pure white or black anywhere", () => {
   expect(css).not.toMatch(/#(fff|ffffff|000|000000)\b/i);
-  const all = [...Object.values(tokens.brand), ...Object.values(tokens.light), ...Object.values(tokens.dark)];
+  const all = [...Object.values(tokens.brand), ...Object.values(tokens.light), ...Object.values(tokens.dark),
+    ...tokens.ivtRamp.light, ...tokens.ivtRamp.dark];
   for (const v of all) expect(v.toLowerCase()).not.toMatch(/^#(fff|ffffff|000|000000)$/);
 });

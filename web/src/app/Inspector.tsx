@@ -22,14 +22,6 @@ export function Inspector({ layer, features, selectedPointId, onSelectPoint, eve
       ) : (
         <div className="inspector-body">
           <h2 className="inspector-title">{layer.title}</h2>
-          <dl className="inspector-meta" data-testid="inspector-meta">
-            <dt>{es.inspector.source}</dt>
-            <dd data-testid="inspector-source">{layer.source}</dd>
-            <dt>{es.inspector.period}</dt>
-            <dd data-testid="inspector-period">{layer.period}</dd>
-            <dt>{es.inspector.license}</dt>
-            <dd>{layer.license}</dd>
-          </dl>
           {layer.kind === "events" && <EventDetails {...(event ?? { selected: null, loadingFrames: false, reading: null })} />}
           {features.length > 0 && (
             <>
@@ -62,6 +54,14 @@ export function Inspector({ layer, features, selectedPointId, onSelectPoint, eve
               <dd>{point.value}</dd>
             </dl>
           )}
+          <dl className="inspector-meta kv" data-testid="inspector-meta">
+            <dt>{es.inspector.source}</dt>
+            <dd data-testid="inspector-source">{layer.source}</dd>
+            <dt>{es.inspector.period}</dt>
+            <dd data-testid="inspector-period">{layer.period}</dd>
+            <dt>{es.inspector.license}</dt>
+            <dd>{layer.license}</dd>
+          </dl>
         </div>
       )}
     </aside>
@@ -83,20 +83,8 @@ function EventDetails({
   const f = eventFields(selected);
   return (
     <>
-      <h3>{selected.event_id}</h3>
-      {loadingFrames && <p className="empty">{es.events.loadingFrames}</p>}
-      <dl className="inspector-point" data-testid="inspector-cell">
-        <dt>{es.events.cell}</dt>
-        {reading ? (
-          <>
-            <dd data-testid="cell-value">{ivtText(reading.value)}</dd>
-            <dd data-testid="cell-where">{cellWhere(reading)}</dd>
-          </>
-        ) : (
-          <dd className="empty">{es.events.cellHint}</dd>
-        )}
-      </dl>
-      <dl className="inspector-point" data-testid="inspector-event">
+      <h3 className="event-id">{selected.event_id}</h3>
+      <dl className="inspector-point kv" data-testid="inspector-event">
         <dt>{es.events.start}</dt>
         <dd data-testid="event-start">{f.start}</dd>
         <dt>{es.events.end}</dt>
@@ -105,8 +93,8 @@ function EventDetails({
         <dd>{f.duration}</dd>
         <dt>{es.events.ivtMax}</dt>
         <dd data-testid="event-ivt-max">{f.ivtMax}</dd>
-        <dt>{es.events.ivtMaxAt}</dt>
-        <dd>{f.ivtMaxAt}</dd>
+        <dt className="kv-wide">{es.events.ivtMaxAt}</dt>
+        <dd className="kv-wide">{f.ivtMaxAt}</dd>
         <dt>{es.events.deg0lMax}</dt>
         <dd>{f.deg0lMax}</dd>
         <dt>{es.events.deg0lMean}</dt>
@@ -115,6 +103,20 @@ function EventDetails({
         <dd>{f.rain}</dd>
         <dt>{es.events.enso}</dt>
         <dd>{f.enso}</dd>
+      </dl>
+      {loadingFrames && <p className="empty">{es.events.loadingFrames}</p>}
+      <dl className="inspector-point kv" data-testid="inspector-cell">
+        <dt>{es.events.cell}</dt>
+        {reading ? (
+          <dd data-testid="cell-value">{ivtText(reading.value)}</dd>
+        ) : (
+          <dd className="empty kv-wide">{es.events.cellHint}</dd>
+        )}
+        {reading && (
+          <dd className="kv-wide" data-testid="cell-where">
+            {cellWhere(reading)}
+          </dd>
+        )}
       </dl>
     </>
   );

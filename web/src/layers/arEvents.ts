@@ -1,30 +1,61 @@
 import type { ArEvent, FrameGrid } from "../api/client";
 import { tokens } from "../theme/tokens";
+import type { Theme } from "../theme/themeStore";
 
-/** |IVT| (kg m-1 s-1) at which the color ramp saturates; fixed so events compare across replays. */
-export const IVT_SCALE_MAX = 800;
+/**
+ * |IVT| (kg m-1 s-1) at which the color ramp saturates; fixed so events compare across replays.
+ * 1200 keeps the strongest events (> 1000) distinguishable; the legend marks it as "≥1200".
+ */
+export const IVT_SCALE_MAX = 1200;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
+
+/** Raster opacity: nearly opaque (>= 0.85) so the field reads on both themes; slightly stronger at the top. */
+export const IVT_ALPHA_MIN = 0.85;
+export const IVT_ALPHA_MAX = 0.95;
 
 const hex = (h: string): [number, number, number] => [
   parseInt(h.slice(1, 3), 16),
   parseInt(h.slice(3, 5), 16),
   parseInt(h.slice(5, 7), 16),
 ];
-const LOW = hex(tokens.brand.secondary);
-const HIGH = hex(tokens.brand.accent);
 
 export type Rgba = [number, number, number, number];
 
-/** Ramp secondary -> accent over [0, IVT_SCALE_MAX]; null/NaN is transparent. Opaque unless `fade`. */
-export function ivtColor(value: number | null | undefined, fade = false): Rgba {
+/**
+ * Sequential ramp (`tokens.ivtRamp[theme]`, stops evenly spaced over [0, IVT_SCALE_MAX]); null/NaN is transparent.
+ * Light theme: pale (low) to deep purple (high). Dark theme: dim blue (low) to bright yellow (high).
+ * Opaque unless `translucent`, which gives alpha IVT_ALPHA_MIN..IVT_ALPHA_MAX (for the map raster).
+ */
+export function ivtColor(value: number | null | undefined, theme: Theme, translucent = false): Rgba {
   if (value == null || Number.isNaN(value)) return [0, 0, 0, 0];
+  const stops = tokens.ivtRamp[theme].map(hex);
   const t = Math.min(1, Math.max(0, value / IVT_SCALE_MAX));
-  const [r, g, b] = [0, 1, 2].map((i) => Math.round(LOW[i]! + (HIGH[i]! - LOW[i]!) * t));
-  return [r!, g!, b!, fade ? Math.round(255 * (0.25 + 0.7 * t)) : 255];
+  const x = t * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(x));
+  const f = x - i;
+  const [r, g, b] = [0, 1, 2].map((c) => Math.round(stops[i]![c]! + (stops[i + 1]![c]! - stops[i]![c]!) * f));
+  const alpha = translucent ? IVT_ALPHA_MIN + (IVT_ALPHA_MAX - IVT_ALPHA_MIN) * t : 1;
+  return [r!, g!, b!, Math.round(255 * alpha)];
 }
 
 export const rgbCss = ([r, g, b]: Rgba) => `rgb(${r}, ${g}, ${b})`;
+
+export interface LegendTick {
+  value: number;
+  /** Position along the bar, 0..1. */
+  fraction: number;
+  /** "0", "300", ..., "≥1200" for the saturation value. */
+  label: string;
+}
+
+/** Evenly spaced legend ticks from 0 to IVT_SCALE_MAX (`intervals` segments); the last reads "≥1200". */
+export function legendTicks(intervals = 4): LegendTick[] {
+  return Array.from({ length: intervals + 1 }, (_, i) => {
+    const value = Math.round((IVT_SCALE_MAX * i) / intervals);
+    return { value, fraction: i / intervals, label: i === intervals ? `≥${value}` : String(value) };
+  });
+}
 
 /** Decode a frames `.bin` (little-endian Float32 [n, ny, nx]); throws when the size does not match. */
 export function parseFrames(buffer: ArrayBuffer, grid: FrameGrid, nFrames: number): Float32Array {
@@ -99,13 +130,13 @@ export interface EventSpan {
 }
 
 /** Position and IVT-max color of every event on a timeline with the given domain. */
-export function eventSpans(events: ArEvent[], domain: [number, number]): EventSpan[] {
+export function eventSpans(events: ArEvent[], domain: [number, number], theme: Theme): EventSpan[] {
   const [lo, hi] = domain;
   const span = hi - lo;
   return events.map((e) => {
     const a = Math.min(1, Math.max(0, (parseTime(e.start) - lo) / span));
     const b = Math.min(1, Math.max(0, (parseTime(e.end) - lo) / span));
-    return { id: e.event_id, left: a, width: Math.max(0, b - a), color: rgbCss(ivtColor(e.ivt_max)) };
+    return { id: e.event_id, left: a, width: Math.max(0, b - a), color: rgbCss(ivtColor(e.ivt_max, theme)) };
   });
 }
 
