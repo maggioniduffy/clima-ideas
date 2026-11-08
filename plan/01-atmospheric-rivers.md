@@ -56,6 +56,11 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   inspector con campos del evento, fuente, período y valor de IVT por celda. e2e con capa falsa: 4/4. Corre en
   `ar-catalog.yml` (artefacto `ar-events-layer`). Falta: correr con datos reales y revisar escala (satura en
   800 kg m-1 s-1) y contraste del raster.
+- F1.8 código listo (2026-11-08): `clima-nqn ar enso` (`stages/ar/enso.py`), corre en `ar-catalog.yml` y sube
+  `F1.8.md` + `F1.8.json`. Por estación-año (DJF con diciembre del año anterior): n eventos, días con RA, IVT, fracción
+  de lluvia por RA; fase ENSO por ONI medio de la estación (umbrales de `io/enso.py`). Test de permutación Niño−Niña
+  (bilateral, p = (k+1)/(n+1)) y de 3 grupos (F de ANOVA), p ajustado por Benjamini-Hochberg; "diferencia sostenida"
+  solo con p < 0,05. 12 unit tests sintéticos. Falta: correr con datos reales.
 - F1.2 código listo (2026-11-08): `teca.yml` con input `years` (matriz por año) y recorte a Neuquén con
   `tools/teca/crop_bard.py` (artefacto `bard-neuquen-<año>`). Falta: corrida 1980–2025 y validar el recorte con salida
   real de BARD.

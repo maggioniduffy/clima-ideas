@@ -6,6 +6,7 @@ import typer
 from clima_nqn.io import dem, era5
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.stages.ar import catalog as ar_catalog
+from clima_nqn.stages.ar import enso as ar_enso
 from clima_nqn.stages.ar import extremes as ar_extremes
 from clima_nqn.stages.ar import layer as ar_layer
 
@@ -172,6 +173,37 @@ def ar_extremes_cmd(
     results = ar_extremes.run(events, era5_stores, out_dir)
     typer.echo(ar_extremes.headline(results))
     typer.echo(f"-> {out_dir / 'F1.4.md'}, {out_dir / 'F1.4.json'}")
+
+
+@ar_app.command("enso")
+def ar_enso_cmd(
+    events: Annotated[Path, typer.Option(help="Catalog Parquet (clima-nqn ar catalog).")] = (
+        ar_catalog.DEFAULT_OUT
+    ),
+    era5_dir: Annotated[Path, typer.Option(help="Directory with the <year>.zarr stores.")] = (
+        era5.DEFAULT_OUT
+    ),
+    enso: Annotated[Path, typer.Option(help="ENSO Parquet (clima-nqn enso fetch).")] = DEFAULT_PATH,
+    out_dir: Annotated[Path, typer.Option(help="Directory for F1.8.md and F1.8.json.")] = (
+        ar_catalog.DEFAULT_OUT.parent
+    ),
+    n_perm: Annotated[int, typer.Option(help="Permutations per test.")] = 10000,
+) -> None:
+    """ARs by ENSO phase and season: permutation tests, BH-adjusted (F1.8)."""
+    if not events.exists():
+        raise typer.BadParameter(f"catalog not found: {events}")
+    if not enso.exists():
+        raise typer.BadParameter(f"ENSO table not found: {enso} (run clima-nqn enso fetch)")
+    era5_stores = sorted(p for p in era5_dir.glob("[0-9][0-9][0-9][0-9].zarr") if p.is_dir())
+    if not era5_stores:
+        raise typer.BadParameter(f"no <year>.zarr stores in {era5_dir}")
+    results = ar_enso.run(events, era5_stores, enso, out_dir, n_perm=n_perm)
+    rows = results["rows"]
+    typer.echo(
+        f"{len(rows)} tests, {sum(r['sustained'] for r in rows)} with p<0.05, "
+        f"{sum(r['sustained_bh'] for r in rows)} after BH"
+    )
+    typer.echo(f"-> {out_dir / 'F1.8.md'}, {out_dir / 'F1.8.json'}")
 
 
 @ar_app.command("layer")

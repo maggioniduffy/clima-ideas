@@ -1,7 +1,7 @@
 # Atmospheric-river event catalog (plan/01, F1.3). Manual only.
 # Downloads the BARD crops (teca.yml run) and the regional ERA5 stores (era5.yml run) from earlier
-# runs, builds data/interim/ar/events.parquet, runs the F1.4 extreme-rain analysis and uploads
-# artifact `ar-events` (parquet + CSV copy + F1.4.md/F1.4.json).
+# runs, builds data/interim/ar/events.parquet, runs the F1.4 extreme-rain and F1.8 ENSO-phase analyses and uploads
+# artifact `ar-events` (parquet + CSV copy + F1.4.md/F1.4.json + F1.8.md/F1.8.json).
 name: AR event catalog
 
 on:
@@ -69,6 +69,14 @@ jobs:
           --events data/interim/ar/events.parquet
           --era5-dir ../era5
           --out-dir data/interim/ar
+      - name: ARs by ENSO phase (F1.8)
+        # ONI parquet from the "Fetch ENSO index" step, read from the default path (repo-root data/interim/enso/)
+        working-directory: backend
+        run: >-
+          uv run clima-nqn ar enso
+          --events data/interim/ar/events.parquet
+          --era5-dir ../era5
+          --out-dir data/interim/ar
       - name: CSV copy
         working-directory: backend
         run: >-
@@ -82,6 +90,8 @@ jobs:
             backend/data/interim/ar/events.csv
             backend/data/interim/ar/F1.4.md
             backend/data/interim/ar/F1.4.json
+            backend/data/interim/ar/F1.8.md
+            backend/data/interim/ar/F1.8.json
           retention-days: 90
           if-no-files-found: error
       - name: Publish viewer layer (F1.6)
