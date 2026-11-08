@@ -40,6 +40,11 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   inicio, fin, duración, prob. máx., fracción de área, IVT máx. (valor, hora, celda), isoterma 0 °C máx. y media, lluvia
   media acumulada (mm) y fase ENSO del mes de inicio. 22 unit tests con datos sintéticos. Falta: correr sobre el run
   de BARD 1980–2025.
+- F1.4 código listo (2026-11-08): `clima-nqn ar extremes` (`stages/ar/extremes.py`), corre en `ar-catalog.yml` después
+  del catálogo y sube `F1.4.md` + `F1.4.json`. Día UTC (D 01:00 a D+1 00:00), lluvia media en el polígono. Principal:
+  días ≥ p99 de todos los días; sensibilidad: p95, p99 por celda sobre días húmedos (≥ 1 mm), ventana ±1 día. Baseline:
+  tasa base de días con río atmosférico (cociente frac/tasa base), IC de Wilson 95 %, por estación. 17 unit tests
+  sintéticos. Falta: correr y pasar el informe a `reports/01/F1.4.md`.
 - F1.2 código listo (2026-11-08): `teca.yml` con input `years` (matriz por año) y recorte a Neuquén con
   `tools/teca/crop_bard.py` (artefacto `bard-neuquen-<año>`). Falta: corrida 1980–2025 y validar el recorte con salida
   real de BARD.

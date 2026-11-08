@@ -1,6 +1,7 @@
 # Atmospheric-river event catalog (plan/01, F1.3). Manual only.
 # Downloads the BARD crops (teca.yml run) and the regional ERA5 stores (era5.yml run) from earlier
-# runs, builds data/interim/ar/events.parquet and uploads it as artifact `ar-events` (+ CSV copy).
+# runs, builds data/interim/ar/events.parquet, runs the F1.4 extreme-rain analysis and uploads
+# artifact `ar-events` (parquet + CSV copy + F1.4.md/F1.4.json).
 name: AR event catalog
 
 on:
@@ -61,6 +62,13 @@ jobs:
           uv run clima-nqn ar catalog
           --bard-dir ../bard --era5-dir ../era5
           --out data/interim/ar/events.parquet
+      - name: Extreme rain vs ARs (F1.4)
+        working-directory: backend
+        run: >-
+          uv run clima-nqn ar extremes
+          --events data/interim/ar/events.parquet
+          --era5-dir ../era5
+          --out-dir data/interim/ar
       - name: CSV copy
         working-directory: backend
         run: >-
@@ -72,5 +80,7 @@ jobs:
           path: |
             backend/data/interim/ar/events.parquet
             backend/data/interim/ar/events.csv
+            backend/data/interim/ar/F1.4.md
+            backend/data/interim/ar/F1.4.json
           retention-days: 90
           if-no-files-found: error
