@@ -92,5 +92,5 @@ def test_cordillera_over_the_bard_grid_counts():
 
 
 def test_web_copies_are_identical():
-    for name in ("cordillera.geojson", "neuquen-province.geojson"):
+    for name in ("neuquen-province.geojson",):
         assert (WEB_GEO / name).read_bytes() == (geo.HERE / name).read_bytes(), name

@@ -14,12 +14,6 @@ export const NEUQUEN_CITY = { lon: -68.06, lat: -38.95 };
 export const PROVINCE_URL = "/geo/neuquen-province.geojson";
 export const PROVINCE_SOURCE = "Natural Earth";
 
-/**
- * Cordillera polygon used by the AR catalog to pick event cells: Neuquén (Natural Earth) west of 70° O. Generated
- * by backend/src/clima_nqn/stages/ar/geo (`cordillera.geojson`, copied here; referenceLayers.test.ts checks they match).
- */
-export const CORDILLERA_URL = "/geo/cordillera.geojson";
-
 export const closeRing = (ring: LonLat[]): LonLat[] => [...ring, ring[0]!];
 
 /** Outer ring of the first polygon feature of a GeoJSON FeatureCollection; null when the shape is unexpected. */
@@ -50,19 +44,16 @@ interface Props {
   theme: Theme;
   /** Province outer ring, once loaded (the other references do not depend on it). */
   province: LonLat[] | null;
-  /** Cordillera polygon ring (closed), once loaded. */
-  cordillera?: LonLat[] | null;
 }
 
 /**
- * Thin geographic references over the IVT raster, theme-colored: province outline, cordillera polygon and Neuquén
+ * Thin geographic references over the IVT raster, theme-colored: province outline and Neuquén
  * city marker with labels. A bg-colored halo under each line keeps it readable over any ramp color.
  */
-export function buildReferenceLayers({ theme, province, cordillera = null }: Props): Layer[] {
+export function buildReferenceLayers({ theme, province }: Props): Layer[] {
   const t = tokens[theme];
   const halo = hex(t.bg, 200);
   const line = hex(t.text, 235);
-  const ref = hex(t.text, 200);
   const path = (id: string, ring: LonLat[], color: [number, number, number, number], width: number) =>
     new PathLayer<LonLat[]>({
       id,
@@ -76,18 +67,12 @@ export function buildReferenceLayers({ theme, province, cordillera = null }: Pro
       parameters: FLAT,
       updateTriggers: { getColor: [theme] },
     });
-  // label at the northernmost vertex of the polygon: the legend sits at the bottom-right of the map
-  const west = cordillera?.reduce((a, p) => (p[1] > a[1] ? p : a));
   const labels = [
-    ...(west ? [{ text: es.map.cordillera, position: west, anchor: "start" as const, size: 11 }] : []),
     { text: es.map.city, position: [NEUQUEN_CITY.lon, NEUQUEN_CITY.lat], anchor: "start" as const, size: 12 },
   ];
   return [
     ...(province
       ? [path("ref-province-halo", province, halo, 4), path("ref-province", province, line, 1.75)]
-      : []),
-    ...(cordillera
-      ? [path("ref-cordillera-halo", cordillera, halo, 3), path("ref-cordillera", cordillera, ref, 1.25)]
       : []),
     new ScatterplotLayer<{ lon: number; lat: number }>({
       id: "ref-city",
@@ -128,23 +113,21 @@ export function buildReferenceLayers({ theme, province, cordillera = null }: Pro
 export function useReferenceLayers(active: boolean): Layer[] {
   const theme = useTheme();
   const [province, setProvince] = useState<LonLat[] | null>(null);
-  const [cordillera, setCordillera] = useState<LonLat[] | null>(null);
   useEffect(() => {
-    if (!active || (province && cordillera)) return;
+    if (!active || province) return;
     let cancelled = false;
     const load = (url: string, set: (r: LonLat[] | null) => void) =>
       fetch(url)
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => !cancelled && set(parseRing(j)))
         .catch(() => undefined);
-    if (!province) void load(PROVINCE_URL, setProvince);
-    if (!cordillera) void load(CORDILLERA_URL, setCordillera);
+    void load(PROVINCE_URL, setProvince);
     return () => {
       cancelled = true;
     };
-  }, [active, province, cordillera]);
+  }, [active, province]);
   return useMemo(
-    () => (active ? buildReferenceLayers({ theme, province, cordillera }) : []),
-    [active, theme, province, cordillera],
+    () => (active ? buildReferenceLayers({ theme, province }) : []),
+    [active, theme, province],
   );
 }
