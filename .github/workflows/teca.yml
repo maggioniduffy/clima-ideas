@@ -1,11 +1,12 @@
 name: TECA / BARD
 
-# Manual only: builds TECA and (optionally) runs BARD over one year of ERA5.
+# Manual only: builds TECA and (optionally) runs BARD over one or many years of ERA5, one parallel job per year,
+# keeping a Neuquen crop of the output.
 on:
   workflow_dispatch:
     inputs:
-      year:
-        description: "ERA5 year"
+      years:
+        description: 'ERA5 years (1940-2026): "2023", "1980-2025" or "1980-1985,1990"'
         default: "2023"
         type: string
       run_bard:
@@ -35,6 +36,10 @@ on:
           - "00,06,12,18"
           - "00,12"
           - "00,03,06,09,12,15,18,21"
+      keep_full:
+        description: "Also upload the full (uncropped) BARD output as an artifact"
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -57,7 +62,37 @@ defaults:
     shell: bash -el {0}
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      years: ${{ steps.parse.outputs.years }}
+      single: ${{ steps.parse.outputs.single }}
+    steps:
+      - name: Parse years
+        id: parse
+        env:
+          YEARS: ${{ inputs.years }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, sys
+          text = os.environ["YEARS"].replace(" ", "")
+          years = set()
+          try:
+              for part in filter(None, text.split(",")):
+                  lo, _, hi = part.partition("-")
+                  years.update(range(int(lo), int(hi or lo) + 1))
+          except ValueError:
+              sys.exit(f"::error::invalid years {text!r}")
+          if not years or min(years) < 1940 or max(years) > 2026:
+              sys.exit(f"::error::years must be non-empty and within 1940..2026, got {text!r}")
+          years = sorted(years)
+          print("years=" + json.dumps(years))
+          print("single=" + ("true" if len(years) == 1 else "false"))
+          PY
+
   build:
+    needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -165,10 +200,15 @@ jobs:
           if-no-files-found: warn
 
   bard:
-    needs: build
+    needs: [plan, build]
     if: inputs.run_bard
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        year: ${{ fromJSON(needs.plan.outputs.years) }}
     steps:
       - uses: actions/checkout@v7
 
@@ -198,9 +238,11 @@ jobs:
           tag="${tag//,/_}"
           tag="${tag//./p}"
           echo "areatag=$tag" >> "$GITHUB_OUTPUT"
-          echo "prefix=ivt-${{ inputs.year }}-${HOURS//,/_}-a${tag}-" >> "$GITHUB_OUTPUT"
+          echo "prefix=ivt-${{ matrix.year }}-${HOURS//,/_}-a${tag}-" >> "$GITHUB_OUTPUT"
 
+      # Many years would blow the 10 GB repo cache and evict the TECA install, so the IVT cache is single-year only.
       - name: Restore fetched IVT
+        if: needs.plan.outputs.single == 'true'
         uses: actions/cache/restore@v6
         with:
           path: data/ivt
@@ -218,7 +260,7 @@ jobs:
       - name: Fetch ERA5 and compute IVT
         timeout-minutes: 180
         env:
-          YEAR: ${{ inputs.year }}
+          YEAR: ${{ matrix.year }}
           HOURS: ${{ inputs.hours }}
           MONTHS: ${{ inputs.months }}
           SOURCE: ${{ inputs.source }}
@@ -235,7 +277,7 @@ jobs:
         run: rm -rf data/ivt/raw_*
 
       - name: Save fetched IVT
-        if: always()
+        if: always() && needs.plan.outputs.single == 'true'
         uses: actions/cache/save@v6
         with:
           path: data/ivt
@@ -243,7 +285,7 @@ jobs:
 
       - name: Run BARD
         env:
-          YEAR: ${{ inputs.year }}
+          YEAR: ${{ matrix.year }}
           AREA: ${{ inputs.area }}
         run: |
           set -o pipefail
@@ -269,6 +311,23 @@ jobs:
             exit 1
           fi
 
+      - name: Crop to Neuquen
+        run: |
+          set -o pipefail
+          python tools/teca/crop_bard.py --area=-34,-74,-43,-66 --out bard-crop/ bard-out/bard_*.nc 2>&1 | tee teca-logs/crop.log
+          python - <<'PY' 2>&1 | tee -a teca-logs/crop.log
+          import glob, sys
+          import xarray as xr
+          n = 0
+          for f in glob.glob("bard-crop/bard_neuquen_*.nc"):
+              with xr.open_dataset(f) as ds:
+                  n += ds.sizes["time"]
+          print(f"crop time steps: {n}")
+          if n == 0:
+              sys.exit("::error::Neuquen crop has zero time steps")
+          PY
+          ls -lh bard-crop | tee -a teca-logs/crop.log
+
       - name: Remove credentials
         if: always()
         run: rm -f ~/.cdsapirc
@@ -276,9 +335,18 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: bard-${{ inputs.year }}-${{ steps.ivtkey.outputs.areatag }}
+          name: bard-neuquen-${{ matrix.year }}
           path: |
-            bard-out/
+            bard-crop/
             teca-logs/
+          if-no-files-found: warn
+          retention-days: 90
+          compression-level: 6
+
+      - uses: actions/upload-artifact@v7
+        if: always() && inputs.keep_full
+        with:
+          name: bard-${{ matrix.year }}-${{ steps.ivtkey.outputs.areatag }}
+          path: bard-out/
           if-no-files-found: warn
           compression-level: 6

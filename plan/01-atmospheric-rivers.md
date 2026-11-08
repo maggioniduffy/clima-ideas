@@ -1,6 +1,6 @@
 # Fase 1 — Ríos atmosféricos en la cordillera
 
-Estado: pendiente · Depende de: 0 · Refs: `docs/architecture.md` (contrato de capas)
+Estado: en curso · Depende de: 0 · Refs: `docs/architecture.md` (contrato de capas)
 
 ## Pregunta
 
@@ -26,6 +26,16 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 ## Entregable
 
 Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visible como capa con replay.
+
+## Avance
+
+- F1.1 código listo (2026-11-08): `clima-nqn era5 fetch` + workflow `era5.yml` (un job por año, hasta 20 en paralelo,
+  64 lecturas concurrentes). Caja `NEUQUEN_BOX` -34,-74,-43,-66; horario; `viwve`, `viwvn`, `tp`, `deg0l`. Prueba
+  real: enero 2023 a 2 horas/día, 62 pasos, ~80 MB/s en red. Año completo estimado ~15 min (sin verificar en Actions).
+  Falta: `gh workflow run era5.yml -f years=1980-2025`, bajar artefactos y `clima-nqn era5 combine`.
+- F1.2 código listo (2026-11-08): `teca.yml` con input `years` (matriz por año) y recorte a Neuquén con
+  `tools/teca/crop_bard.py` (artefacto `bard-neuquen-<año>`). Falta: corrida 1980–2025 y validar el recorte con salida
+  real de BARD.
 
 ## Abierto
 
