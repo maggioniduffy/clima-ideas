@@ -29,6 +29,9 @@ Ciclo por tarea:
 ## Reglas
 
 - Código, nombres de archivo y commits en inglés. UI en español primero.
+- Ramas con nombre semántico `<tipo>/<id-tarea>-<tema>`, en inglés y kebab-case: tipo como el prefijo del commit
+  (`feat`, `fix`, `docs`, `ci`, `chore`); el ID de tarea se omite si no hay. Ej.: `feat/f1.2-bard-1980-2025`,
+  `ci/teca-runner-input`. Si la sesión asigna una rama con nombre aleatorio, trabajar en una semántica creada desde `main`.
 - Nada inventado: lo no verificado se marca "sin verificar"; todo dato modelado muestra fuente y período.
 - ML solo con un baseline simple al lado.
 - No es un sistema de alerta. Todo es retrospectivo salvo la fase 6: predicciones experimentales, siempre con
