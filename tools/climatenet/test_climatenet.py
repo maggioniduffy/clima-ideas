@@ -182,3 +182,19 @@ def test_pick_weights_none_or_ambiguous():
     with pytest.raises(ValueError, match="several"):
         fetch_weights.pick_weights(two)
     assert fetch_weights.pick_weights(two, "b.pth") == "https://x/b.pth"
+
+
+def test_extract_state_dict_unwraps_training_checkpoint():
+    from climatenet_core import extract_state_dict
+
+    weights = {"level1_0.conv.weight": 1, "classifier.0.conv.weight": 2}
+    ckpt = {"epoch": 10, "net_state_dict": weights, "optimizer_state_dict": {}, "loss": 0.1}
+    assert extract_state_dict(ckpt) == weights
+
+
+def test_extract_state_dict_keeps_bare_and_strips_module_prefix():
+    from climatenet_core import extract_state_dict
+
+    bare = {"a.weight": 1}
+    assert extract_state_dict(bare) == bare
+    assert extract_state_dict({"module.a.weight": 1}) == {"a.weight": 1}

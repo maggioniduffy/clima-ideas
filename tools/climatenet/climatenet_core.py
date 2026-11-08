@@ -111,3 +111,21 @@ def ivt_baseline(viwve, viwvn, threshold: float = IVT_THRESHOLD) -> tuple[np.nda
     """IVT magnitude (float32, kg m-1 s-1) and the boolean mask IVT >= threshold (NaN is False)."""
     ivt = np.hypot(viwve, viwvn).astype(np.float32)
     return ivt, ivt >= threshold
+
+
+CHECKPOINT_KEYS = ("net_state_dict", "model_state_dict", "state_dict")
+
+
+def extract_state_dict(obj: dict) -> dict:
+    """Model weights from a torch.load result: a bare state_dict or a training checkpoint.
+
+    The NERSC ClimateNet weights are a checkpoint (``epoch``, ``net_state_dict``, ``optimizer_state_dict``,
+    ...); the weights are under ``net_state_dict``. A ``module.`` prefix (DataParallel) is stripped.
+    """
+    for key in CHECKPOINT_KEYS:
+        if key in obj and isinstance(obj[key], dict):
+            obj = obj[key]
+            break
+    if obj and all(k.startswith("module.") for k in obj):
+        obj = {k[len("module."):]: v for k, v in obj.items()}
+    return obj

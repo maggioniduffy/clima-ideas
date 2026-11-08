@@ -129,7 +129,9 @@ def load_model(repo_dir: Path, weights: Path):
     from climatenet.models import CGNetModule
 
     model = CGNetModule(classes=3, channels=4)
-    state = torch.load(weights, map_location="cpu", weights_only=True)
+    from climatenet_core import extract_state_dict
+
+    state = extract_state_dict(torch.load(weights, map_location="cpu", weights_only=True))
     model.load_state_dict(state)
     return model.eval()
 

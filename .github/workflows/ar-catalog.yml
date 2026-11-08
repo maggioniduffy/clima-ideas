@@ -77,6 +77,13 @@ jobs:
           --events data/interim/ar/events.parquet
           --era5-dir ../era5
           --out-dir data/interim/ar
+      - name: Print reports to the log and the run summary
+        working-directory: backend
+        run: |
+          for f in F1.4.md F1.8.md; do
+            echo "::group::$f"; cat "data/interim/ar/$f"; echo "::endgroup::"
+            cat "data/interim/ar/$f" >> "$GITHUB_STEP_SUMMARY"
+          done
       - name: CSV copy
         working-directory: backend
         run: >-
