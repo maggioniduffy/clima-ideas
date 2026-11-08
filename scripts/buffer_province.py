@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["shapely>=2"]
 # ///
-"""Buffer the Neuquén province outline by 10 km -> web/public/geo/neuquen-province-buffer-10km.geojson.
+"""Buffer the Neuquén province outline by 10 km -> web/public/geo/ and backend/src/clima_nqn/stages/ar/geo/ (identical copies).
 
 Run from the repo root:  uv run scripts/buffer_province.py
 
@@ -20,7 +20,9 @@ from shapely.ops import transform
 BUFFER_M = 10_000
 R = 6_371_000.0
 LON0, LAT0 = math.radians(-69.8), math.radians(-38.9)
-GEO = Path(__file__).resolve().parent.parent / "web" / "public" / "geo"
+ROOT = Path(__file__).resolve().parent.parent
+GEO = ROOT / "web" / "public" / "geo"
+BACKEND_GEO = ROOT / "backend" / "src" / "clima_nqn" / "stages" / "ar" / "geo"  # second copy, read by io/dem.py
 
 
 def forward(lon, lat):
@@ -65,7 +67,9 @@ def main():
             }
         ],
     }
-    (GEO / "neuquen-province-buffer-10km.geojson").write_text(json.dumps(doc, ensure_ascii=False), encoding="utf8")
+    text = json.dumps(doc, ensure_ascii=False)
+    for folder in (GEO, BACKEND_GEO):
+        (folder / "neuquen-province-buffer-10km.geojson").write_text(text, encoding="utf8")
     print(len(coords), "vertices; area ratio", round(buf.area / metric.area, 4))
 
 

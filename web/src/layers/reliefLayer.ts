@@ -7,8 +7,8 @@ import type { LonLat } from "./referenceLayers";
 const STRIDE = 3;
 /** Vertical exaggeration applied to elevation (m) so relief reads at province scale. */
 export const RELIEF_EXAGGERATION = 3;
-/** Grid step (degrees) of relief.bin when it cannot be inferred (relief.meta.json `step`). */
-export const RELIEF_STEP = 0.005;
+/** Fallback grid step (degrees): keep in sync with `DEFAULT_STEP` in backend io/dem.py; the viewer prefers relief.meta.json `step`. */
+export const RELIEF_STEP = 0.008;
 /** Elevation (m) of each `tokens.reliefRamp` stop (slate ramp): lowland, mid, high, peaks. */
 export const RELIEF_STOPS_M = [0, 800, 1800, 3000] as const;
 /** Hillshade: sun from the NW (azimuth clockwise from north) at 45 degrees; slopes exaggerated for shading only. */
