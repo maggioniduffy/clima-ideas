@@ -1,0 +1,80 @@
+# Regional ERA5 for Neuquén from the public ARCO-ERA5 Zarr (anonymous, no CDS key). Manual only.
+# One job per year writes data/raw/era5/neuquen/<year>.zarr and uploads it as artifact
+# era5-neuquen-<year> (90 days). `years` accepts "2023" or "1980-1985,1990"; `hours` is UTC hours
+# ("0-23", "0,12"). Join the downloaded artifacts into data/raw/era5/neuquen/ and run
+# `clima-nqn era5 combine` locally.
+name: ERA5 regional fetch
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: 'Years, e.g. "1980-2025", "2023" or "1980-1985,1990"'
+        default: "1980-2025"
+      hours:
+        description: 'UTC hours, e.g. "0-23" or "0,12"'
+        default: "0-23"
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.years.outputs.matrix }}
+    steps:
+      - id: years
+        env:
+          YEARS: ${{ inputs.years }}
+          HOURS: ${{ inputs.hours }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+          years, hours = os.environ["YEARS"], os.environ["HOURS"]
+          if not re.fullmatch(r"\d{4}(-\d{4})?(,\d{4}(-\d{4})?)*", years.replace(" ", "")):
+              sys.exit(f"invalid years: {years!r}")
+          if not re.fullmatch(r"\d{1,2}(-\d{1,2})?(,\d{1,2}(-\d{1,2})?)*", hours.replace(" ", "")):
+              sys.exit(f"invalid hours: {hours!r}")
+          out = set()
+          for part in years.replace(" ", "").split(","):
+              a, _, b = part.partition("-")
+              lo, hi = int(a), int(b or a)
+              if lo > hi or lo < 1940 or hi > 2026:
+                  sys.exit(f"invalid range: {part!r}")
+              out.update(range(lo, hi + 1))
+          if len(out) > 256:
+              sys.exit("too many years")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("matrix=" + json.dumps({"year": sorted(out)}) + "\n")
+          PY
+
+  fetch:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - env:
+          YEAR: ${{ matrix.year }}
+          HOURS: ${{ inputs.hours }}
+        run: >-
+          uv run clima-nqn era5 fetch --year "$YEAR"
+          --hours "${HOURS// /}" --workers 64 --out data/raw/era5/neuquen
+      - uses: actions/upload-artifact@v7
+        with:
+          name: era5-neuquen-${{ matrix.year }}
+          path: backend/data/raw/era5/neuquen/${{ matrix.year }}.zarr
+          retention-days: 90
+          if-no-files-found: error

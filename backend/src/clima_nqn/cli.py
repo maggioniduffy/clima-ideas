@@ -3,7 +3,7 @@ from typing import Annotated
 
 import typer
 
-from clima_nqn.io import dem
+from clima_nqn.io import dem, era5
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, write_enso
 
 app = typer.Typer(help="clima-nqn command line interface.")
@@ -57,3 +57,54 @@ def dem_build(
     """Decimate tiles to relief.bin (Float32 [lon, lat, elev_m]) with its manifest."""
     path = dem.build_relief(raw, out, step=step)
     typer.echo(f"{path.stat().st_size / 1e6:.2f} MB -> {path}")
+
+
+era5_app = typer.Typer(help="Regional ERA5 for Neuquén (ARCO-ERA5 Zarr, no CDS account).")
+app.add_typer(era5_app, name="era5")
+
+
+@era5_app.command("fetch")
+def era5_fetch(
+    year: Annotated[int | None, typer.Option(help="Calendar year.")] = None,
+    years: Annotated[
+        str | None, typer.Option(help='Several years, e.g. "1980-2025" or "1980-1985,1990".')
+    ] = None,
+    months: Annotated[str, typer.Option(help='Months, e.g. "1-12", "3", "1,2,5-7".')] = "1-12",
+    hours: Annotated[str, typer.Option(help='UTC hours, e.g. "0-23", "0,12".')] = "0-23",
+    area: Annotated[
+        str, typer.Option("--area", help="N,W,S,E (use --area=N,W,S,E for negatives).")
+    ] = ",".join(f"{x:g}" for x in era5.NEUQUEN_BOX),
+    out: Annotated[Path, typer.Option(help="Per-year store directory.")] = era5.DEFAULT_OUT,
+    workers: Annotated[
+        int, typer.Option(help="Concurrent hour-chunk reads.")
+    ] = era5.DEFAULT_WORKERS,
+    retries: Annotated[int, typer.Option(help="Attempts per read.")] = 3,
+) -> None:
+    """Fetch one or more years to <out>/<year>.zarr (complete years skipped, incomplete rebuilt)."""
+    if (year is None) == (years is None):
+        raise typer.BadParameter("give exactly one of --year or --years")
+    try:
+        box = era5.parse_area(area)
+        month_list, hour_list = era5.parse_months(months), era5.parse_hours(hours)
+        year_list = [year] if year is not None else era5.parse_years(years or "")
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    failed: list[int] = []
+    for y in year_list:
+        try:
+            era5.fetch_year(y, month_list, hour_list, box, out, workers=workers, retries=retries)
+        except Exception as exc:  # noqa: BLE001 - keep going, report at the end
+            typer.echo(f"year {y} failed: {exc}", err=True)
+            failed.append(y)
+    if failed:
+        typer.echo(f"years failed: {failed}", err=True)
+        raise typer.Exit(1)
+
+
+@era5_app.command("combine")
+def era5_combine(
+    src: Annotated[Path, typer.Option(help="Per-year store directory.")] = era5.DEFAULT_OUT,
+    out: Annotated[Path, typer.Option(help="Combined store.")] = era5.COMBINED,
+) -> None:
+    """Concatenate all per-year stores into one time-series store."""
+    era5.combine(src, out)

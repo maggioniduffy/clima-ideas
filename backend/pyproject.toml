@@ -13,6 +13,9 @@ dependencies = [
     "typer",
     "rasterio>=1.5.2",
     "numpy>=2.5.4",
+    "xarray>=2026.9.0",
+    "zarr>=3.4.2",
+    "gcsfs>=2026.10.1",
 ]
 
 [project.scripts]
