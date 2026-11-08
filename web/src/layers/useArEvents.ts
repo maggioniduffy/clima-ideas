@@ -16,7 +16,7 @@ export interface CellReading {
 }
 
 /** Events of an `events` layer with hourly IVT frames: selection, replay clock and picked cell. */
-export function useArEvents(layer: LayerManifest | undefined, active: boolean) {
+export function useArEvents(layer: LayerManifest | undefined, active: boolean, opacity = 1) {
   const layerId = layer?.id;
   const eventsFile = layer?.files.find((f) => f.endsWith("events.json"));
   const indexFile = layer?.files.find((f) => f === "frames/index.json");
@@ -125,11 +125,12 @@ export function useArEvents(layer: LayerManifest | undefined, active: boolean) {
         frame,
         theme,
         picked,
+        opacity,
         onHover: setHover,
         onPick: setPicked,
       }),
     ];
-  }, [layerId, index, selectedEventId, frames, cells, frame, theme, picked]);
+  }, [layerId, index, selectedEventId, frames, cells, frame, theme, picked, opacity]);
 
   const startIso = entry?.start;
   const timeMs = startIso ? frameTime(startIso, frame, index?.step_hours) : null;

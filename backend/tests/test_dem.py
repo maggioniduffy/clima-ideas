@@ -85,9 +85,33 @@ def test_build_relief_from_tiles(tmp_path):
     raw.mkdir()
     name = dem.tile_name(-38, -70)
     (raw / f"{name}.tif").write_bytes(_tile(np.full((20, 20), 100.0), -70.0, -37.0).read())
-    out = dem.build_relief(raw, tmp_path / "out", bbox=(-70.0, -38.0, -69.0, -37.0), step=0.25)
+    box = [(-70.5, -38.5), (-68.5, -38.5), (-68.5, -36.5), (-70.5, -36.5)]  # whole bbox kept
+    out = dem.build_relief(
+        raw, tmp_path / "out", bbox=(-70.0, -38.0, -69.0, -37.0), step=0.25, clip_ring=box
+    )
     pts = np.fromfile(out, dtype="<f4").reshape(-1, 3)
     assert pts.shape == (16, 3) and set(pts[:, 2]) == {100.0}
+
+
+def test_clip_polygon_keeps_only_points_inside_ring():
+    ring = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (2.0, 1.0), (0.0, 4.0)]  # notch at the top
+    pts = np.array([[1, 1, 5], [2, 3, 6], [5, 1, 7], [3, 1, 8], [-1, -1, 9]], dtype=np.float32)
+    out = dem.clip_polygon(pts, ring)
+    assert out[:, 2].tolist() == [5.0, 8.0]
+    assert dem.clip_polygon(np.empty((0, 3), dtype=np.float32), ring).shape == (0, 3)
+
+
+def test_build_relief_clips_to_ring(tmp_path):
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    name = dem.tile_name(-38, -70)
+    (raw / f"{name}.tif").write_bytes(_tile(np.full((20, 20), 100.0), -70.0, -37.0).read())
+    west_half = [(-70.0, -38.0), (-69.5, -38.0), (-69.5, -37.0), (-70.0, -37.0)]
+    out = dem.build_relief(
+        raw, tmp_path / "out", bbox=(-70.0, -38.0, -69.0, -37.0), step=0.25, clip_ring=west_half
+    )
+    pts = np.fromfile(out, dtype="<f4").reshape(-1, 3)
+    assert pts.shape == (8, 3) and pts[:, 0].max() < -69.5
 
 
 @pytest.mark.slow

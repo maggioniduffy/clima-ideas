@@ -76,8 +76,8 @@ export function buildReferenceLayers({ theme, province, cordillera = null }: Pro
       parameters: FLAT,
       updateTriggers: { getColor: [theme] },
     });
-  // label at the westernmost vertex of the polygon
-  const west = cordillera?.reduce((a, p) => (p[0] < a[0] ? p : a));
+  // label at the northernmost vertex of the polygon: the legend sits at the bottom-right of the map
+  const west = cordillera?.reduce((a, p) => (p[1] > a[1] ? p : a));
   const labels = [
     ...(west ? [{ text: es.map.cordillera, position: west, anchor: "start" as const, size: 11 }] : []),
     { text: es.map.city, position: [NEUQUEN_CITY.lon, NEUQUEN_CITY.lat], anchor: "start" as const, size: 12 },

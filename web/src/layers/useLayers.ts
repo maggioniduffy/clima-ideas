@@ -2,7 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Layer } from "@deck.gl/core";
 import { fetchLayerBinary, fetchLayerData, fetchLayers, type LayerManifest, type PointFeature } from "../api/client";
 import { buildPointsLayer } from "./pointsLayer";
+import { useTheme } from "../theme/themeStore";
 import { buildReliefLayer, parseRelief, type ReliefData } from "./reliefLayer";
+import { parseRing, PROVINCE_URL, type LonLat } from "./referenceLayers";
+
+/** Province outer ring used to clip the relief; null when it cannot be fetched (relief then shows unclipped). */
+const fetchProvinceRing = (): Promise<LonLat[] | null> =>
+  fetch(PROVINCE_URL)
+    .then((r) => (r.ok ? r.json() : null))
+    .then(parseRing)
+    .catch(() => null);
 
 /** Binary point-cloud layers: kind "points" whose manifest lists a .bin file. */
 const binaryFile = (l: LayerManifest) => (l.kind === "points" ? l.files.find((f) => f.endsWith(".bin")) : undefined);
@@ -14,6 +23,7 @@ export function useLayers() {
   const [activeIds, setActiveIds] = useState<ReadonlySet<string>>(new Set());
   const [data, setData] = useState<Record<string, PointFeature[]>>({});
   const [reliefs, setReliefs] = useState<Record<string, ReliefData>>({});
+  const theme = useTheme();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
 
@@ -47,8 +57,8 @@ export function useLayers() {
         const failed = () => setActiveIds((prev) => new Set([...prev].filter((x) => x !== id)));
         if (bin) {
           if (!reliefs[id]) {
-            fetchLayerBinary(id, bin)
-              .then((b) => setReliefs((prev) => ({ ...prev, [id]: parseRelief(b) })))
+            Promise.all([fetchLayerBinary(id, bin), fetchProvinceRing()])
+              .then(([b, ring]) => setReliefs((prev) => ({ ...prev, [id]: parseRelief(b, ring) })))
               .catch(failed);
           }
         } else if (layer?.kind === "points" && !data[id]) {
@@ -75,8 +85,9 @@ export function useLayers() {
     () =>
       layers
         .filter((l) => activeIds.has(l.id))
+        .sort((a, b) => Number(!!reliefs[b.id]) - Number(!!reliefs[a.id])) // terrain at the bottom
         .flatMap((l): Layer[] => {
-          if (reliefs[l.id]) return [buildReliefLayer(l.id, reliefs[l.id]!)];
+          if (reliefs[l.id]) return [buildReliefLayer(l.id, reliefs[l.id]!, theme)];
           if (l.kind === "points" && data[l.id])
             return [
               buildPointsLayer(l.id, data[l.id]!, selectedId === l.id ? selectedPointId : null, (f) =>
@@ -85,7 +96,7 @@ export function useLayers() {
             ];
           return [];
         }),
-    [layers, activeIds, data, reliefs, selectedId, selectedPointId, pickPoint],
+    [layers, activeIds, data, reliefs, theme, selectedId, selectedPointId, pickPoint],
   );
 
   const selectedLayer = layers.find((l) => l.id === selectedId) ?? null;
