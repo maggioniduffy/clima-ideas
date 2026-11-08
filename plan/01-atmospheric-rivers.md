@@ -54,9 +54,10 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   diseño, `docs/design.md`), debajo del IVT semitransparente (0,5 con relieve; casi opaco sin relieve); IVT y relieve
   recortados a la provincia más una franja de 10 km; leyenda abajo a la derecha. Visor adaptable: por debajo de 800 px
   capas e inspector pasan a paneles desplegables.
-- F1.7 hecha para 2023 (run 42503142531): ClimateNet (`climatenet_new/model/weights.pth`) vs. BARD kappa 0,18, peor que
-  el baseline IVT ≥ 250 (kappa 0,24), con el rectángulo anterior (no re-corrido con el polígono); ClimateNet marca RA en 25,8 % de los pasos vs. 3,8 % de BARD y se parece más al
-  umbral de IVT (kappa 0,54). El ML no mejora al baseline (`reports/01/F1.7.md`).
+- F1.7 hecha para 2023 con el polígono provincial (run 42520253919): ClimateNet (`climatenet_new/model/weights.pth`) vs.
+  BARD kappa 0,18, peor que el baseline IVT ≥ 250 (kappa 0,24); ClimateNet marca RA en 24,5 % de los pasos vs. 3,3 % de
+  BARD y se parece más al umbral de IVT (kappa 0,54). Con el rectángulo (run 42503142531) los kappa eran los mismos
+  (25,8 % vs. 3,8 % de pasos). El ML no mejora al baseline (`reports/01/F1.7.md`).
 - F1.8 hecha: con el polígono, 3 de 16 pruebas Niño−Niña con p < 0,05 (SON: días con RA, IVT máx. medio 527 vs. 435
   kg m⁻¹ s⁻¹, fracción de lluvia) y ninguna sostiene p BH < 0,05 (`reports/01/F1.8.md`). Con el rectángulo eran 6 de 16
   y el IVT máx. medio de SON sí sostenía BH: el resultado no es robusto a la elección del polígono.
