@@ -1,0 +1,9 @@
+# CPU-only inference. torch comes from the PyTorch CPU index (smaller wheel, no CUDA).
+--extra-index-url https://download.pytorch.org/whl/cpu
+numpy>=2.0
+xarray>=2025.1
+zarr>=3.0
+gcsfs>=2025.1
+netcdf4>=1.7
+tqdm
+torch>=2.4

@@ -1,0 +1,182 @@
+# ClimateNet (pretrained CGNet) vs BARD (plan/01, F1.7). Manual only.
+# One CPU job per year runs the model and the IVT >= 250 baseline on ERA5 (ARCO), cropped to Neuquen; a final job
+# compares them with the BARD crops of an earlier teca.yml run and uploads F1.7.md/F1.7.json (`climatenet-compare`).
+name: ClimateNet vs BARD
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: 'ERA5 years (1940-2026): "2023", "2020-2023" or "2019,2023"; must exist in the BARD run'
+        default: "2023"
+        type: string
+      bard_run_id:
+        description: "Run id of the teca.yml run that produced bard-neuquen-<year> artifacts"
+        default: "42437931768"
+        type: string
+      weights_url:
+        description: "Direct link to the pretrained .pth, or an index page that links to it (README of andregraubner/ClimateNet: https://portal.nersc.gov/project/ClimateNet/; exact file sin verificar)"
+        default: "https://portal.nersc.gov/project/ClimateNet/"
+        type: string
+      weights_name:
+        description: "File name of the weights when weights_url is an index that links several .pth files"
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: climatenet-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # andregraubner/ClimateNet, HEAD of main when checked (MIT).
+  CLIMATENET_COMMIT: 474bb96a76198ad1ff0551126c46a28a61a1b553
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      years: ${{ steps.parse.outputs.years }}
+      wkey: ${{ steps.parse.outputs.wkey }}
+    steps:
+      - name: Parse years and weights key
+        id: parse
+        env:
+          YEARS: ${{ inputs.years }}
+          WEIGHTS_URL: ${{ inputs.weights_url }}
+          WEIGHTS_NAME: ${{ inputs.weights_name }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import hashlib, json, os, sys
+          text = os.environ["YEARS"].replace(" ", "")
+          years = set()
+          try:
+              for part in filter(None, text.split(",")):
+                  lo, _, hi = part.partition("-")
+                  years.update(range(int(lo), int(hi or lo) + 1))
+          except ValueError:
+              sys.exit(f"::error::invalid years {text!r}")
+          if not years or min(years) < 1940 or max(years) > 2026:
+              sys.exit(f"::error::years must be non-empty and within 1940..2026, got {text!r}")
+          key = hashlib.sha256(f"{os.environ['WEIGHTS_URL']}|{os.environ['WEIGHTS_NAME']}".encode()).hexdigest()[:16]
+          print("years=" + json.dumps(sorted(years)))
+          print("wkey=" + key)
+          PY
+
+  weights:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore weights
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: model
+          key: climatenet-weights-v1-${{ needs.plan.outputs.wkey }}
+      - name: Fetch weights
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          WEIGHTS_URL: ${{ inputs.weights_url }}
+          WEIGHTS_NAME: ${{ inputs.weights_name }}
+        run: |
+          args=(--url "$WEIGHTS_URL" --out model)
+          if [ -n "$WEIGHTS_NAME" ]; then args+=(--name "$WEIGHTS_NAME"); fi
+          python3 tools/climatenet/fetch_weights.py "${args[@]}"
+      - name: Show weights provenance
+        run: cat model/source.json
+
+  climatenet:
+    needs: [plan, weights]
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        year: ${{ fromJSON(needs.plan.outputs.years) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - name: Restore weights
+        uses: actions/cache/restore@v6
+        with:
+          path: model
+          key: climatenet-weights-v1-${{ needs.plan.outputs.wkey }}
+          fail-on-cache-miss: true
+      - name: Clone ClimateNet at the pinned commit
+        run: |
+          git clone https://github.com/andregraubner/ClimateNet.git ClimateNet
+          git -C ClimateNet checkout "$CLIMATENET_COMMIT"
+      - name: Install CPU dependencies
+        run: |
+          uv venv .venv-climatenet
+          uv pip install --python .venv-climatenet/bin/python -r tools/climatenet/requirements.txt
+      - name: Unit tests
+        run: |
+          uv pip install --python .venv-climatenet/bin/python pytest
+          .venv-climatenet/bin/python -m pytest tools/climatenet -q
+      - name: Run ClimateNet and the IVT baseline
+        timeout-minutes: 240
+        env:
+          YEAR: ${{ matrix.year }}
+        run: |
+          set -o pipefail
+          mkdir -p out
+          .venv-climatenet/bin/python tools/climatenet/run_climatenet.py --year "$YEAR" \
+            --model-dir model --repo-dir ClimateNet --model-commit "$CLIMATENET_COMMIT" \
+            --out out 2>&1 | tee out/run.log
+          ls -lh out
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: climatenet-neuquen-${{ matrix.year }}
+          path: |
+            out/*.nc
+            out/run.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  compare:
+    needs: [plan, climatenet]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - name: Install backend
+        working-directory: backend
+        run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: climatenet-neuquen-*
+          path: climatenet
+      - uses: actions/download-artifact@v7
+        with:
+          run-id: ${{ inputs.bard_run_id }}
+          github-token: ${{ github.token }}
+          pattern: bard-neuquen-*
+          path: bard
+      - name: Compare BARD, ClimateNet and the IVT baseline
+        working-directory: backend
+        run: >-
+          uv run python -m clima_nqn.stages.ar.compare
+          --bard-dir ../bard --climatenet-dir ../climatenet --ivt-dir ../climatenet
+          --out-dir ../climatenet-compare
+      - name: Show report
+        run: cat climatenet-compare/F1.7.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: climatenet-compare
+          path: |
+            climatenet-compare/F1.7.md
+            climatenet-compare/F1.7.json
