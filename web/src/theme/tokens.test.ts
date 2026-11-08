@@ -24,7 +24,7 @@ test.each(["light", "dark"] as const)("%s neutrals match tokens.css", (theme) =>
 
 test.each(["light", "dark"] as const)("%s IVT ramp matches tokens.css", (theme) => {
   const b = block(`:root[data-theme="${theme}"]`);
-  expect(tokens.ivtRamp[theme]).toHaveLength(4);
+  expect(tokens.ivtRamp[theme]).toHaveLength(6);
   tokens.ivtRamp[theme].forEach((v, i) => expect(b[`--ivt-${i}`]).toBe(v));
 });
 
