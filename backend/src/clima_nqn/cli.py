@@ -4,7 +4,8 @@ from typing import Annotated
 import typer
 
 from clima_nqn.io import dem, era5
-from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, write_enso
+from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
+from clima_nqn.stages.ar import catalog as ar_catalog
 
 app = typer.Typer(help="clima-nqn command line interface.")
 
@@ -108,3 +109,41 @@ def era5_combine(
 ) -> None:
     """Concatenate all per-year stores into one time-series store."""
     era5.combine(src, out)
+
+
+ar_app = typer.Typer(help="Atmospheric rivers in the Neuquén cordillera (phase 1).")
+app.add_typer(ar_app, name="ar")
+
+
+@ar_app.command("catalog")
+def ar_catalog_cmd(
+    bard_dir: Annotated[Path, typer.Option(help="Directory searched for bard_neuquen_*.nc.")],
+    era5_dir: Annotated[Path, typer.Option(help="Directory with the <year>.zarr stores.")],
+    threshold: Annotated[float, typer.Option(help="BARD probability threshold.")] = 0.67,
+    max_gap_steps: Annotated[
+        int, typer.Option(help="Non-AR 6-hourly steps allowed inside one event.")
+    ] = 0,
+    out: Annotated[Path, typer.Option(help="Output Parquet path.")] = ar_catalog.DEFAULT_OUT,
+    enso: Annotated[
+        Path, typer.Option(help="ENSO Parquet (clima-nqn enso fetch); skipped if missing.")
+    ] = DEFAULT_PATH,
+) -> None:
+    """Build the AR event catalog (BARD events + ERA5 statistics over the cordillera polygon)."""
+    bard = sorted(bard_dir.rglob("bard_neuquen_*.nc"))
+    era5_stores = sorted(p for p in era5_dir.glob("[0-9][0-9][0-9][0-9].zarr") if p.is_dir())
+    if not bard:
+        raise typer.BadParameter(f"no bard_neuquen_*.nc under {bard_dir}")
+    if not era5_stores:
+        raise typer.BadParameter(f"no <year>.zarr stores in {era5_dir}")
+    enso_df = read_enso(enso) if enso.exists() else None
+    if enso_df is None:
+        typer.echo(f"ENSO table not found at {enso}: enso_phase left empty", err=True)
+    df = ar_catalog.build_catalog(bard, era5_stores, threshold, max_gap_steps, enso=enso_df)
+    path = ar_catalog.write_catalog(df, out)
+    period = df.attrs["period"]
+    first, last = (int(x[:4]) for x in period.split("/"))
+    years = last - first + 1
+    typer.echo(
+        f"{len(df)} events, {period}, {len(df) / years:.1f} events/year "
+        f"(threshold {threshold}, max_gap_steps {max_gap_steps}) -> {path}"
+    )

@@ -34,6 +34,12 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   `deg0l` sobre `NEUQUEN_BOX` -34,-74,-43,-66, fuente ARCO-ERA5 (CC-BY 4.0). Cada job pasa el chequeo de completitud
   (eje de tiempo y variables). No se revisó el contenido fuera de Actions (esta sesión no llega al almacenamiento de
   artefactos): F1.3/F1.4 deben bajarlos dentro de Actions (`actions/download-artifact` con `run-id`).
+- F1.3 código listo (2026-11-08): `clima-nqn ar catalog` (`stages/ar/catalog.py`) + workflow `ar-catalog.yml`, que
+  baja los artefactos de BARD y ERA5 por run id. Evento: pasos BARD de 6 h consecutivos con `ar_probability` ≥ 0,67 en
+  alguna celda del polígono de cordillera (rectángulo 71,95–70 O, 36–41,1 S, aproximación sin verificar). Por evento:
+  inicio, fin, duración, prob. máx., fracción de área, IVT máx. (valor, hora, celda), isoterma 0 °C máx. y media, lluvia
+  media acumulada (mm) y fase ENSO del mes de inicio. 22 unit tests con datos sintéticos. Falta: correr sobre el run
+  de BARD 1980–2025.
 - F1.2 código listo (2026-11-08): `teca.yml` con input `years` (matriz por año) y recorte a Neuquén con
   `tools/teca/crop_bard.py` (artefacto `bard-neuquen-<año>`). Falta: corrida 1980–2025 y validar el recorte con salida
   real de BARD.
