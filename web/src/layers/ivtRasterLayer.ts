@@ -9,6 +9,9 @@ export interface CellRef {
   col: number;
 }
 
+/** IVT raster opacity while relief is drawn below it, so terrain reads through. */
+export const IVT_OVER_RELIEF_OPACITY = 0.65;
+
 interface Props {
   layerId: string;
   eventId: string;
@@ -18,6 +21,8 @@ interface Props {
   frame: number;
   theme: Theme;
   picked: CellRef | null;
+  /** Layer opacity (1 = as colored); lowered when terrain is drawn below so it reads through. */
+  opacity?: number;
   onHover: (cell: CellRef | null) => void;
   onPick: (cell: CellRef) => void;
 }
@@ -36,6 +41,9 @@ export function buildIvtRasterLayer(p: Props) {
     id: `ivt-${p.layerId}`,
     data: p.cells,
     pickable: true,
+    opacity: p.opacity ?? 1,
+    // flat at z = 0: skip the depth test so the 3D relief below never hides it
+    parameters: { depthCompare: "always" },
     getPolygon: (c) => c.polygon,
     getFillColor: (c) => ivtColor(frameValue(p.frames, p.grid, p.frame, c.row, c.col), p.theme, true),
     getLineColor: (c) => (isPicked(c) ? [...outline, 255] : [0, 0, 0, 0]),

@@ -50,6 +50,8 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   buena parte de la cordillera. Afecta F1.3/F1.4. Corregido: el polígono ahora es la provincia (Natural Earth 1:10m)
   recortada al oeste de 70° O (`backend/src/clima_nqn/stages/ar/geo/`, 88 celdas BARD contra 140 del rectángulo);
   F1.3/F1.4/F1.8 re-corridos con el polígono (run 42516927153 de `ar-catalog.yml`). Usar relieve (DEM) queda abierto.
+- Relieve en el visor (2026-11-08): Copernicus GLO-30 recortado a la provincia, rampa hipsométrica con sombreado, debajo del
+  IVT semitransparente (0,65); leyenda abajo a la derecha. Definir la cordillera por cota con el DEM sigue abierto.
 - F1.7 hecha para 2023 (run 42503142531): ClimateNet (`climatenet_new/model/weights.pth`) vs. BARD kappa 0,18, peor que
   el baseline IVT ≥ 250 (kappa 0,24), con el rectángulo anterior (no re-corrido con el polígono); ClimateNet marca RA en 25,8 % de los pasos vs. 3,8 % de BARD y se parece más al
   umbral de IVT (kappa 0,54). El ML no mejora al baseline (`reports/01/F1.7.md`).

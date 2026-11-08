@@ -85,7 +85,7 @@
 .kv dd.kv-wide { margin-bottom: var(--space-2); }
 .event-id { margin: 0 0 var(--space-2); font-size: 13px; }
 .inspector-meta { margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--border); font-size: 11px; }
-.inspector-meta dd { color: var(--text-muted); text-align: right; }
+.inspector-meta dd { color: var(--text-muted); text-align: right; overflow-wrap: anywhere; }
 
 /* AR events: list in the panel, replay controls and marks on the timeline */
 .event-list-item { padding: 0 0 var(--space-2) var(--space-5); }
@@ -125,9 +125,9 @@
 }
 .timeline-span { position: absolute; inset: 4px 0; background: var(--raised); }
 
-/* Map legend (bottom-left over the canvas): IVT ramp + ticks */
+/* Map legend (bottom-right over the canvas): IVT ramp + ticks */
 .map-legend {
-  position: absolute; left: var(--space-3); bottom: var(--space-3); width: 220px; z-index: 1;
+  position: absolute; right: var(--space-3); bottom: var(--space-3); width: 220px; max-width: calc(100% - 2 * var(--space-3)); z-index: 1;
   padding: var(--space-2) var(--space-3); font-size: 11px; line-height: 1.3;
   background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md);
   opacity: 0.96; pointer-events: none;
@@ -140,4 +140,4 @@
 .map-legend-ticks span:last-child { transform: translateX(-100%); }
 .map-legend-source { margin-top: 4px; color: var(--text-muted); font-size: 10px; }
 .inspector-meta { grid-template-columns: auto minmax(0, 1fr); }
-.inspector-meta dd:not(.kv-wide) { white-space: normal; }
+.inspector-meta dd:not(.kv-wide) { white-space: normal; overflow-wrap: anywhere; min-width: 0; }

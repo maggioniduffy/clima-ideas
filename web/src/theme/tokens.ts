@@ -22,4 +22,9 @@ export const tokens = {
     light: ["#DCE6BE", "#8CCBB0", "#3FA3B8", "#2B6FB0", "#38399A", "#5A1A72"],
     dark: ["#22384A", "#2B5F80", "#1E9A9C", "#6BCB6C", "#E3E24A", "#F8F5B4"],
   },
+  /** Hypsometric relief stops, lowland to peaks (elevations in RELIEF_STOPS_M); `--relief-0..5` in tokens.css. */
+  reliefRamp: {
+    light: ["#A9B27E", "#CBC593", "#BE9F6E", "#8F6C4B", "#B3A99C", "#E2DDD2"],
+    dark: ["#4B5B3B", "#6C6B46", "#80694B", "#684F40", "#9A938D", "#D0CBC2"],
+  },
 } as const;

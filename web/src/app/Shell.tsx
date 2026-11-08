@@ -1,3 +1,4 @@
+import { IVT_OVER_RELIEF_OPACITY } from "../layers/ivtRasterLayer";
 import { useArEvents } from "../layers/useArEvents";
 import { useReferenceLayers } from "../layers/referenceLayers";
 import { useLayers } from "../layers/useLayers";
@@ -13,7 +14,8 @@ export function Shell() {
   const s = useLayers();
   const eventsLayer = s.layers.find((l) => l.kind === "events");
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
-  const ar = useArEvents(eventsLayer, eventsActive);
+  const reliefOn = s.deckLayers.some((l) => l.id.startsWith("relief-"));
+  const ar = useArEvents(eventsLayer, eventsActive, reliefOn ? IVT_OVER_RELIEF_OPACITY : 1);
   const refLayers = useReferenceLayers(eventsActive);
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);

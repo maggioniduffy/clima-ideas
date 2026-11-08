@@ -11,6 +11,8 @@ import numpy as np
 from rasterio.enums import Resampling
 
 from clima_nqn.layers.manifest import LayerManifest
+from clima_nqn.stages.ar import geo
+from clima_nqn.stages.ar.catalog import _points_in_polygon
 
 BUCKET_URL = "https://copernicus-dem-30m.s3.amazonaws.com"
 SOURCE = "Copernicus DEM GLO-30 (ESA)"
@@ -114,6 +116,20 @@ def clip_bbox(pts: np.ndarray, bbox: tuple[float, float, float, float]) -> np.nd
     return pts[keep]
 
 
+def clip_polygon(pts: np.ndarray, ring: list[tuple[float, float]]) -> np.ndarray:
+    """Keep the points whose (lon, lat) fall inside `ring` (even-odd ray casting, bbox prefilter)."""
+    if len(pts) == 0:
+        return pts
+    xs, ys = [p[0] for p in ring], [p[1] for p in ring]
+    keep = np.zeros(len(pts), dtype=bool)
+    in_box = (
+        (pts[:, 0] >= min(xs)) & (pts[:, 0] <= max(xs))
+        & (pts[:, 1] >= min(ys)) & (pts[:, 1] <= max(ys))
+    )  # fmt: skip
+    keep[in_box] = _points_in_polygon(pts[in_box, 0], pts[in_box, 1], ring)
+    return pts[keep]
+
+
 def write_relief(
     pts: np.ndarray, out_dir: Path, bbox: tuple[float, float, float, float], step: float
 ) -> Path:
@@ -154,8 +170,15 @@ def build_relief(
     out_dir: Path = OUT_DIR,
     bbox: tuple[float, float, float, float] = NEUQUEN_BBOX,
     step: float = DEFAULT_STEP,
+    clip_ring: list[tuple[float, float]] | None = None,
 ) -> Path:
-    """Decimate each tile in turn (one in memory at a time) and write the layer."""
+    """Decimate each tile in turn (one in memory at a time) and write the layer.
+
+    Points are clipped to the bbox and then to `clip_ring` (default: the Neuquén province outline, Natural Earth),
+    so the relief does not spill outside the province. The bbox in relief.meta.json stays the rectangle searched.
+    """
+    if clip_ring is None:
+        clip_ring = geo.province_ring()
     import rasterio
 
     chunks = []
@@ -164,6 +187,6 @@ def build_relief(
         if not path.exists():
             raise FileNotFoundError(f"missing tile {path}; run `clima-nqn dem fetch`")
         with rasterio.open(path) as ds:
-            chunks.append(clip_bbox(decimate_tile(ds, step), bbox))
+            chunks.append(clip_polygon(clip_bbox(decimate_tile(ds, step), bbox), clip_ring))
     pts = np.concatenate(chunks) if chunks else np.empty((0, 3), dtype=np.float32)
     return write_relief(pts, out_dir, bbox, step)
