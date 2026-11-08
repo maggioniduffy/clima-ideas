@@ -33,14 +33,15 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   `viwvn`, `tp`, `deg0l` sobre `NEUQUEN_BOX` -34,-74,-43,-66, fuente ARCO-ERA5 (CC-BY 4.0).
 - F1.2 hecha (2026-11-08): run 42437931768 de `teca.yml` (3 intentos: jobs sin runner, y una falla transitoria de
   `setup-micromamba`), 46 recortes `bard-neuquen-<año>` 1980–2025.
-- F1.3 hecha: 480 eventos, 10,4/año (`reports/01/F1.3.md`, run 42500865697).
-- F1.4 hecha: 63,3 % de los días ≥ p99 (35,5 mm/día, media del polígono) coinciden con un RA (IC 55,8–70,2 %), tasa base
-  4,2 %, razón 15,2; p95: 35,3 %; por celda: 70,8 % (`reports/01/F1.4.md`). Umbral p99 confirmado como definición
+- F1.3 hecha: 433 eventos, 9,4/año con el polígono recortado (`reports/01/F1.3.md`, run 42516927153); con el rectángulo
+  anterior eran 480, 10,4/año.
+- F1.4 hecha: 58,0 % de los días ≥ p99 (29,2 mm/día, media del polígono) coinciden con un RA (IC 50,5–65,2 %), tasa base
+  3,7 %, razón 15,8; p95: 30,7 %; por celda: 65,9 % (`reports/01/F1.4.md`). Con el rectángulo: 63,3 %, 4,2 %, 35,3 %, 70,8 %. Umbral p99 confirmado como definición
   principal; p95 y por celda quedan como sensibilidad.
 - F1.5 hecha (2026-11-08, entorno `clima-ideas` con acceso a doi.org y revistas): 4 de 7 estudios verificados en texto
   completo (Viale et al. 2018, Valenzuela y Garreaud 2019, Viale y Nuñez 2011, Saavedra et al. 2020); Guan y Waliser
-  2015, Rutz et al. 2019 y Campos y Rondanelli 2023 siguen sin verificar (Wiley responde 403). Comparación: ≈ 15 días/año
-  con RA vs. 15–20 al este de los Andes al sur de 35° S (Viale 2018); 63,3 % de extremos con RA vs. 27–70 % en Chile
+  2015, Rutz et al. 2019 y Campos y Rondanelli 2023 siguen sin verificar (Wiley responde 403). Comparación: ≈ 13,5 días/año
+  con RA vs. 15–20 al este de los Andes al sur de 35° S (Viale 2018); 58,0 % de extremos con RA vs. 27–70 % en Chile
   centro-sur con umbral ≥ 35 mm/día (Valenzuela y Garreaud 2019).
 - F1.6 hecha y revisada en el visor con la capa real (2026-11-08): rampa secuencial de alto contraste en ambos temas,
   leyenda (satura en 1200 kg m-1 s-1), contorno provincial (Natural Earth 1:10m, dominio público), polígono de
@@ -48,13 +49,13 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
 - Hallazgo del visor: el polígono de cordillera (71,95–70 O) se sale al oeste del límite provincial, sobre Chile, en
   buena parte de la cordillera. Afecta F1.3/F1.4. Corregido: el polígono ahora es la provincia (Natural Earth 1:10m)
   recortada al oeste de 70° O (`backend/src/clima_nqn/stages/ar/geo/`, 88 celdas BARD contra 140 del rectángulo);
-  los números de F1.3/F1.4 se rehacen con el catálogo re-corrido. Usar relieve (DEM) queda abierto.
+  F1.3/F1.4/F1.8 re-corridos con el polígono (run 42516927153 de `ar-catalog.yml`). Usar relieve (DEM) queda abierto.
 - F1.7 hecha para 2023 (run 42503142531): ClimateNet (`climatenet_new/model/weights.pth`) vs. BARD kappa 0,18, peor que
-  el baseline IVT ≥ 250 (kappa 0,24); ClimateNet marca RA en 25,8 % de los pasos vs. 3,8 % de BARD y se parece más al
+  el baseline IVT ≥ 250 (kappa 0,24), con el rectángulo anterior (no re-corrido con el polígono); ClimateNet marca RA en 25,8 % de los pasos vs. 3,8 % de BARD y se parece más al
   umbral de IVT (kappa 0,54). El ML no mejora al baseline (`reports/01/F1.7.md`).
-- F1.8 hecha: 6 de 16 pruebas Niño−Niña con p < 0,05; solo el IVT máx. medio de SON sostiene p BH < 0,05 (Niño 531 vs.
-  Niña 442 kg m⁻¹ s⁻¹, p = 0,0005, p BH = 0,008). Más RA en El Niño en JJA y SON, sin sostener tras BH
-  (`reports/01/F1.8.md`).
+- F1.8 hecha: con el polígono, 3 de 16 pruebas Niño−Niña con p < 0,05 (SON: días con RA, IVT máx. medio 527 vs. 435
+  kg m⁻¹ s⁻¹, fracción de lluvia) y ninguna sostiene p BH < 0,05 (`reports/01/F1.8.md`). Con el rectángulo eran 6 de 16
+  y el IVT máx. medio de SON sí sostenía BH: el resultado no es robusto a la elección del polígono.
 
 ## Abierto
 
