@@ -1,0 +1,13 @@
+{
+  "id": "ar-events",
+  "title": "Ríos atmosféricos",
+  "kind": "events",
+  "source": "Eventos falsos de prueba",
+  "period": "2000-01-01/2000-12-31",
+  "license": "CC0",
+  "updated_at": "2026-01-01T00:00:00Z",
+  "files": [
+    "events.json",
+    "frames/index.json"
+  ]
+}

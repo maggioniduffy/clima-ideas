@@ -84,3 +84,17 @@ jobs:
             backend/data/interim/ar/F1.4.json
           retention-days: 90
           if-no-files-found: error
+      - name: Publish viewer layer (F1.6)
+        working-directory: backend
+        run: >-
+          uv run clima-nqn ar layer
+          --events data/interim/ar/events.parquet
+          --era5-dir ../era5
+          --out data/processed
+          && du -sh data/processed/ar-events
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ar-events-layer
+          path: backend/data/processed/ar-events/
+          retention-days: 90
+          if-no-files-found: error

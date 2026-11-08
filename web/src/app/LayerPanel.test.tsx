@@ -43,3 +43,23 @@ test("shows empty, loading and error states", () => {
   rerender(<LayerPanel {...props} status="error" />);
   expect(screen.getByText(es.layers.error)).toBeInTheDocument();
 });
+
+test("active events layer lists its events and reports selection", () => {
+  const evLayer: LayerManifest = { ...layer, id: "ar-events", kind: "events", title: "Ríos" };
+  const onSelectEvent = vi.fn();
+  const items = [
+    { event_id: "AR-2000-001", start: "2000-03-10T06:00:00Z", ivt_max: 350 },
+    { event_id: "AR-2000-002", start: "2000-07-21T00:00:00Z", ivt_max: null },
+  ] as never;
+  const events = { layerId: "ar-events", status: "ready" as const, items, selectedEventId: "AR-2000-002", onSelectEvent };
+  const props = { ...base, layers: [evLayer], onToggle: vi.fn(), onSelect: vi.fn(), events };
+  const { rerender } = render(<LayerPanel {...props} />);
+  expect(screen.queryByTestId("event-list")).toBeNull();
+  rerender(<LayerPanel {...props} activeIds={new Set(["ar-events"])} />);
+  expect(screen.getByTestId("event-AR-2000-001")).toHaveTextContent("2000-03-10");
+  expect(screen.getByTestId("event-AR-2000-001")).toHaveTextContent("IVT 350");
+  expect(screen.getByTestId("event-AR-2000-002")).toHaveTextContent(es.events.noData);
+  expect(screen.getByTestId("event-AR-2000-002")).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByTestId("event-AR-2000-001"));
+  expect(onSelectEvent).toHaveBeenCalledWith("AR-2000-001");
+});
