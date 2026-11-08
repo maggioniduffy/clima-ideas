@@ -20,7 +20,7 @@ export const es = {
     city: "Neuquén",
     legendTitle: "IVT (kg m⁻¹ s⁻¹)",
     legendLabel: "Escala de IVT",
-    outlineSource: "Contorno provincial: Natural Earth (dominio público)",
+    outlineSource: "Contorno provincial: Natural Earth (dominio público). Cordillera: Neuquén (Natural Earth) al oeste de 70° O",
   },
   events: {
     list: "Eventos",

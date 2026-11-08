@@ -16,7 +16,7 @@ OUT_LAT, OUT_LON = -34.75, -66.25  # outside
 
 
 def make_mask():
-    return catalog.polygon_mask(LAT, LON)
+    return catalog.polygon_mask(LAT, LON, catalog.LEGACY_RECTANGLE)
 
 
 def make_bard(times, ar_cells):
@@ -43,11 +43,23 @@ def six_hourly(start, n):
 # --- polygon / mask ------------------------------------------------------------------------
 
 
-def test_polygon_is_the_documented_rectangle():
-    lons = [v[0] for v in catalog.CORDILLERA_POLYGON]
-    lats = [v[1] for v in catalog.CORDILLERA_POLYGON]
+def test_legacy_rectangle_is_the_documented_rectangle():
+    lons = [v[0] for v in catalog.LEGACY_RECTANGLE]
+    lats = [v[1] for v in catalog.LEGACY_RECTANGLE]
     assert (min(lons), max(lons)) == (-71.95, -70.0)
     assert (min(lats), max(lats)) == (-41.1, -36.0)
+
+
+def test_polygon_mask_multipolygon_is_the_union():
+    a = [(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]
+    b = [(5.0, 5.0), (7.0, 5.0), (7.0, 7.0), (5.0, 7.0)]
+    axis = np.array([1.0, 3.0, 6.0])
+    mask = catalog.polygon_mask(axis, axis, [a, b])
+    assert mask.values.tolist() == [
+        [True, False, False],
+        [False, False, False],
+        [False, False, True],
+    ]
 
 
 def test_polygon_mask_known_cells():
@@ -302,7 +314,7 @@ def write_year_files(tmp_path):
 
 def test_build_catalog_event_across_year_boundary(tmp_path):
     bard, era5 = write_year_files(tmp_path)
-    df = catalog.build_catalog(bard, era5)
+    df = catalog.build_catalog(bard, era5, polygon=catalog.LEGACY_RECTANGLE)
     assert list(df["event_id"]) == ["AR-1980-001", "AR-1981-001"]
     ev = df.iloc[0]
     assert ev["start"] == pd.Timestamp("1980-12-31 18:00")
@@ -337,14 +349,20 @@ def test_build_catalog_enso_phase(tmp_path):
             "phase": ["nina", "nino"],
         }
     )
-    df = catalog.build_catalog(bard, era5, enso=enso)
+    df = catalog.build_catalog(bard, era5, enso=enso, polygon=catalog.LEGACY_RECTANGLE)
     assert list(df["enso_phase"]) == ["nina", "nino"]  # phase of the start month
-    assert catalog.build_catalog(bard, era5)["enso_phase"].isna().all()
+    assert (
+        catalog.build_catalog(bard, era5, polygon=catalog.LEGACY_RECTANGLE)["enso_phase"]
+        .isna()
+        .all()
+    )
 
 
 def test_write_catalog_round_trip_with_metadata(tmp_path):
     bard, era5 = write_year_files(tmp_path)
-    df = catalog.build_catalog(bard, era5, threshold=0.67, max_gap_steps=0)
+    df = catalog.build_catalog(
+        bard, era5, threshold=0.67, max_gap_steps=0, polygon=catalog.LEGACY_RECTANGLE
+    )
     out = catalog.write_catalog(df, tmp_path / "ar" / "events.parquet", threshold=0.67)
     back = pd.read_parquet(out)
     pd.testing.assert_frame_equal(back, df, check_dtype=False)
