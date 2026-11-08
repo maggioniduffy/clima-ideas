@@ -1,0 +1,36 @@
+[
+ {
+  "event_id": "AR-2000-001",
+  "start": "2000-03-10T06:00:00Z",
+  "end": "2000-03-10T10:00:00Z",
+  "duration_h": 4,
+  "n_steps": 1,
+  "prob_max": 0.82,
+  "area_frac_max": 0.5,
+  "ivt_max": 350.0,
+  "ivt_max_time": "2000-03-10T09:00:00Z",
+  "ivt_max_lat": -38.5,
+  "ivt_max_lon": -70.5,
+  "deg0l_max": 3100.0,
+  "deg0l_mean": 2900.0,
+  "tp_sum_mm": 12.5,
+  "enso_phase": "nina"
+ },
+ {
+  "event_id": "AR-2000-002",
+  "start": "2000-07-21T00:00:00Z",
+  "end": "2000-07-21T03:00:00Z",
+  "duration_h": 3,
+  "n_steps": 1,
+  "prob_max": 0.9,
+  "area_frac_max": 1.0,
+  "ivt_max": 720.0,
+  "ivt_max_time": "2000-07-21T02:00:00Z",
+  "ivt_max_lat": -39.0,
+  "ivt_max_lon": -71.0,
+  "deg0l_max": null,
+  "deg0l_mean": null,
+  "tp_sum_mm": null,
+  "enso_phase": null
+ }
+]

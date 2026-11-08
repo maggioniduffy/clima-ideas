@@ -1,0 +1,149 @@
+import json
+
+import numpy as np
+import pandas as pd
+import pytest
+import xarray as xr
+from typer.testing import CliRunner
+
+from clima_nqn.cli import app
+from clima_nqn.layers.manifest import load_manifest
+from clima_nqn.stages.ar import catalog, layer
+
+LAT = np.array([-40.0, -39.75, -39.5])
+LON = np.array([-71.0, -70.75, -70.5, -70.25])
+
+
+def make_store(tmp_path, year, start, hours):
+    times = pd.date_range(start, periods=hours, freq="h")
+    t = np.arange(hours, dtype="float32")[:, None, None]
+    shape = (hours, len(LAT), len(LON))
+    # viwve = 3 * (hour index), viwvn = 4 * (hour index) -> |IVT| = 5 * hour index (3-4-5)
+    ds = xr.Dataset(
+        {
+            "viwve": (("time", "lat", "lon"), np.broadcast_to(3 * t, shape).astype("float32")),
+            "viwvn": (("time", "lat", "lon"), np.broadcast_to(4 * t, shape).astype("float32")),
+            "tp": (("time", "lat", "lon"), np.zeros(shape, dtype="float32")),
+            "deg0l": (("time", "lat", "lon"), np.full(shape, 2500, dtype="float32")),
+        },
+        coords={"time": times, "lat": LAT, "lon": LON},
+    )
+    ds.to_zarr(tmp_path / f"{year}.zarr", mode="w", consolidated=False)
+
+
+def make_catalog(tmp_path):
+    df = pd.DataFrame(
+        {
+            "event_id": ["AR-2000-001", "AR-2000-002", "AR-2000-003"],
+            "start": pd.to_datetime(["2000-01-01 06:00", "2000-01-02 00:00", "2001-06-01 00:00"]),
+            "end": pd.to_datetime(["2000-01-01 12:00", "2000-01-02 12:00", "2001-06-01 06:00"]),
+            "duration_h": [6.0, 12.0, 6.0],
+            "n_steps": [1, 2, 1],
+            "prob_max": [0.8, 0.9, 0.7],
+            "area_frac_max": [0.5, 1.0, 0.2],
+            "ivt_max": [25.0, 55.0, np.nan],
+            "ivt_max_time": pd.to_datetime(["2000-01-01 11:00", "2000-01-02 11:00", pd.NaT]),
+            "ivt_max_lat": [-39.5, -39.5, np.nan],
+            "ivt_max_lon": [-70.5, -70.5, np.nan],
+            "deg0l_max": [2500.0, 2500.0, np.nan],
+            "deg0l_mean": [2500.0, 2500.0, np.nan],
+            "tp_sum_mm": [0.0, 0.0, np.nan],
+            "enso_phase": ["Niña", None, None],
+        }
+    )[catalog.COLUMNS]
+    df.attrs.update(period="2000-01-01/2001-12-31")
+    return catalog.write_catalog(df, tmp_path / "interim" / "events.parquet")
+
+
+@pytest.fixture
+def published(tmp_path):
+    (tmp_path / "era5").mkdir()
+    make_store(tmp_path / "era5", 2000, "2000-01-01", 72)
+    events = make_catalog(tmp_path)
+    out_dir, index = layer.build_layer(events, tmp_path / "era5", tmp_path / "processed")
+    return out_dir, index
+
+
+def test_ivt_magnitude_is_hypot():
+    ds = xr.Dataset(
+        {
+            "viwve": (("time", "lat", "lon"), [[[3.0]]]),
+            "viwvn": (("time", "lat", "lon"), [[[4.0]]]),
+        },
+        coords={"time": [pd.Timestamp("2000-01-01")], "lat": [0.0], "lon": [0.0]},
+    )
+    assert float(layer.ivt_magnitude(ds)[0, 0, 0]) == 5.0
+
+
+def test_manifest_is_valid_and_lists_files(published):
+    out_dir, _ = published
+    m = load_manifest(out_dir / "manifest.json")
+    assert (m.id, m.kind, m.title) == ("ar-events", "events", "Ríos atmosféricos")
+    assert m.source == "ERA5 (Copernicus) vía ARCO-ERA5 + TECA BARD"
+    assert m.license == "CC BY 4.0"
+    assert m.period == "2000-01-01/2001-12-31"
+    assert m.files == ["events.json", "events.parquet", "frames/index.json"]
+    for f in m.files:
+        assert (out_dir / f).is_file()
+
+
+def test_events_json_rows(published):
+    out_dir, _ = published
+    rows = json.loads((out_dir / "events.json").read_text(encoding="utf-8"))
+    assert [r["event_id"] for r in rows] == ["AR-2000-001", "AR-2000-002", "AR-2000-003"]
+    assert rows[0]["start"] == "2000-01-01T06:00:00Z"
+    assert rows[0]["ivt_max_time"] == "2000-01-01T11:00:00Z"
+    assert rows[0]["enso_phase"] == "Niña"
+    assert rows[2]["ivt_max"] is None and rows[2]["ivt_max_time"] is None
+
+
+def test_frames_values_and_index(published):
+    out_dir, index = published
+    assert index["units"] == "kg m-1 s-1"
+    assert index["grid"] == {
+        "ny": 3, "nx": 4, "lat_min": -40.0, "lat_max": -39.5,
+        "lon_min": -71.0, "lon_max": -70.25, "origin": "south-west",
+    }  # fmt: skip
+    # event 1: [06:00, 12:00) -> 6 hourly frames, hour index 6..11 -> |IVT| = 30..55
+    ev = index["events"]["AR-2000-001"]
+    assert ev["n_frames"] == 6 and ev["start"] == "2000-01-01T06:00:00Z"
+    assert (ev["vmin"], ev["vmax"]) == (30.0, 55.0)
+    raw = np.fromfile(out_dir / "frames" / "AR-2000-001.bin", dtype="<f4")
+    frames = raw.reshape(6, 3, 4)
+    np.testing.assert_allclose(frames[:, 0, 0], [30, 35, 40, 45, 50, 55])
+    assert (out_dir / "frames" / "AR-2000-001.bin").stat().st_size == 6 * 3 * 4 * 4
+    assert index["events"]["AR-2000-002"]["n_frames"] == 12
+    # no ERA5 store for 2001: event without frames, still in events.json
+    assert "AR-2000-003" not in index["events"]
+    assert (
+        json.loads((out_dir / "frames" / "index.json").read_text())["events"].keys()
+        == index["events"].keys()
+    )
+
+
+def test_missing_hours_are_nan():
+    ivt = xr.DataArray(
+        np.ones((2, 1, 1), dtype="float32"),
+        dims=("time", "lat", "lon"),
+        coords={
+            "time": pd.to_datetime(["2000-01-01 00:00", "2000-01-01 02:00"]),
+            "lat": [0.0],
+            "lon": [0.0],
+        },
+    )
+    f = layer.event_frames(ivt, "2000-01-01 00:00", "2000-01-01 03:00")
+    assert f.shape == (3, 1, 1) and np.isnan(f[1]).all() and f.dtype == np.dtype("<f4")
+
+
+def test_cli_layer(tmp_path):
+    (tmp_path / "era5").mkdir()
+    make_store(tmp_path / "era5", 2000, "2000-01-01", 72)
+    events = make_catalog(tmp_path)
+    res = CliRunner().invoke(
+        app,
+        ["ar", "layer", "--events", str(events), "--era5-dir", str(tmp_path / "era5"),
+         "--out", str(tmp_path / "proc")],
+    )  # fmt: skip
+    assert res.exit_code == 0, res.output
+    assert "2 events with frames, 18 hourly frames" in res.output
+    assert (tmp_path / "proc" / "ar-events" / "manifest.json").is_file()

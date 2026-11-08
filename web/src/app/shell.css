@@ -3,7 +3,7 @@
   display: grid;
   height: 100vh;
   grid-template-columns: 240px minmax(0, 1fr) 300px;
-  grid-template-rows: 48px minmax(0, 1fr) 120px;
+  grid-template-rows: 48px minmax(0, 1fr) 136px;
   grid-template-areas:
     "top top top"
     "layers canvas inspector"
@@ -75,3 +75,41 @@
 .inspector-point dt { color: var(--text-muted); font-size: 12px; }
 .inspector-meta dd,
 .inspector-point dd { margin: 0 0 var(--space-2); }
+
+/* AR events: list in the panel, replay controls and marks on the timeline */
+.event-list-item { padding: 0 0 var(--space-2) var(--space-5); }
+.event-list { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow: auto; }
+.event-list button {
+  display: flex; justify-content: space-between; gap: var(--space-2); width: 100%;
+  background: none; border: 0; border-left: 2px solid transparent; color: inherit;
+  cursor: pointer; font: inherit; font-size: 12px; padding: 2px var(--space-2); text-align: left;
+}
+.event-list button[aria-pressed="true"] { border-left-color: var(--accent); font-weight: 600; background: var(--raised); }
+.event-list span { white-space: nowrap; }
+.event-ivt { color: var(--text-muted); }
+
+.shell-timeline { display: flex; flex-direction: column; gap: var(--space-2); }
+.replay-controls { display: flex; align-items: center; gap: var(--space-2); font-size: 12px; }
+.replay-controls button {
+  min-width: 28px; height: 24px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--raised); color: var(--text); cursor: pointer; font-size: 10px;
+}
+.replay-controls button[aria-pressed="true"] { border-color: var(--accent); }
+.replay-controls input[type="range"] { flex: 1; accent-color: var(--accent); }
+.replay-time { min-width: 150px; text-align: right; color: var(--text-muted); }
+
+.timeline-track, .timeline-detail {
+  position: relative; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.timeline-track { height: 28px; }
+.timeline-detail { height: 14px; }
+.timeline-mark {
+  position: absolute; top: 3px; bottom: 3px; min-width: 5px; padding: 0; border: 0; cursor: pointer;
+  border-radius: 1px;
+}
+.timeline-mark[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 1px; z-index: 1; }
+.timeline-cursor {
+  position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px;
+  background: var(--accent); box-shadow: 0 0 0 1px var(--text); pointer-events: none; z-index: 2;
+}
+.timeline-span { position: absolute; inset: 4px 0; background: var(--raised); }

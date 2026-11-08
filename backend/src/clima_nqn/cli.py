@@ -7,6 +7,7 @@ from clima_nqn.io import dem, era5
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.ar import extremes as ar_extremes
+from clima_nqn.stages.ar import layer as ar_layer
 
 app = typer.Typer(help="clima-nqn command line interface.")
 
@@ -171,3 +172,25 @@ def ar_extremes_cmd(
     results = ar_extremes.run(events, era5_stores, out_dir)
     typer.echo(ar_extremes.headline(results))
     typer.echo(f"-> {out_dir / 'F1.4.md'}, {out_dir / 'F1.4.json'}")
+
+
+@ar_app.command("layer")
+def ar_layer_cmd(
+    events: Annotated[Path, typer.Option(help="Catalog Parquet (clima-nqn ar catalog).")] = (
+        ar_catalog.DEFAULT_OUT
+    ),
+    era5_dir: Annotated[Path, typer.Option(help="Directory with the <year>.zarr stores.")] = (
+        era5.DEFAULT_OUT
+    ),
+    out: Annotated[Path, typer.Option(help="Processed root; writes <out>/ar-events/.")] = (
+        ar_layer.DEFAULT_OUT
+    ),
+) -> None:
+    """Publish the ar-events viewer layer: events plus hourly IVT frames for replay (F1.6)."""
+    if not events.exists():
+        raise typer.BadParameter(f"catalog not found: {events}")
+    if not any(era5_dir.glob("[0-9][0-9][0-9][0-9].zarr")):
+        raise typer.BadParameter(f"no <year>.zarr stores in {era5_dir}")
+    layer_dir, index = ar_layer.build_layer(events, era5_dir, out)
+    frames = sum(e["n_frames"] for e in index["events"].values())
+    typer.echo(f"{len(index['events'])} events with frames, {frames} hourly frames -> {layer_dir}")

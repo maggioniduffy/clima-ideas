@@ -50,6 +50,12 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   estudios con cifras para Neuquén/Comahue. Más comparables: ~50 % de lluvia diaria extrema con RA en Chile
   centro-sur (Valenzuela y Garreaud 2019) y 40–55 % de la lluvia anual por RA en la costa 37–47 S (Viale et al.
   2018). Falta: verificar en fuente primaria y completar la columna "nuestro valor" tras F1.3/F1.4.
+- F1.6 código listo (2026-11-08): `clima-nqn ar layer` publica `data/processed/ar-events/` (manifiesto, eventos en
+  JSON/Parquet, frames horarios de |IVT| en Float32 por evento) y la ruta `GET /layers/{id}/frames/{t}`. Visor: eventos
+  en la línea de tiempo coloreados por IVT máx., lista en el panel, replay horario (play/pausa, paso, deslizador),
+  inspector con campos del evento, fuente, período y valor de IVT por celda. e2e con capa falsa: 4/4. Corre en
+  `ar-catalog.yml` (artefacto `ar-events-layer`). Falta: correr con datos reales y revisar escala (satura en
+  800 kg m-1 s-1) y contraste del raster.
 - F1.2 código listo (2026-11-08): `teca.yml` con input `years` (matriz por año) y recorte a Neuquén con
   `tools/teca/crop_bard.py` (artefacto `bard-neuquen-<año>`). Falta: corrida 1980–2025 y validar el recorte con salida
   real de BARD.

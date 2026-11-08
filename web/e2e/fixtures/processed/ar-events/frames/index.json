@@ -1,0 +1,30 @@
+{
+ "units": "kg m-1 s-1",
+ "variable": "|IVT|",
+ "dtype": "float32-le",
+ "layout": "[n_frames, ny, nx], row 0 = south, column 0 = west",
+ "step_hours": 1,
+ "grid": {
+  "ny": 4,
+  "nx": 6,
+  "lat_min": -40.0,
+  "lat_max": -37.0,
+  "lon_min": -72.0,
+  "lon_max": -67.0,
+  "origin": "south-west"
+ },
+ "events": {
+  "AR-2000-001": {
+   "start": "2000-03-10T06:00:00Z",
+   "n_frames": 4,
+   "vmin": 200.0,
+   "vmax": 350.0
+  },
+  "AR-2000-002": {
+   "start": "2000-07-21T00:00:00Z",
+   "n_frames": 3,
+   "vmin": 400.0,
+   "vmax": 500.0
+  }
+ }
+}

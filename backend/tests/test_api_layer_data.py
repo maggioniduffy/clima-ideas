@@ -63,3 +63,36 @@ def test_unknown_layer_404(client: TestClient) -> None:
 def test_listed_but_missing_file_404(client: TestClient, tmp_path: Path) -> None:
     (tmp_path / "pts" / "a.json").unlink()
     assert client.get("/layers/pts/data").status_code == 404
+
+
+def _frames_client(tmp_path: Path, with_index: bool = True) -> TestClient:
+    manifest = {**MANIFEST, "id": "fr", "kind": "events", "files": ["a.json"]}
+    if with_index:
+        manifest["files"].append("frames/index.json")
+    d = tmp_path / "fr"
+    (d / "frames").mkdir(parents=True)
+    (d / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (d / "a.json").write_text("[]", encoding="utf-8")
+    (d / "frames" / "index.json").write_text("{}", encoding="utf-8")
+    (d / "frames" / "AR-2000-001.bin").write_bytes(b"\x00\x00\x80\x3f")
+    (d / "secret.bin").write_bytes(b"x")
+    return TestClient(create_app(tmp_path))
+
+
+def test_frames_served_as_binary(tmp_path: Path) -> None:
+    r = _frames_client(tmp_path).get("/layers/fr/frames/AR-2000-001")
+    assert r.status_code == 200
+    assert r.content == b"\x00\x00\x80\x3f"
+    assert r.headers["content-type"] == "application/octet-stream"
+
+
+def test_frames_missing_or_bad_id_404(tmp_path: Path) -> None:
+    c = _frames_client(tmp_path)
+    assert c.get("/layers/fr/frames/AR-1999-001").status_code == 404
+    assert c.get("/layers/fr/frames/..%2Fsecret").status_code == 404
+    assert c.get("/layers/nope/frames/AR-2000-001").status_code == 404
+
+
+def test_frames_404_without_index_in_manifest(tmp_path: Path) -> None:
+    c = _frames_client(tmp_path, with_index=False)
+    assert c.get("/layers/fr/frames/AR-2000-001").status_code == 404
