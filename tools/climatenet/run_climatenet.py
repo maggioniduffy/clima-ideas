@@ -20,6 +20,7 @@ time/lat/lon; the baseline also has ``ivt``). torch is imported only when the mo
 from __future__ import annotations
 
 import argparse
+import json
 import calendar
 import sys
 import time
@@ -31,6 +32,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from climatenet_core import (  # noqa: E402
     AR_CLASS,
+    FIELDS,
     IVT_THRESHOLD,
     NEUQUEN_BOX,
     crop_box,
@@ -38,6 +40,7 @@ from climatenet_core import (  # noqa: E402
     model_grid,
     normalize_fields,
     regrid_bilinear,
+    STATS,
 )
 
 ARCO_STORE = "gs://gcp-public-data-arco-era5/ar/full_37-1h-0p25deg-chunk-1.zarr-v3"
@@ -128,12 +131,33 @@ def load_model(repo_dir: Path, weights: Path):
     sys.path.insert(0, str(repo_dir))
     from climatenet.models import CGNetModule
 
-    model = CGNetModule(classes=3, channels=4)
-    from climatenet_core import extract_state_dict
+    from climatenet_core import check_cgnet_state, extract_state_dict
 
+    model = CGNetModule(classes=3, channels=len(FIELDS))
     state = extract_state_dict(torch.load(weights, map_location="cpu", weights_only=True))
+    try:
+        check_cgnet_state(state, set(model.state_dict()), len(FIELDS))
+    except ValueError as exc:
+        raise SystemExit(f"{weights}: {exc}") from None
     model.load_state_dict(state)
     return model.eval()
+
+
+def model_inputs(model_dir: Path):
+    """Normalisation stats and AR class id from model_dir/config.json (published with the weights); the repo's
+    config.json values (climatenet_core.STATS, AR_CLASS) only when no config came with the weights."""
+    from climatenet_core import model_inputs_from_config
+
+    cfg_path = model_dir / "config.json"
+    if not cfg_path.exists():
+        print("no config.json next to the weights: using the repo config.json statistics", flush=True)
+        return STATS, AR_CLASS
+    try:
+        stats, ar_class = model_inputs_from_config(json.loads(cfg_path.read_text()))
+    except ValueError as exc:
+        raise SystemExit(f"{cfg_path}: {exc}") from None
+    print(f"normalisation from {cfg_path}: {stats}; AR class {ar_class}", flush=True)
+    return stats, ar_class
 
 
 def predict_classes(model, x: np.ndarray) -> np.ndarray:
@@ -158,6 +182,7 @@ def run(args) -> int:
     model = (
         None if args.baseline_only else load_model(args.repo_dir, args.model_dir / "weights.pth")
     )
+    stats, ar_class = (STATS, AR_CLASS) if args.baseline_only else model_inputs(args.model_dir)
     sources = dict(BASELINE_SOURCE) if args.baseline_only else {**MODEL_SOURCE, **BASELINE_SOURCE}
 
     cn_masks, ivt_masks, ivts = [], [], []
@@ -184,8 +209,8 @@ def run(args) -> int:
                     k: regrid_bilinear(np.stack([s[k] for s in steps]), lat, lon, dst_lat, dst_lon)
                     for k in MODEL_SOURCE
                 }
-                cls = predict_classes(model, normalize_fields(fields))
-                ar_c, cn_lat, cn_lon = crop_box(cls == AR_CLASS, dst_lat, dst_lon, args.area)
+                cls = predict_classes(model, normalize_fields(fields, stats))
+                ar_c, cn_lat, cn_lon = crop_box(cls == ar_class, dst_lat, dst_lon, args.area)
                 cn_grid = (cn_lat, cn_lon)
                 cn_masks.append(ar_c)
             done = start + len(batch)
