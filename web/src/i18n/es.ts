@@ -17,11 +17,10 @@ export const es = {
   },
   timeline: { empty: "Sin serie temporal", events: "Eventos en la línea de tiempo", cursor: "Hora de la reproducción" },
   map: {
-    cordillera: "polígono de cordillera (aprox., sin verificar)",
     city: "Neuquén",
     legendTitle: "IVT (kg m⁻¹ s⁻¹)",
     legendLabel: "Escala de IVT",
-    outlineSource: "Contorno provincial: Natural Earth (dominio público). Cordillera: Neuquén (Natural Earth) al oeste de 70° O",
+    outlineSource: "Contorno provincial: Natural Earth (dominio público)",
   },
   events: {
     list: "Eventos",
