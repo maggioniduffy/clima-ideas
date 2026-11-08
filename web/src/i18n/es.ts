@@ -1,6 +1,7 @@
 export const es = {
   appTitle: "Neuquén: lluvias extremas",
   theme: { toggle: "Cambiar tema" },
+  drawers: { layers: "Capas", inspector: "Detalle", close: "Cerrar panel" },
   layers: { empty: "Sin capas", loading: "Cargando capas…", error: "No se pudieron cargar las capas", toggle: "Activar capa" },
   inspector: {
     empty: "Nada seleccionado",

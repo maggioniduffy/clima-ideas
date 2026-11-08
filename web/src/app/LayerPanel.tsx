@@ -22,7 +22,7 @@ interface Props {
 
 export function LayerPanel({ layers, status, activeIds, selectedId, onToggle, onSelect, events }: Props) {
   return (
-    <aside className="shell-layers" data-testid="layer-panel">
+    <aside className="shell-layers" id="layer-panel" data-testid="layer-panel">
       {status === "loading" && <p className="empty">{es.layers.loading}</p>}
       {status === "error" && <p className="empty">{es.layers.error}</p>}
       {status === "ready" && layers.length === 0 && <p className="empty">{es.layers.empty}</p>}

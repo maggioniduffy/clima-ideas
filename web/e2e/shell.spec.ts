@@ -27,3 +27,21 @@ test("shell layout is fixed across themes without reload", async ({ page }) => {
   expect(await boxes()).toEqual(boxesBefore);
   expect(await page.evaluate(() => (window as unknown as { __marker: number }).__marker)).toBe(42);
 });
+
+test("narrow layout: map uses the width and the layer drawer opens", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const canvas = page.getByTestId("map-canvas");
+  await expect(canvas).toBeVisible();
+  expect((await canvas.boundingBox())!.width).toBeGreaterThan(300);
+
+  const toggle = page.getByTestId("drawer-toggle-layers");
+  await expect(page.getByTestId("layer-panel")).toBeHidden();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByTestId("layer-panel")).toBeVisible();
+  await page.getByTestId("drawer-toggle-inspector").click();
+  await expect(page.getByTestId("inspector")).toBeVisible();
+  await expect(page.getByTestId("layer-panel")).toBeHidden();
+});

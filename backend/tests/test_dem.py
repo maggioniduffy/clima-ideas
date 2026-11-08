@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -8,6 +9,7 @@ from rasterio.transform import from_origin
 
 from clima_nqn.io import dem
 from clima_nqn.layers.manifest import LayerManifest
+from clima_nqn.stages.ar import geo
 
 
 def _tile(values: np.ndarray, west: float, north: float, nodata=-32767.0) -> MemoryFile:
@@ -40,6 +42,27 @@ def test_tiles_for_bbox_covers_edges():
     assert len(tiles) == 4 * 6
     assert (-42, -72) in tiles and (-37, -69) in tiles
     assert (-36, -72) not in tiles and (-42, -68) not in tiles
+
+
+def test_default_bbox_contains_the_band():
+    ring = geo.province_band_ring()
+    lon_min, lat_min, lon_max, lat_max = dem.NEUQUEN_BBOX
+    assert all(lon_min <= x <= lon_max and lat_min <= y <= lat_max for x, y in ring)
+
+
+def test_band_clip_keeps_5_km_outside_the_border_and_drops_20_km():
+    km = 1 / 110.574
+    lon, lat = -70.431, -36.129  # northern tip of the province outline
+    pts = np.array([[lon, lat + 5 * km, 2], [lon, lat + 20 * km, 3]], dtype=np.float32)
+    assert len(dem.clip_polygon(pts, geo.province_ring())) == 0
+    assert dem.clip_polygon(pts, geo.province_band_ring())[:, 2].tolist() == [2.0]
+
+
+def test_band_copies_are_identical():
+    web = (
+        Path(__file__).resolve().parents[2] / "web/public/geo/neuquen-province-buffer-10km.geojson"
+    )
+    assert web.read_bytes() == geo.BAND_FILE.read_bytes()
 
 
 def test_decimate_known_values_and_nodata_dropped():

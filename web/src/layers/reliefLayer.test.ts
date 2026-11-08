@@ -32,23 +32,27 @@ test("parseRelief reads interleaved lon/lat/elev and exaggerates z", () => {
   expect(reliefColors(r, "light").length).toBe(2 * 4);
 });
 
-test.each(["light", "dark"] as const)("%s hypsometric ramp hits each token at its elevation stop", (theme) => {
+test.each(["light", "dark"] as const)("%s slate ramp hits each token at its elevation stop", (theme) => {
   tokens.reliefRamp[theme].forEach((t, i) => expect(reliefColor(RELIEF_STOPS_M[i]!, theme)).toEqual(hex(t)));
   expect(reliefColor(-20, theme)).toEqual(hex(tokens.reliefRamp[theme][0]!));
-  expect(reliefColor(6000, theme)).toEqual(hex(tokens.reliefRamp[theme][5]!));
+  expect(reliefColor(6000, theme)).toEqual(hex(tokens.reliefRamp[theme][3]!));
   // midway between stops 0 and 1 is the average of both tokens
   const mid = reliefColor(RELIEF_STOPS_M[1]! / 2, theme);
   const [a, b] = [hex(tokens.reliefRamp[theme][0]!), hex(tokens.reliefRamp[theme][1]!)];
   mid.forEach((c, k) => expect(Math.abs(c - (a[k]! + b[k]!) / 2)).toBeLessThanOrEqual(1));
 });
 
-test("hypsometric ramp goes green lowland to brown mountains to pale peaks", () => {
-  const [lr, lg, lb] = reliefColor(0, "light");
-  expect(lg).toBeGreaterThan(lb);
-  const [pr, pg, pb] = reliefColor(4600, "light");
-  expect(Math.min(pr, pg, pb)).toBeGreaterThan(200);
-  expect(reliefColor(2000, "light")[0]).toBeGreaterThan(reliefColor(2000, "light")[2]); // warm brown
-  expect(lr).toBeGreaterThan(0);
+test("slate ramp is monochrome: light theme darkens with height, dark theme lightens", () => {
+  const lum = (c: number[]) => c[0]! + c[1]! + c[2]!;
+  const ls = [0, 800, 1800, 3000].map((m) => lum(reliefColor(m, "light")));
+  const ds = [0, 800, 1800, 3000].map((m) => lum(reliefColor(m, "dark")));
+  for (let i = 1; i < 4; i++) {
+    expect(ls[i]!).toBeLessThan(ls[i - 1]!);
+    expect(ds[i]!).toBeGreaterThan(ds[i - 1]!);
+  }
+  const [r, g, b] = reliefColor(1500, "light");
+  expect(Math.abs(r - b)).toBeLessThan(40); // slate, not green/brown
+  expect(g).toBeGreaterThan(0);
 });
 
 test("hillshade: flat is 1, NW-facing slopes are lit, SE-facing slopes are dark", () => {

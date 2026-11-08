@@ -30,7 +30,7 @@ test.each(["light", "dark"] as const)("%s IVT ramp matches tokens.css", (theme) 
 
 test.each(["light", "dark"] as const)("%s relief ramp matches tokens.css", (theme) => {
   const b = block(`:root[data-theme="${theme}"]`);
-  expect(tokens.reliefRamp[theme]).toHaveLength(6);
+  expect(tokens.reliefRamp[theme]).toHaveLength(4);
   tokens.reliefRamp[theme].forEach((v, i) => expect(b[`--relief-${i}`]).toBe(v));
 });
 

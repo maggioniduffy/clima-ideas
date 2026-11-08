@@ -25,9 +25,11 @@ LICENSE = (
 )
 # AWS registry: "Copernicus DEM 2021 release" (acquisition period not verified).
 PERIOD = "2021-01-01/2021-12-31"
-# Approximate Neuquén province bbox (lon_min, lat_min, lon_max, lat_max); a bbox, not the border.
-NEUQUEN_BBOX = (-71.95, -41.1, -68.0, -36.0)
-DEFAULT_STEP = 0.005  # degrees (~555 m) -> ~0.8 M points for the bbox, ~9.7 MB
+# Bbox (lon_min, lat_min, lon_max, lat_max) containing the province + 10 km band (band extent is
+# lon -72.075..-67.895, lat -41.184..-36.039); a search rectangle, not the border.
+NEUQUEN_BBOX = (-72.1, -41.2, -67.88, -36.02)
+# degrees (~890 m in lat; 1/0.008 = 125 samples per tile degree) -> see build_relief for the point count
+DEFAULT_STEP = 0.008
 MAX_BYTES = 15_000_000
 STRIDE = 3
 
@@ -174,11 +176,11 @@ def build_relief(
 ) -> Path:
     """Decimate each tile in turn (one in memory at a time) and write the layer.
 
-    Points are clipped to the bbox and then to `clip_ring` (default: the Neuquén province outline, Natural Earth),
-    so the relief does not spill outside the province. The bbox in relief.meta.json stays the rectangle searched.
+    Points are clipped to the bbox and then to `clip_ring` (default: the Neuquén province outline buffered by 10 km,
+    `geo.province_band_ring()`), the same band the viewer clips the IVT raster to. The bbox in relief.meta.json stays the rectangle searched.
     """
     if clip_ring is None:
-        clip_ring = geo.province_ring()
+        clip_ring = geo.province_band_ring()
     import rasterio
 
     chunks = []

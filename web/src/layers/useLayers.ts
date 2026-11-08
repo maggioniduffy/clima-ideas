@@ -3,15 +3,20 @@ import type { Layer } from "@deck.gl/core";
 import { fetchLayerBinary, fetchLayerData, fetchLayers, type LayerManifest, type PointFeature } from "../api/client";
 import { buildPointsLayer } from "./pointsLayer";
 import { useTheme } from "../theme/themeStore";
-import { buildReliefLayer, parseRelief, type ReliefData } from "./reliefLayer";
-import { parseRing, PROVINCE_URL, type LonLat } from "./referenceLayers";
+import { buildReliefLayer, parseRelief, RELIEF_STEP, type ReliefData } from "./reliefLayer";
+import { fetchClipRing } from "./provinceClip";
 
-/** Province outer ring used to clip the relief; null when it cannot be fetched (relief then shows unclipped). */
-const fetchProvinceRing = (): Promise<LonLat[] | null> =>
-  fetch(PROVINCE_URL)
-    .then((r) => (r.ok ? r.json() : null))
-    .then(parseRing)
-    .catch(() => null);
+/** Grid step (degrees) from the layer's `*.meta.json` (field `step`); RELIEF_STEP when absent or unreadable. */
+async function fetchReliefStep(id: string, layer: LayerManifest): Promise<number> {
+  const meta = layer.files.find((f) => f.endsWith(".meta.json"));
+  if (!meta) return RELIEF_STEP;
+  try {
+    const step = (JSON.parse(new TextDecoder().decode(await fetchLayerBinary(id, meta))) as { step?: unknown }).step;
+    return typeof step === "number" && step > 0 ? step : RELIEF_STEP;
+  } catch {
+    return RELIEF_STEP;
+  }
+}
 
 /** Binary point-cloud layers: kind "points" whose manifest lists a .bin file. */
 const binaryFile = (l: LayerManifest) => (l.kind === "points" ? l.files.find((f) => f.endsWith(".bin")) : undefined);
@@ -57,8 +62,8 @@ export function useLayers() {
         const failed = () => setActiveIds((prev) => new Set([...prev].filter((x) => x !== id)));
         if (bin) {
           if (!reliefs[id]) {
-            Promise.all([fetchLayerBinary(id, bin), fetchProvinceRing()])
-              .then(([b, ring]) => setReliefs((prev) => ({ ...prev, [id]: parseRelief(b, ring) })))
+            Promise.all([fetchLayerBinary(id, bin), fetchClipRing(), fetchReliefStep(id, layer!)])
+              .then(([b, ring, step]) => setReliefs((prev) => ({ ...prev, [id]: parseRelief(b, ring, step) })))
               .catch(failed);
           }
         } else if (layer?.kind === "points" && !data[id]) {

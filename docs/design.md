@@ -1,5 +1,7 @@
 # Diseño (provisorio)
 
+Referencia visual: el mockup del usuario, https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y. El relieve usa su rampa monocromática pizarra (tokens `--relief-0..3`, con sombreado), no una hipsométrica verde/marrón.
+
 Base inicial; el usuario lo va a profundizar. Inspiración: `inspiration/README.md`.
 
 ## Reglas de UI
@@ -33,7 +35,7 @@ Valores neutros a ajustar; contraste mínimo WCAG AA.
 ## Rampa IVT (secuencial)
 
 Tokens `--ivt-0..5` por tema (tokens.css / tokens.ts), 6 paradas parejas sobre 0–1200 kg m⁻¹ s⁻¹ (satura en 1200, "≥1200").
-Raster casi opaco (alfa 0,85–0,95). Claro: pálido a violeta profundo. Oscuro: azul tenue a amarillo claro.
+Raster casi opaco (alfa 0,85–0,95). Excepción: con la capa de relieve activa, la opacidad de la capa baja a 0,5 (`IVT_OVER_RELIEF_OPACITY`) para que el terreno se lea a través; sin relieve sigue casi opaco. Claro: pálido a violeta profundo. Oscuro: azul tenue a amarillo claro.
 
 | Token | Claro | Oscuro |
 |---|---|---|
@@ -46,4 +48,4 @@ Raster casi opaco (alfa 0,85–0,95). Claro: pálido a violeta profundo. Oscuro:
 
 ## Tipografía
 
-Monoespaciada para datos e instrumentos; una sans para títulos. Elección pendiente.
+Monoespaciada para datos e instrumentos; una sans para títulos. IBM Plex Mono (400, 500) para datos y IBM Plex Sans (400, 500, 600) para títulos, cargadas desde Google Fonts en `index.html` (sin CSP que lo bloquee); tokens `--font-mono` y `--font-sans`.
