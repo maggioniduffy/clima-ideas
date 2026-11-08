@@ -42,8 +42,11 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   2015, Rutz et al. 2019 y Campos y Rondanelli 2023 siguen sin verificar (Wiley responde 403). Comparación: ≈ 15 días/año
   con RA vs. 15–20 al este de los Andes al sur de 35° S (Viale 2018); 63,3 % de extremos con RA vs. 27–70 % en Chile
   centro-sur con umbral ≥ 35 mm/día (Valenzuela y Garreaud 2019).
-- F1.6 hecha en código y con datos: capa `ar-events-layer` (480 eventos, 8538 frames, 42 MB). Falta revisar escala
-  (satura en 800 kg m-1 s-1) y contraste con datos reales en el visor.
+- F1.6 hecha y revisada en el visor con la capa real (2026-11-08): rampa secuencial de alto contraste en ambos temas,
+  leyenda (satura en 1200 kg m-1 s-1), contorno provincial (Natural Earth 1:10m, dominio público), polígono de
+  cordillera y marcador de Neuquén capital; inspector sin scroll a 1400x820.
+- Hallazgo del visor: el polígono de cordillera (71,95–70 O) se sale al oeste del límite provincial, sobre Chile, en
+  buena parte de la cordillera. Afecta F1.3/F1.4; refinarlo (recortar al límite provincial o usar relieve) queda abierto.
 - F1.7 hecha para 2023 (run 42503142531): ClimateNet (`climatenet_new/model/weights.pth`) vs. BARD kappa 0,18, peor que
   el baseline IVT ≥ 250 (kappa 0,24); ClimateNet marca RA en 25,8 % de los pasos vs. 3,8 % de BARD y se parece más al
   umbral de IVT (kappa 0,54). El ML no mejora al baseline (`reports/01/F1.7.md`).

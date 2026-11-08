@@ -21,7 +21,16 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
 
   // choose the first event from its timeline mark
   await page.getByTestId("timeline-event-AR-2000-001").click();
-  await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", "ivt-ar-events");
+  const canvas = page.getByTestId("map-canvas");
+  await expect(canvas).toHaveAttribute("data-deck-layers", /^ivt-ar-events,/);
+  // outlines draw above the raster: province (loaded from the static GeoJSON), cordillera polygon, city and labels
+  for (const id of ["ref-province", "ref-cordillera", "ref-city", "ref-labels"])
+    await expect(canvas).toHaveAttribute("data-deck-layers", new RegExp(`ivt-ar-events,.*${id}`));
+  // legend: Spanish title, ticks up to "≥1200" and the outline source
+  const legend = page.getByTestId("map-legend");
+  await expect(legend).toContainText("IVT (kg m⁻¹ s⁻¹)");
+  await expect(page.getByTestId("map-legend-ticks")).toHaveText("03006009001200".replace("1200", "≥1200"));
+  await expect(legend).toContainText("Natural Earth");
   await expect(page.getByTestId("event-start")).toHaveText("2000-03-10 06:00 UTC");
   await expect(page.getByTestId("event-ivt-max")).toHaveText("350 kg m-1 s-1");
   await expect(page.getByTestId("replay-time")).toHaveText("2000-03-10 06:00 UTC");
@@ -61,7 +70,8 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
 
   // turning the layer off removes marks, raster and replay
   await page.getByTestId("layer-toggle-ar-events").uncheck();
-  await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", "");
+  await expect(canvas).toHaveAttribute("data-deck-layers", "");
+  await expect(page.getByTestId("map-legend")).toHaveCount(0);
   await expect(page.getByTestId("timeline")).toContainText("Sin serie temporal");
 
   expect(errors).toEqual([]);

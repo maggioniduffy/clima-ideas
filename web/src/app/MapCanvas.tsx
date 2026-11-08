@@ -1,5 +1,6 @@
 import DeckGL from "@deck.gl/react";
 import { MapView, type Layer } from "@deck.gl/core";
+import type { ReactNode } from "react";
 
 // Neuquén province; pitch leaves room for the 3D relief layer (F0.5).
 const INITIAL_VIEW_STATE = {
@@ -10,7 +11,7 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
 };
 
-export function MapCanvas({ layers = [] }: { layers?: Layer[] }) {
+export function MapCanvas({ layers = [], children }: { layers?: Layer[]; children?: ReactNode }) {
   return (
     <main className="shell-canvas" data-testid="map-canvas" data-deck-layers={layers.map((l) => l.id).join(",")}>
       <DeckGL
@@ -20,6 +21,7 @@ export function MapCanvas({ layers = [] }: { layers?: Layer[] }) {
         layers={layers}
         style={{ background: "transparent" }}
       />
+      {children}
     </main>
   );
 }

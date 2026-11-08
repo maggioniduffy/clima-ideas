@@ -30,6 +30,20 @@ Base inicial; el usuario lo va a profundizar. Inspiración: `inspiration/README.
 
 Valores neutros a ajustar; contraste mínimo WCAG AA.
 
+## Rampa IVT (secuencial)
+
+Tokens `--ivt-0..5` por tema (tokens.css / tokens.ts), 6 paradas parejas sobre 0–1200 kg m⁻¹ s⁻¹ (satura en 1200, "≥1200").
+Raster casi opaco (alfa 0,85–0,95). Claro: pálido a violeta profundo. Oscuro: azul tenue a amarillo claro.
+
+| Token | Claro | Oscuro |
+|---|---|---|
+| `--ivt-0` | `#DCE6BE` | `#22384A` |
+| `--ivt-1` | `#8CCBB0` | `#2B5F80` |
+| `--ivt-2` | `#3FA3B8` | `#1E9A9C` |
+| `--ivt-3` | `#2B6FB0` | `#6BCB6C` |
+| `--ivt-4` | `#38399A` | `#E3E24A` |
+| `--ivt-5` | `#5A1A72` | `#F8F5B4` |
+
 ## Tipografía
 
 Monoespaciada para datos e instrumentos; una sans para títulos. Elección pendiente.

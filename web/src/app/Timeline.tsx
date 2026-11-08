@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { ArEvent } from "../api/client";
 import { es } from "../i18n/es";
 import { eventDomain, eventSpans, fractionOf, formatUtc, periodDomain } from "../layers/arEvents";
+import { useTheme } from "../theme/themeStore";
 import type { ArEventsState } from "../layers/useArEvents";
 
 interface Props {
@@ -17,7 +18,8 @@ const pct = (f: number) => `${(f * 100).toFixed(3)}%`;
 
 export function Timeline({ events = [], period, selectedEventId = null, onSelectEvent, replay = null }: Props) {
   const domain = useMemo(() => (period ? periodDomain(period) : null), [period]);
-  const spans = useMemo(() => (domain ? eventSpans(events, domain) : []), [events, domain]);
+  const theme = useTheme();
+  const spans = useMemo(() => (domain ? eventSpans(events, domain, theme) : []), [events, domain, theme]);
   const selected = replay?.selectedEvent ?? null;
   const detail = selected ? eventDomain(selected) : null;
 

@@ -1,8 +1,10 @@
 import { useArEvents } from "../layers/useArEvents";
+import { useReferenceLayers } from "../layers/referenceLayers";
 import { useLayers } from "../layers/useLayers";
 import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
 import { MapCanvas } from "./MapCanvas";
+import { MapLegend } from "./MapLegend";
 import { Timeline } from "./Timeline";
 import { TopBar } from "./TopBar";
 import "./shell.css";
@@ -12,6 +14,7 @@ export function Shell() {
   const eventsLayer = s.layers.find((l) => l.kind === "events");
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
   const ar = useArEvents(eventsLayer, eventsActive);
+  const refLayers = useReferenceLayers(eventsActive);
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);
@@ -36,7 +39,9 @@ export function Shell() {
           }
         }
       />
-      <MapCanvas layers={[...s.deckLayers, ...ar.deckLayers]} />
+      <MapCanvas layers={[...s.deckLayers, ...ar.deckLayers, ...refLayers]}>
+        {eventsActive && <MapLegend />}
+      </MapCanvas>
       <Inspector
         layer={s.selectedLayer}
         features={s.selectedFeatures}

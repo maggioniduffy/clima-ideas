@@ -8,9 +8,12 @@ import {
   gridCells,
   ivtColor,
   IVT_SCALE_MAX,
+  legendTicks,
   parseFrames,
   periodDomain,
+  rgbCss,
 } from "./arEvents";
+import { tokens } from "../theme/tokens";
 
 const grid: FrameGrid = { ny: 2, nx: 3, lat_min: -40, lat_max: -39, lon_min: -71, lon_max: -69 };
 
@@ -51,14 +54,50 @@ test("frameValue indexes by frame, row (south first) and column; NaN and out of 
   expect(frameValue(raw, grid, 0, 0, 3)).toBeNull();
 });
 
-test("ivtColor ramps secondary to accent, saturates, and hides missing values", () => {
-  expect(ivtColor(0)).toEqual([0xa4, 0xaf, 0x69, 255]);
-  expect(ivtColor(IVT_SCALE_MAX)).toEqual([0x8e, 0xb8, 0xe5, 255]);
-  expect(ivtColor(IVT_SCALE_MAX * 5)).toEqual(ivtColor(IVT_SCALE_MAX));
-  expect(ivtColor(null)[3]).toBe(0);
-  expect(ivtColor(NaN)[3]).toBe(0);
-  expect(ivtColor(0, true)[3]).toBeLessThan(ivtColor(IVT_SCALE_MAX, true)[3]);
-  expect(ivtColor(IVT_SCALE_MAX, true)[3]).toBeLessThan(256);
+const rgb = (c: number[]) => c.slice(0, 3);
+const hexRgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const luma = ([r, g, b]: number[]) => 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+
+test.each(["light", "dark"] as const)("ivtColor (%s) follows the token ramp and saturates at IVT_SCALE_MAX", (theme) => {
+  const stops = tokens.ivtRamp[theme];
+  expect(IVT_SCALE_MAX).toBe(1200);
+  expect(rgb(ivtColor(0, theme))).toEqual(hexRgb(stops[0]!));
+  expect(rgb(ivtColor(IVT_SCALE_MAX, theme))).toEqual(hexRgb(stops[5]!));
+  expect(rgb(ivtColor(IVT_SCALE_MAX / 5, theme))).toEqual(hexRgb(stops[1]!)); // stops are evenly spaced
+  expect(ivtColor(IVT_SCALE_MAX * 5, theme)).toEqual(ivtColor(IVT_SCALE_MAX, theme));
+  expect(ivtColor(-50, theme)).toEqual(ivtColor(0, theme));
+  expect(ivtColor(1000, theme)).not.toEqual(ivtColor(IVT_SCALE_MAX, theme)); // strong events stay distinguishable
+  // midpoint between two stops is the channel-wise average
+  const mid = ivtColor(IVT_SCALE_MAX * 0.1, theme);
+  expect(Math.abs(mid[0]! - (hexRgb(stops[0]!)[0]! + hexRgb(stops[1]!)[0]!) / 2)).toBeLessThanOrEqual(1);
+});
+
+test.each(["light", "dark"] as const)("ivtColor (%s) is monotonic in lightness and separates non-AR from AR values", (theme) => {
+  const l = (v: number) => luma(ivtColor(v, theme));
+  const sign = theme === "light" ? -1 : 1; // light: deeper = stronger; dark: brighter = stronger
+  for (let v = 0; v < IVT_SCALE_MAX; v += 100) expect(sign * (l(v + 100) - l(v))).toBeGreaterThan(0);
+  // low (non-AR, < 250) is clearly lower-key than a typical AR band value
+  expect(sign * (l(600) - l(100))).toBeGreaterThan(40);
+});
+
+test("ivtColor: missing values are transparent; the raster is nearly opaque (alpha >= 0.85)", () => {
+  expect(ivtColor(null, "light")[3]).toBe(0);
+  expect(ivtColor(NaN, "dark")[3]).toBe(0);
+  expect(ivtColor(undefined, "dark")[3]).toBe(0);
+  for (const theme of ["light", "dark"] as const) {
+    expect(ivtColor(500, theme)[3]).toBe(255);
+    expect(ivtColor(0, theme, true)[3]).toBeGreaterThanOrEqual(Math.floor(255 * 0.85));
+    expect(ivtColor(0, theme, true)[3]).toBeLessThanOrEqual(ivtColor(IVT_SCALE_MAX, theme, true)[3]);
+    expect(ivtColor(IVT_SCALE_MAX, theme, true)[3]).toBeLessThan(256);
+  }
+});
+
+test("legendTicks spans 0..IVT_SCALE_MAX and labels the saturation value '≥1200'", () => {
+  const ticks = legendTicks();
+  expect(ticks.map((t) => t.value)).toEqual([0, 300, 600, 900, 1200]);
+  expect(ticks.map((t) => t.fraction)).toEqual([0, 0.25, 0.5, 0.75, 1]);
+  expect(ticks.map((t) => t.label)).toEqual(["0", "300", "600", "900", "≥1200"]);
+  expect(legendTicks(2).map((t) => t.label)).toEqual(["0", "600", "≥1200"]);
 });
 
 test("gridCells covers the grid with half-step rectangles centered on each point", () => {
@@ -87,10 +126,11 @@ test("eventSpans maps events to fractions of the domain with IVT-max colors", ()
   const spans = eventSpans(
     [ev("a", "2000-01-02T00:00:00Z", "2000-01-02T12:00:00Z", 0), ev("b", "1999-12-01T00:00:00Z", "2000-01-01T06:00:00Z", null)],
     domain,
+    "light",
   );
   expect(spans[0]!.left).toBeCloseTo(1 / 3);
   expect(spans[0]!.width).toBeCloseTo(0.5 / 3);
-  expect(spans[0]!.color).toBe("rgb(164, 175, 105)");
+  expect(spans[0]!.color).toBe(rgbCss(ivtColor(0, "light")));
   expect(spans[1]).toMatchObject({ id: "b", left: 0 });
   expect(spans[1]!.width).toBeCloseTo(0.25 / 3);
 });

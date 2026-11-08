@@ -76,6 +76,17 @@
 .inspector-meta dd,
 .inspector-point dd { margin: 0 0 var(--space-2); }
 
+/* Compact two-column key/value rows: the event fields and the cell value fit without scrolling */
+.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-2); font-size: 10.5px; }
+.kv dt, .kv dd { margin: 0 0 3px; }
+.kv dd:not(.kv-wide) { text-align: right; white-space: nowrap; }
+.kv .kv-wide { grid-column: 1 / -1; }
+.kv dt.kv-wide { margin-bottom: 0; }
+.kv dd.kv-wide { margin-bottom: var(--space-2); }
+.event-id { margin: 0 0 var(--space-2); font-size: 13px; }
+.inspector-meta { margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--border); font-size: 11px; }
+.inspector-meta dd { color: var(--text-muted); text-align: right; }
+
 /* AR events: list in the panel, replay controls and marks on the timeline */
 .event-list-item { padding: 0 0 var(--space-2) var(--space-5); }
 .event-list { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow: auto; }
@@ -113,3 +124,20 @@
   background: var(--accent); box-shadow: 0 0 0 1px var(--text); pointer-events: none; z-index: 2;
 }
 .timeline-span { position: absolute; inset: 4px 0; background: var(--raised); }
+
+/* Map legend (bottom-left over the canvas): IVT ramp + ticks */
+.map-legend {
+  position: absolute; left: var(--space-3); bottom: var(--space-3); width: 220px; z-index: 1;
+  padding: var(--space-2) var(--space-3); font-size: 11px; line-height: 1.3;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md);
+  opacity: 0.96; pointer-events: none;
+}
+.map-legend-title { font-weight: 600; margin-bottom: 4px; }
+.map-legend-bar { height: 10px; border-radius: 2px; border: 1px solid var(--border); }
+.map-legend-ticks { position: relative; height: 14px; margin-top: 2px; color: var(--text-muted); }
+.map-legend-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.map-legend-ticks span:first-child { transform: none; }
+.map-legend-ticks span:last-child { transform: translateX(-100%); }
+.map-legend-source { margin-top: 4px; color: var(--text-muted); font-size: 10px; }
+.inspector-meta { grid-template-columns: auto minmax(0, 1fr); }
+.inspector-meta dd:not(.kv-wide) { white-space: normal; }

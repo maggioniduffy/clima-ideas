@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import type { ArEvent } from "../api/client";
+import { ivtColor, rgbCss } from "../layers/arEvents";
+import { getTheme } from "../theme/themeStore";
 import { es } from "../i18n/es";
 import type { ArEventsState } from "../layers/useArEvents";
 import { Timeline } from "./Timeline";
@@ -26,8 +28,8 @@ test("draws one colored mark per event and reports clicks", () => {
   render(<Timeline events={events} period="2000-01-01/2000-01-03" selectedEventId="b" onSelectEvent={onSelectEvent} />);
   const a = screen.getByTestId("timeline-event-a");
   expect(a.style.left).toBe("33.333%");
-  expect(a.style.background).toBe("rgb(164, 175, 105)");
-  expect(screen.getByTestId("timeline-event-b").style.background).toBe("rgb(142, 184, 229)");
+  expect(a.style.background).toBe(rgbCss(ivtColor(0, getTheme())));
+  expect(screen.getByTestId("timeline-event-b").style.background).toBe(rgbCss(ivtColor(800, getTheme())));
   expect(screen.getByTestId("timeline-event-b")).toHaveAttribute("aria-pressed", "true");
   expect(screen.queryByTestId("replay-controls")).toBeNull();
   fireEvent.click(a);
