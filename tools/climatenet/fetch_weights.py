@@ -11,7 +11,6 @@ one. Nothing is guessed: the run fails when no weights file is found.
 from __future__ import annotations
 
 import argparse
-import os
 import hashlib
 import json
 import sys
@@ -22,7 +21,6 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 WEIGHT_EXTS = (".pth", ".pt")
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 class _Links(HTMLParser):
@@ -46,6 +44,15 @@ def find_links(html: str, base_url: str) -> list[str]:
         url = urljoin(base_url, href).split("#")[0].split("?")[0]
         seen.setdefault(url)
     return list(seen)
+
+
+def config_name_for(weights_name: str) -> str:
+    """Config published next to a weights file: weights.pth -> config.json, weights_new.pth -> config_new.json.
+
+    Kept here (standard library only) because the weights job runs without numpy.
+    """
+    stem = weights_name.rsplit(".", 1)[0]
+    return "config" + stem[len("weights"):] + ".json" if stem.startswith("weights") else "config.json"
 
 
 def pick_weights(links: list[str], name: str | None = None) -> str:
@@ -101,8 +108,6 @@ def main(argv=None) -> int:
     }
     # The config published next to these weights (weights.pth -> config.json, weights_new.pth -> config_new.json)
     # carries the input fields, normalisation stats and labels the weights were trained with.
-    from climatenet_core import config_name_for
-
     cfg_name = config_name_for(urlparse(url).path.rsplit("/", 1)[-1])
     cfg_url = url.rsplit("/", 1)[0] + "/" + cfg_name
     try:

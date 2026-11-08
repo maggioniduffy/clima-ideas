@@ -250,3 +250,15 @@ def test_check_cgnet_state_ignores_num_batches_tracked():
 
     expected = {"level1_0.conv.weight", "level1_0.bn.num_batches_tracked"}
     check_cgnet_state({"level1_0.conv.weight": np.zeros((32, 4, 3, 3))}, expected, 4)
+
+
+def test_fetch_weights_imports_without_numpy():
+    """The weights job runs plain python3 without numpy (run 42502xxx failed on this)."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    here = Path(__file__).parent
+    code = f"import sys; sys.path.insert(0, {str(here)!r}); import fetch_weights; print('numpy' in sys.modules)"
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == "False"
