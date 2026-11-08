@@ -2,26 +2,39 @@
 
 Workflow manual `.github/workflows/teca.yml` (F0.9). Compila TECA 6.0.0 (solo apps C++, sin MPI ni bindings Python)
 con conda-forge, verifica `teca_bayesian_ar_detect --help` y, opcionalmente, corre BARD (detector bayesiano de
-ríos atmosféricos) sobre un año de ERA5. No corre en push ni PR.
+ríos atmosféricos) sobre uno o varios años de ERA5. No corre en push ni PR.
 
 ## Lanzar
 
 ```sh
-gh workflow run teca.yml -f year=2023 -f run_bard=true      # build + BARD
-gh workflow run teca.yml -f run_bard=false                  # solo build y verificación
+gh workflow run teca.yml -f years=2023 -f run_bard=true               # un año
+gh workflow run teca.yml -f years=1980-2025 -f run_bard=true          # varios años en paralelo
+gh workflow run teca.yml -f years=1980-1985,1990 -f run_bard=true -f keep_full=true
+gh workflow run teca.yml -f run_bard=false                            # solo build y verificación
 gh run list --workflow teca.yml
 ```
 
-Parámetros: `year` (2023), `run_bard` (false), `hours` (`00,06,12,18`).
+Parámetros: `years` (`2023`; acepta `2023`, `1980-2025`, `1980-1985,1990`; válido 1940..2026, se valida en el job `plan`),
+`run_bard` (false), `hours` (`00,06,12,18`), `keep_full` (false), más `months`, `source` y `area`.
+
+Cada año es un job de la matriz `bard` (`fail-fast: false`, `max-parallel: 20`): un año que falla no cancela a los demás. Los runners
+hospedados admiten ~20 jobs concurrentes, así que 46 años (1980-2025) correrían en ~3 tandas de ~3-4 h cada una. Estimación sin verificar.
+
+Después de BARD, cada job recorta a Neuquén (`tools/teca/crop_bard.py --area=-34,-74,-43,-66`, misma caja que `NEUQUEN_BOX` del backend)
+y falla si el recorte no tiene pasos de tiempo. El recorte conserva `ar_probability` y `ar_binary_tag` sin cambios dentro de la caja
+(lon normalizada a -180..180, lat ascendente) y agrega los atributos `crop_area` y `source_files`.
 
 ## Artefactos
 
 ```sh
-gh run download <run-id> -n teca-build-logs   # cmake.log, build-tail.txt, verify.txt
-gh run download <run-id> -n bard-2023         # máscara netCDF (ar_probability, ar_binary_tag) + logs
+gh run download <run-id> -n teca-build-logs        # cmake.log, build-tail.txt, verify.txt
+gh run download <run-id> -n bard-neuquen-2023      # bard_neuquen_2023.nc (recorte) + logs (retención 90 días)
+gh run download <run-id> -p 'bard-neuquen-*'       # todos los años
+gh run download <run-id> -n bard-2023-<area>       # salida completa, solo si keep_full=true
 ```
 
-Los logs se suben siempre, también si falla (el error exacto queda en `build-tail.txt` / `bard.log`).
+Los logs se suben siempre, también si falla (el error exacto queda en `build-tail.txt` / `bard.log` / `crop.log`).
+La salida completa del hemisferio (`bard-<año>-<área>`) solo se sube con `keep_full=true`.
 La instalación de TECA se cachea (clave: tag + hash de `tools/teca/environment.yml`).
 
 ## Datos
@@ -52,10 +65,10 @@ salida BARD de orden 0.3-1 GB. Estimación sin verificar.
 
 ## Caché y reintentos
 
-Los meses descargados se cachean con clave `ivt-<año>-<horas>-a<área>-<run_id>`, donde `<área>` es el input `area` con `,` -> `_`
+La caché de IVT solo se usa cuando el run tiene un único año: con muchos años los 10 GB de caché del repo desalojarían la instalación de TECA (que se restaura con `fail-on-cache-miss`). Con un año, los meses descargados se cachean con clave `ivt-<año>-<horas>-a<área>-<run_id>`, donde `<área>` es el input `area` con `,` -> `_`
 y `.` -> `p` (p. ej. `a-10_-180_-80_179p75`), así que áreas distintas nunca se mezclan. Agregar una versión (`ivt-v2-`) cuando
 cambien `VARIABLES` o el `AREA` por defecto en `fetch_era5_ivt.py`. El run de BARD pasa `--periodic_in_x 1` solo si el área abarca
-el círculo completo (E - O >= 359), si no 0, y el artefacto se llama `bard-<año>-<área>`. Los `raw_*` parciales se borran antes de guardar
+el círculo completo (E - O >= 359), si no 0, y la salida completa (opcional) se llama `bard-<año>-<área>`. Los `raw_*` parciales se borran antes de guardar
 la caché. Los reintentos (ambas fuentes) esperan `--retry-wait` × intento (60 s por defecto). Con `cds` las descargas son secuenciales (`--workers 1`) porque CDS rechaza pedidos en paralelo; si la cola está llena
 espera `--queue-wait` (300 s) y reintenta sin gastar reintentos, hasta `--queue-timeout` (3600 s) en total. Un solo run por rama a la vez
 (`concurrency`). Si BARD no produce ningún `bard_*.nc`, el paso falla.
