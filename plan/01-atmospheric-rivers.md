@@ -20,7 +20,7 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 | F1.4 ✅ | Fracción de días de lluvia extrema (p99) que coinciden con un evento | opencode | Informe con cifras, fuente y período |
 | F1.5 | Contraste con literatura de ríos atmosféricos en los Andes | opencode | Tabla: nuestro conteo vs. publicado |
 | F1.6 ✅ | Capa del visor: eventos en la línea de tiempo + replay de IVT por hora | Sonnet | e2e: elegir evento, reproducir, inspeccionar |
-| F1.7 | ML (media): detector preentrenado tipo ClimateNet vs. BARD | opencode corre, Sonnet integra | Acuerdo entre métodos medido; opcional |
+| F1.7 ✅ | ML (media): detector preentrenado tipo ClimateNet vs. BARD | opencode corre, Sonnet integra | Acuerdo entre métodos medido; opcional |
 | F1.8 ✅ | Ríos atmosféricos por fase ENSO (F0.10): conteo, IVT y lluvia por estación del año; test de permutación | opencode analiza, Sonnet codifica el test | Tabla Niño/Neutro/Niña con p-valor y n de años + unit del test |
 
 ## Entregable
@@ -41,7 +41,9 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   verificado en fuente primaria (la red de la sesión no llega a doi.org ni a las revistas).
 - F1.6 hecha en código y con datos: capa `ar-events-layer` (480 eventos, 8538 frames, 42 MB). Falta revisar escala
   (satura en 800 kg m-1 s-1) y contraste con datos reales en el visor.
-- F1.7 bloqueada (opcional): los pesos de NERSC son una DeepLabv3+ Xception, no CGNet (`reports/01/F1.7.md`).
+- F1.7 hecha para 2023 (run 42503142531): ClimateNet (`climatenet_new/model/weights.pth`) vs. BARD kappa 0,18, peor que
+  el baseline IVT ≥ 250 (kappa 0,24); ClimateNet marca RA en 25,8 % de los pasos vs. 3,8 % de BARD y se parece más al
+  umbral de IVT (kappa 0,54). El ML no mejora al baseline (`reports/01/F1.7.md`).
 - F1.8 hecha: 6 de 16 pruebas Niño−Niña con p < 0,05; solo el IVT máx. medio de SON sostiene p BH < 0,05 (Niño 531 vs.
   Niña 442 kg m⁻¹ s⁻¹, p = 0,0005, p BH = 0,008). Más RA en El Niño en JJA y SON, sin sostener tras BH
   (`reports/01/F1.8.md`).
