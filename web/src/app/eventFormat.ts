@@ -45,3 +45,32 @@ export function eventFields(e: ArEvent): EventFields {
 }
 
 export const ivtText = (v: number | null) => withUnit(v, es.events.units.ivt);
+
+/** Number with decimal comma; null/NaN read "sin dato". */
+export const formatDecimal = (v: number | null, digits = 0) =>
+  v == null || Number.isNaN(v) ? es.events.noData : v.toFixed(digits).replace(".", ",");
+
+/** Display scale and decimals of each ENSO metric, as in the F1.8 report (`ar_share` is stored as a fraction). */
+export const ENSO_METRIC_FORMAT = {
+  n_events: { scale: 1, digits: 2 },
+  ar_days: { scale: 1, digits: 1 },
+  ivt_mean: { scale: 1, digits: 0 },
+  ar_share: { scale: 100, digits: 1 },
+} as const;
+
+export function formatEnsoValue(v: number | null, metric: keyof typeof ENSO_METRIC_FORMAT) {
+  const f = ENSO_METRIC_FORMAT[metric];
+  return formatDecimal(v == null ? null : v * f.scale, f.digits);
+}
+
+/** "mean ± sd (n=…)" of one phase group; the group count is kept even when the mean is missing. */
+export function formatEnsoGroup(
+  g: { n: number; mean: number | null; sd: number | null },
+  metric: keyof typeof ENSO_METRIC_FORMAT,
+) {
+  return g.mean == null
+    ? `${es.events.noData} (n=${g.n})`
+    : `${formatEnsoValue(g.mean, metric)} ± ${formatEnsoValue(g.sd, metric)} (n=${g.n})`;
+}
+
+export const formatPValue = (p: number | null) => formatDecimal(p, 4);

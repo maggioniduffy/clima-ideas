@@ -119,3 +119,55 @@ test("IVT view toggle: drape over the relief by default, isolines add contour la
 
   expect(errors).toEqual([]);
 });
+
+test("ENSO panel: opens over the map with the F1.8 table, source and caveats, switches season and closes", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("pageerror", (e) => errors.push(e.message));
+
+  await page.setViewportSize({ width: 1400, height: 820 });
+  await page.goto("/");
+  await expect(page.getByTestId("enso-open")).toHaveCount(0);
+  await page.getByTestId("layer-toggle-ar-events").check();
+  await page.getByTestId("enso-open").click();
+
+  const panel = page.getByTestId("enso-panel");
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("enso-tab-DJF")).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("enso-row-ivt_mean")).toContainText("527 ± 132 (n=14)");
+  await expect(page.getByTestId("enso-row-ar_share")).toContainText("2,2 ± 0,5 (n=14)");
+  await expect(page.getByTestId("enso-years")).toContainText("El Niño 14 · Neutro 18 · La Niña 14");
+  await expect(page.getByTestId("enso-source")).toContainText("Estadísticas ENSO falsas de prueba");
+  await expect(page.getByTestId("enso-caveats")).toContainText("Ninguna diferencia Niño − Niña mantiene p BH < 0,05");
+  await expect(page.getByTestId("enso-caveats")).toContainText("no es robusto a la elección del polígono");
+
+  await page.getByTestId("enso-tab-JJA").click();
+  await expect(page.getByTestId("enso-row-ar_share")).toContainText("sin dato (n=14)");
+  await page.getByTestId("enso-tab-SON").click();
+  await expect(page.getByTestId("enso-tab-SON")).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("enso-row-ivt_mean")).toContainText("0,0312");
+
+  // the inspector keeps fitting without scrolling and the panel stays inside the map
+  const inspector = page.getByTestId("inspector");
+  expect(await inspector.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+  const map = (await page.getByTestId("map-canvas").boundingBox())!;
+  const box = (await panel.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(map.x);
+  expect(box.x + box.width).toBeLessThanOrEqual(map.x + map.width);
+
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveCount(0);
+
+  // narrow screen: the panel takes the map width
+  await page.setViewportSize({ width: 600, height: 820 });
+  await page.getByTestId("drawer-toggle-layers").click();
+  await page.getByTestId("enso-open").click();
+  await page.getByTestId("drawer-scrim").click({ position: { x: 560, y: 100 } }); // right of the drawer
+  const narrowMap = (await page.getByTestId("map-canvas").boundingBox())!;
+  const narrow = (await page.getByTestId("enso-panel").boundingBox())!;
+  expect(narrow.width).toBeGreaterThan(narrowMap.width - 24);
+
+  expect(errors).toEqual([]);
+});

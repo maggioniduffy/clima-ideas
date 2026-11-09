@@ -87,3 +87,42 @@ export async function fetchFrames(layerId: string, t: string): Promise<ArrayBuff
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
   return res.arrayBuffer();
 }
+
+export type EnsoPhase = "nino" | "neutral" | "nina";
+export type EnsoMetric = "n_events" | "ar_days" | "ivt_mean" | "ar_share";
+
+export interface EnsoGroup {
+  n: number;
+  mean: number | null;
+  sd: number | null;
+}
+
+/** One season x metric test of `F1.8.json` (backend `stages/ar/enso.py:compute_results`); NaN arrives as null. */
+export interface EnsoRow {
+  season: string;
+  metric: EnsoMetric;
+  phase_years: Record<EnsoPhase, number>;
+  groups: Record<EnsoPhase, EnsoGroup>;
+  diff_nino_nina: number | null;
+  p: number | null;
+  p_bh: number | null;
+  p_3group: number | null;
+  p_3group_bh: number | null;
+  f_3group: number | null;
+  sustained: boolean;
+  sustained_bh: boolean;
+}
+
+/** `enso.json` published with the `ar-events` layer: the F1.8 report numbers. `ar_share` is a fraction (0-1). */
+export interface EnsoStats {
+  meta: {
+    period?: string;
+    season_years_period?: string;
+    n_events?: number;
+    n_season_years?: number;
+    bard_threshold?: number | null;
+    polygon?: [number, number][] | null;
+    source?: string;
+  };
+  results: { rows: EnsoRow[]; n_perm: number; seed: number; alpha: number };
+}

@@ -1,0 +1,562 @@
+{
+ "meta": {
+  "period": "2000-01-01/2000-12-31",
+  "season_years_period": "1980-2025 (prueba)",
+  "n_events": 2,
+  "n_season_years": 46,
+  "bard_threshold": 0.67,
+  "polygon": null,
+  "source": "Estadísticas ENSO falsas de prueba"
+ },
+ "results": {
+  "rows": [
+   {
+    "season": "DJF",
+    "metric": "n_events",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 0.8,
+      "sd": 0.2
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 1.0,
+      "sd": 0.25
+     },
+     "nina": {
+      "n": 14,
+      "mean": 1.06,
+      "sd": 0.265
+     }
+    },
+    "diff_nino_nina": -0.26,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "DJF",
+    "metric": "ar_days",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 1.1,
+      "sd": 0.275
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 1.2,
+      "sd": 0.3
+     },
+     "nina": {
+      "n": 14,
+      "mean": 1.2,
+      "sd": 0.3
+     }
+    },
+    "diff_nino_nina": -0.09999999999999987,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "DJF",
+    "metric": "ivt_mean",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 527.0,
+      "sd": 131.75
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 500.0,
+      "sd": 125.0
+     },
+     "nina": {
+      "n": 14,
+      "mean": 435.0,
+      "sd": 108.75
+     }
+    },
+    "diff_nino_nina": 92.0,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "DJF",
+    "metric": "ar_share",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 0.022,
+      "sd": 0.0055
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 0.067,
+      "sd": 0.01675
+     },
+     "nina": {
+      "n": 14,
+      "mean": 0.05,
+      "sd": 0.0125
+     }
+    },
+    "diff_nino_nina": -0.028000000000000004,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "MAM",
+    "metric": "n_events",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 0.8,
+      "sd": 0.2
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 1.0,
+      "sd": 0.25
+     },
+     "nina": {
+      "n": 14,
+      "mean": 1.06,
+      "sd": 0.265
+     }
+    },
+    "diff_nino_nina": -0.26,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "MAM",
+    "metric": "ar_days",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 1.1,
+      "sd": 0.275
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 1.2,
+      "sd": 0.3
+     },
+     "nina": {
+      "n": 14,
+      "mean": 1.2,
+      "sd": 0.3
+     }
+    },
+    "diff_nino_nina": -0.09999999999999987,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "MAM",
+    "metric": "ivt_mean",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 527.0,
+      "sd": 131.75
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 500.0,
+      "sd": 125.0
+     },
+     "nina": {
+      "n": 14,
+      "mean": 435.0,
+      "sd": 108.75
+     }
+    },
+    "diff_nino_nina": 92.0,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "MAM",
+    "metric": "ar_share",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 0.022,
+      "sd": 0.0055
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 0.067,
+      "sd": 0.01675
+     },
+     "nina": {
+      "n": 14,
+      "mean": 0.05,
+      "sd": 0.0125
+     }
+    },
+    "diff_nino_nina": -0.028000000000000004,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "JJA",
+    "metric": "n_events",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 0.8,
+      "sd": 0.2
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 1.0,
+      "sd": 0.25
+     },
+     "nina": {
+      "n": 14,
+      "mean": 1.06,
+      "sd": 0.265
+     }
+    },
+    "diff_nino_nina": -0.26,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "JJA",
+    "metric": "ar_days",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 1.1,
+      "sd": 0.275
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 1.2,
+      "sd": 0.3
+     },
+     "nina": {
+      "n": 14,
+      "mean": 1.2,
+      "sd": 0.3
+     }
+    },
+    "diff_nino_nina": -0.09999999999999987,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "JJA",
+    "metric": "ivt_mean",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 527.0,
+      "sd": 131.75
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 500.0,
+      "sd": 125.0
+     },
+     "nina": {
+      "n": 14,
+      "mean": 435.0,
+      "sd": 108.75
+     }
+    },
+    "diff_nino_nina": 92.0,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "JJA",
+    "metric": "ar_share",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 0.022,
+      "sd": 0.0055
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 0.067,
+      "sd": 0.01675
+     },
+     "nina": {
+      "n": 14,
+      "mean": null,
+      "sd": null
+     }
+    },
+    "diff_nino_nina": -0.028000000000000004,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "SON",
+    "metric": "n_events",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 0.8,
+      "sd": 0.2
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 1.0,
+      "sd": 0.25
+     },
+     "nina": {
+      "n": 14,
+      "mean": 1.06,
+      "sd": 0.265
+     }
+    },
+    "diff_nino_nina": -0.26,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "SON",
+    "metric": "ar_days",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 1.1,
+      "sd": 0.275
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 1.2,
+      "sd": 0.3
+     },
+     "nina": {
+      "n": 14,
+      "mean": 1.2,
+      "sd": 0.3
+     }
+    },
+    "diff_nino_nina": -0.09999999999999987,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   },
+   {
+    "season": "SON",
+    "metric": "ivt_mean",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 527.0,
+      "sd": 131.75
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 500.0,
+      "sd": 125.0
+     },
+     "nina": {
+      "n": 14,
+      "mean": 435.0,
+      "sd": 108.75
+     }
+    },
+    "diff_nino_nina": 92.0,
+    "p": 0.0312,
+    "p_bh": 0.31,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": true,
+    "sustained_bh": false
+   },
+   {
+    "season": "SON",
+    "metric": "ar_share",
+    "phase_years": {
+     "nino": 14,
+     "neutral": 18,
+     "nina": 14
+    },
+    "groups": {
+     "nino": {
+      "n": 14,
+      "mean": 0.022,
+      "sd": 0.0055
+     },
+     "neutral": {
+      "n": 18,
+      "mean": 0.067,
+      "sd": 0.01675
+     },
+     "nina": {
+      "n": 14,
+      "mean": 0.05,
+      "sd": 0.0125
+     }
+    },
+    "diff_nino_nina": -0.028000000000000004,
+    "p": 0.54,
+    "p_bh": 0.72,
+    "p_3group": 0.4,
+    "p_3group_bh": 0.6,
+    "f_3group": 1.2,
+    "sustained": false,
+    "sustained_bh": false
+   }
+  ],
+  "n_perm": 10000,
+  "seed": 0,
+  "alpha": 0.05
+ }
+}
