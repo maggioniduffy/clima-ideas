@@ -35,7 +35,7 @@ Valores neutros a ajustar; contraste mínimo WCAG AA.
 ## Rampa IVT (secuencial)
 
 Tokens `--ivt-0..5` por tema (tokens.css / tokens.ts), 6 paradas parejas sobre 0–1200 kg m⁻¹ s⁻¹ (satura en 1200, "≥1200").
-Raster casi opaco (alfa 0,85–0,95). Excepción: con la capa de relieve activa, la opacidad de la capa baja a 0,5 (`IVT_OVER_RELIEF_OPACITY`) para que el terreno se lea a través; sin relieve sigue casi opaco. Claro: pálido a violeta profundo. Oscuro: azul tenue a amarillo claro.
+Alfa por celda según el IVT (`ivtAlpha`): 0 hasta 150 kg m⁻¹ s⁻¹ (`IVT_ALPHA_LOW`), sube con smoothstep hasta 0,95 en 400 (`IVT_ALPHA_HIGH`); donde no hay río la capa es transparente y se ve el relieve. La leyenda lo indica ("Bajo ~150: transparente"). Con la capa de relieve activa, la opacidad de toda la capa baja además a 0,7 (`IVT_OVER_RELIEF_OPACITY`). El raster y el relieve cubren todo el recorte ERA5 (ver `docs/architecture.md`, "Área del visor"). Claro: pálido a violeta profundo. Oscuro: azul tenue a amarillo claro.
 
 | Token | Claro | Oscuro |
 |---|---|---|

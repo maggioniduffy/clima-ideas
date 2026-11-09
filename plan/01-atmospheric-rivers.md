@@ -53,7 +53,7 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   F1.3/F1.4/F1.8 re-corridos con el polígono (run 42516927153 de `ar-catalog.yml`). La cordillera no se define por cota con el DEM (decisión del usuario, 2026-11-08).
 - Relieve en el visor (2026-11-08): Copernicus GLO-30, rampa pizarra monocroma con sombreado (referencia: mockup de
   diseño, `docs/design.md`), debajo del IVT semitransparente (0,5 con relieve; casi opaco sin relieve); IVT y relieve
-  recortados a la provincia más una franja de 10 km; leyenda abajo a la derecha. Visor adaptable: por debajo de 800 px
+  recortados a la provincia más una franja de 10 km (reemplazado: ahora cubren todo el recorte ERA5, ver V1–V4); leyenda abajo a la derecha. Visor adaptable: por debajo de 800 px
   capas e inspector pasan a paneles desplegables.
 - F1.7 hecha para 2023 con el polígono provincial (run 42520253919): ClimateNet (`climatenet_new/model/weights.pth`) vs.
   BARD kappa 0,18, peor que el baseline IVT ≥ 250 (kappa 0,24); ClimateNet marca RA en 24,5 % de los pasos vs. 3,3 % de
