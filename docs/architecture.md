@@ -91,6 +91,23 @@ cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
 - Términos del SNIH (§7): citar al SIPH/SNIH como fuente, declarar la fecha de última actualización y no alterar el
   sentido original de los datos. El Parquet guarda fuente, URL y fecha de consulta en sus metadatos.
 
+Capa `flood-stations` (F2.4), desde los Parquet de F2.1 y los JSON de F2.2:
+
+```
+cd backend && uv run clima-nqn flow layer
+```
+
+- `flow layer` (`--flow-dir`, `--gev-dir`, `--out`; por defecto `data/processed/flood-stations`) escribe `manifest.json` (kind `points`,
+  fuente SNIH/SIPH, período = primera..última fecha entre estaciones, fecha de actualización en la licencia),
+  `stations.json` y `stations/<id>.json`; todos figuran en `files` (la API solo sirve archivos del manifiesto).
+- `stations.json`: `id` (texto), `lon`, `lat`, `value`, `name`, `river`, `area_km2`, `has_gev`, `regulated`. `value` es el caudal de
+  período de retorno 100 años (m³/s) si la estación tiene GEV y el máximo diario observado si no; el mapa dimensiona el punto con él
+  (radio 6–18 px, proporcional a √valor). Las reguladas (11803) se dibujan huecas y no tienen `gev`, `return_levels` ni `curve`.
+- `stations/<id>.json`: `daily` (`start` y un valor por día con 1 decimal, `null` en huecos), `annual_maxima` y `top_floods` (5 mayores),
+  y con GEV: `gev` (`irregular` si ξ ≥ 0,5), `return_levels` y `curve` (T de 1,1 a 200; el IC 95 % solo dentro del rango guardado, 2–100).
+  Sin GEV, los períodos de retorno son empíricos (Weibull).
+- El inspector abre el panel de la estación (curva T–caudal con banda IC, serie diaria con máximos anuales, mayores crecidas).
+
 ## API
 
 `GET /health` · `GET /layers` · `GET /layers/{id}` · `GET /layers/{id}/data` · `GET /layers/{id}/frames/{t}` (binario Float32 del conjunto de frames `t`; en `ar-events`, `t` es el id del evento y el índice está en `frames/index.json`)

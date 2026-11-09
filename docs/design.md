@@ -51,6 +51,10 @@ En ambas vistas las celdas ERA5 siguen siendo seleccionables (hover/clic) aunque
 | `--ivt-4` | `#38399A` | `#E3E24A` |
 | `--ivt-5` | `#5A1A72` | `#F8F5B4` |
 
+## Panel de crecidas
+
+Gráficos SVG propios, solo con tokens: curva GEV y serie diaria en `--text`, banda IC 95 % y máximos anuales en `--text-muted` (banda translúcida), las 5 mayores crecidas en `--accent` con borde `--text`. Los puntos del mapa son `--main` (acento si está seleccionada) y las estaciones reguladas se dibujan huecas con contorno.
+
 ## Tipografía
 
 Monoespaciada para datos e instrumentos; una sans para títulos. IBM Plex Mono (400, 500) para datos y IBM Plex Sans (400, 500, 600) para títulos, cargadas desde Google Fonts en `index.html` (sin CSP que lo bloquee); tokens `--font-mono` y `--font-sans`.

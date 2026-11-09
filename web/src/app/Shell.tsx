@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { es } from "../i18n/es";
 import type { IvtView } from "../layers/arEvents";
+import type { FloodStationFeature } from "../api/client";
+import { buildFloodStationsLayer } from "../layers/floodStations";
+import { FLOOD_LAYER_ID } from "../layers/useFloodStation";
 import { useArEvents } from "../layers/useArEvents";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
@@ -42,6 +45,25 @@ export function Shell() {
         : s.deckLayers,
     [s.deckLayers, s.activeRelief, ar.drapeColors, theme],
   );
+  // Flood stations replace the generic points layer: sized by value, hollow when regulated.
+  const { select: selectLayer, selectPoint, selectedId, selectedPointId } = s;
+  const mapLayers = useMemo(
+    () =>
+      baseLayers.map((l) =>
+        l.id === `points-${FLOOD_LAYER_ID}`
+          ? buildFloodStationsLayer(
+              (l.props as { data: FloodStationFeature[] }).data,
+              selectedId === FLOOD_LAYER_ID ? selectedPointId : null,
+              theme,
+              (f) => {
+                selectLayer(FLOOD_LAYER_ID);
+                selectPoint(f.id);
+              },
+            )
+          : l,
+      ),
+    [baseLayers, selectedId, selectedPointId, theme, selectLayer, selectPoint],
+  );
   const refLayers = useReferenceLayers();
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
@@ -67,7 +89,7 @@ export function Shell() {
           }
         }
       />
-      <MapCanvas layers={[...baseLayers, ...ar.deckLayers, ...refLayers]}>
+      <MapCanvas layers={[...mapLayers, ...ar.deckLayers, ...refLayers]}>
         {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} />}
       </MapCanvas>
       <Inspector

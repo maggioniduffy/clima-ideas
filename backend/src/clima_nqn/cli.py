@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -5,6 +6,7 @@ import typer
 
 from clima_nqn.io import dem, era5, flow
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
+from clima_nqn.layers import flood_stations
 from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.ar import enso as ar_enso
 from clima_nqn.stages.ar import extremes as ar_extremes
@@ -108,6 +110,24 @@ def flow_gev(
     """Annual maxima and GEV return levels with 95 % CI (pyextremes) per natural station."""
     results = flood_extremes.run(flow_dir, out, report, stations=station)
     typer.echo(f"{len(results)} stations -> {out}; report -> {report}")
+
+
+@flow_app.command("layer")
+def flow_layer(
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    gev_dir: Annotated[
+        Path, typer.Option(help="GEV JSON directory of F2.2.")
+    ] = flood_extremes.GEV_DIR,
+    out: Annotated[
+        Path, typer.Option(help="Layer directory (manifest.json, stations.json, stations/).")
+    ] = flood_stations.DEFAULT_OUT,
+) -> None:
+    """Publish the flood-stations viewer layer: stations, daily flow and GEV return periods (F2.4)."""
+    if not (flow_dir / "stations.json").is_file():
+        raise typer.BadParameter(f"no stations.json in {flow_dir} (run clima-nqn flow ingest)")
+    layer_dir = flood_stations.build_layer(flow_dir, gev_dir, out)
+    stations = json.loads((layer_dir / "stations.json").read_text(encoding="utf-8"))
+    typer.echo(f"{len(stations)} stations -> {layer_dir}")
 
 
 era5_app = typer.Typer(help="Regional ERA5 for Neuquén (ARCO-ERA5 Zarr, no CDS account).")

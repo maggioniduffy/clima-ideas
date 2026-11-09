@@ -1,7 +1,9 @@
-import type { ArEvent, LayerManifest, PointFeature } from "../api/client";
+import type { ArEvent, FloodStationFeature, LayerManifest, PointFeature } from "../api/client";
 import { es } from "../i18n/es";
 import { formatUtc } from "../layers/arEvents";
 import type { CellReading } from "../layers/useArEvents";
+import { FLOOD_LAYER_ID, useFloodStation } from "../layers/useFloodStation";
+import { FloodStationPanel } from "./FloodStationPanel";
 import { eventFields, formatLatLon, ivtText } from "./eventFormat";
 
 interface Props {
@@ -15,6 +17,8 @@ interface Props {
 
 export function Inspector({ layer, features, selectedPointId, onSelectPoint, event }: Props) {
   const point = features.find((f) => f.id === selectedPointId) ?? null;
+  const isFlood = layer?.id === FLOOD_LAYER_ID;
+  const flood = useFloodStation(isFlood ? FLOOD_LAYER_ID : null, isFlood ? (point?.id ?? null) : null);
   return (
     <aside className="shell-inspector" id="inspector-panel" data-testid="inspector">
       {!layer ? (
@@ -35,14 +39,15 @@ export function Inspector({ layer, features, selectedPointId, onSelectPoint, eve
                       aria-pressed={f.id === selectedPointId}
                       onClick={() => onSelectPoint(f.id)}
                     >
-                      {es.inspector.point} {f.id}
+                      {isFlood ? stationLabel(f) : `${es.inspector.point} ${f.id}`}
                     </button>
                   </li>
                 ))}
               </ul>
             </>
           )}
-          {point && (
+          {isFlood && point && <FloodStationPanel state={flood} />}
+          {!isFlood && point && (
             <dl className="inspector-point" data-testid="inspector-point">
               <dt>{es.inspector.id}</dt>
               <dd>{point.id}</dd>
@@ -67,6 +72,11 @@ export function Inspector({ layer, features, selectedPointId, onSelectPoint, eve
     </aside>
   );
 }
+
+const stationLabel = (f: PointFeature) => {
+  const s = f as FloodStationFeature;
+  return [s.name ?? f.id, s.river].filter(Boolean).join(es.events.sep);
+};
 
 const cellWhere = (r: CellReading) => [formatLatLon(r.lat, r.lon), formatUtc(r.timeMs)].join(es.events.sep);
 

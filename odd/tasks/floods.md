@@ -12,6 +12,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 - S3 (F2.2) "Máximos anuales y GEV con intervalo de confianza (`pyextremes`)" — "Unit: recupera parámetros de una GEV sintética"
 - S4 (rule, CLAUDE.md) "Nada inventado: lo no verificado se marca \"sin verificar\"; todo dato modelado muestra fuente y período."
 - S5 (assumption) Hydrological year and complete-year rule (≥ 330 valid days) fixed after seeing the data in T0.
+- S6 (F2.4) "Capa: estaciones + panel de período de retorno y serie" — "e2e: elegir estación, ver curva y crecidas". User: "Sí, hacer F2.4" and "levanta localhost para ver esta fase visualmente".
 
 ## Tasks
 
@@ -20,6 +21,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 | T0 SNIH sources | S1, S4 | inline (Opus, built-in browser) | done | L2, L3 |
 | T1 F2.1 | S2, S4, S5 | delegated (builder, model-roles override) | done | 16 tests green, full suite 172 passed; real fetch: 4 stations with data (L4) |
 | T2 F2.2 | S3, S4, S5 | delegated (builder, model-roles override) | done | 8 tests, suite 180 passed, verifier OK on 6 items (L5) |
+| T3 F2.4 | S4, S6 | delegated (builder, one unit backend+web, model-roles override) | done | backend 191 passed, web 109 passed, e2e 7 passed; real layer 436 KB (L7) |
 
 ## Log
 
@@ -54,3 +56,10 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   Independent verifier (Risk item 5, new dependency): lock adds only pyextremes and its deps, no lock drift, CI width,
   shape sign and return levels recomputed OK. Open note: a bootstrap resample pinned at xi = 0.99 is not counted or logged.
   User asked (2026-11-09): "Una vez terminado todo levanta localhost para ver esta fase visualmente" — F2.4 (layer) not built yet.
+- L6 (2026-11-09) User: "Sí, hacer F2.4". Same branch / PR #30. Design: `points` layer `flood-stations` built by
+  `clima-nqn flow layer` from data/flow + data/flow/gev; inspector panel with SVG return-period curve (log T, GEV + IC band,
+  empirical points), daily series with annual maxima, top floods list; no new chart dependency.
+- L7 (2026-11-09) T3 result: `clima-nqn flow layer` -> data/processed/flood-stations (4 stations, 436 KB; 12004 detail 176 KB).
+  Panel: return-period SVG (CI band only within stored T 2–100), daily series (max-per-bucket downsample), top floods.
+  CodeRabbit review fixes on PR #30 committed separately (b0220c6): partial fetch keeps metadata, strict JSON, public scipy base.
+  Light theme not checked visually by the builder.

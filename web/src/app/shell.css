@@ -198,3 +198,24 @@
 @media (prefers-reduced-motion: reduce) {
   .shell-layers, .shell-inspector { transition: none; }
 }
+
+/* Flood station panel (docs/design.md): tokens only, readable in both themes */
+.flood-panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.flood-panel h3 { margin: 0; }
+.flood-panel h4 { margin: var(--space-2) 0 0; font-size: 12px; color: var(--text); }
+.flood-river { display: block; font-size: 11px; font-weight: 400; color: var(--text-muted); }
+.flood-figure { margin: 0; min-width: 0; }
+.flood-figure figcaption { font-size: 10.5px; line-height: 1.35; color: var(--text-muted); overflow-wrap: anywhere; }
+.flood-warn { margin: var(--space-1) 0 0; font-size: 11px; color: var(--text); }
+.flood-chart { display: block; width: 100%; height: auto; }
+.flood-tick, .flood-axis { font-family: var(--font-mono); font-size: 8px; fill: var(--text-muted); }
+.flood-grid { stroke: var(--border); stroke-width: 1; }
+.flood-curve, .flood-series { fill: none; stroke: var(--text); stroke-width: 1.5; stroke-linejoin: round; }
+.flood-series { stroke-width: 0.75; }
+.flood-band { fill: var(--text-muted); fill-opacity: 0.25; stroke: none; }
+.flood-dot { fill: var(--text-muted); }
+.flood-dot-top { fill: var(--accent); stroke: var(--text); stroke-width: 1; }
+.flood-top { list-style: none; margin: 0; padding: 0; font-size: 10px; white-space: nowrap; }
+.flood-top li { display: grid; grid-template-columns: auto 1fr auto; column-gap: var(--space-1); padding: 2px 0; border-bottom: 1px solid var(--border); }
+.flood-top li span:nth-child(2) { text-align: right; }
+.flood-top li span:last-child { text-align: right; white-space: nowrap; color: var(--text-muted); }

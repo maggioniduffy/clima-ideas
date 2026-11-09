@@ -10,7 +10,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 |---|---|---|---|---|
 | 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | hecha |
 | 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | hecha (F1.1–F1.8; F1.7 solo 2023; 3 estudios de F1.5 sin verificar) |
-| 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, datos de caudal | en curso (F2.1–F2.2; caudal SNIH en 12004, 12010, 12012) |
+| 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, datos de caudal | en curso (F2.1, F2.2, F2.4; caudal SNIH en 12004, 12010, 12012) |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | pendiente |
 | 4 | Aluviones: cuencas chicas, HEC-RAS, emulador | [plan/04-debris-flows.md](plan/04-debris-flows.md) | 2, 3 | pendiente |
 | 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1, 3 | pendiente |
