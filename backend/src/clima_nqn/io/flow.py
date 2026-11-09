@@ -171,10 +171,21 @@ def fetch_flow(
             time.sleep(sleep)
             rows = fetch_station_series(client, sid, meta[sid]["alta_year"], today, sleep, progress)
             (raw_dir / f"{sid}.json").write_text(json.dumps(rows), encoding="utf-8")
-    payload = {"fetched": today.isoformat(), "stations": raw_meta}
-    (raw_dir / "stations.json").write_text(
-        json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8"
-    )
+    # merge with the previous metadata so a partial fetch keeps the other stations
+    meta_path = raw_dir / "stations.json"
+    previous = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
+    rows = {r["Codigo"]: r for r in previous.get("stations", [])}
+    fetched_by = dict(previous.get("fetched_by_station", {}))
+    fetched_by.update({str(c): previous["fetched"] for c in rows if str(c) not in fetched_by})
+    for r in raw_meta:
+        rows[r["Codigo"]] = r
+        fetched_by[str(r["Codigo"])] = today.isoformat()
+    payload = {
+        "fetched": today.isoformat(),
+        "fetched_by_station": {k: fetched_by[k] for k in sorted(fetched_by)},
+        "stations": list(rows.values()),
+    }
+    meta_path.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
     return raw_dir
 
 
@@ -283,7 +294,10 @@ def ingest_flow(
         if not raw:
             m.update(first_date=None, last_date=None, first_valid_date=None, last_valid_date=None)
             continue
-        df = build_flow(raw, _BY_ID[sid], fetched)
+        station_fetched = payload.get("fetched_by_station", {}).get(str(sid))
+        df = build_flow(
+            raw, _BY_ID[sid], date.fromisoformat(station_fetched) if station_fetched else fetched
+        )
         write_flow(df, out_dir / f"{sid}.parquet")
         frames[sid] = df
         valid = df.loc[df["q_m3s"].notna(), "date"]

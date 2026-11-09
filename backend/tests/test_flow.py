@@ -246,3 +246,29 @@ def test_ingest_and_report_with_empty_station(tmp_path):
     report = flow.build_report(frames, meta)
     assert "Sin datos" in report and "12013" in report
     assert "supuesto" in report and "2026-11-09" in report
+
+
+def test_partial_fetch_keeps_other_stations_metadata(tmp_path, monkeypatch):
+    def station_row(sid):
+        return {
+            "Codigo": sid,
+            "Descripcion": f"S{sid}",
+            "Rio": "R",
+            "Latitud": 38.0,
+            "Longitud": 69.0,
+            "Area": 100,
+            "Cota": 0,
+            "MesHidrologico": 4,
+            "Alta": "/Date(0)/",
+            "Baja": "/Date(0)/",
+        }
+
+    monkeypatch.setattr(
+        flow, "fetch_stations", lambda client: [station_row(12004), station_row(12010)]
+    )
+    monkeypatch.setattr(flow, "fetch_station_series", lambda *a, **k: [])
+    flow.fetch_flow(tmp_path, stations=[12004, 12010], today=date(2026, 1, 1), sleep=0)
+    flow.fetch_flow(tmp_path, stations=[12004], today=date(2026, 2, 1), sleep=0)
+    payload = json.loads((tmp_path / "stations.json").read_text())
+    assert sorted(r["Codigo"] for r in payload["stations"]) == [12004, 12010]
+    assert payload["fetched_by_station"] == {"12004": "2026-02-01", "12010": "2026-01-01"}

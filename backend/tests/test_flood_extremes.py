@@ -128,3 +128,15 @@ def test_station_result_json_roundtrip(tmp_path):
     loaded = json.loads(path.read_text())
     assert loaded["station_id"] == 1
     assert loaded["source"] == extremes.flow.SOURCE
+
+
+def test_station_json_has_no_infinite_values(tmp_path):
+    result = {"station_id": 1, "annual_maxima": [{"gev_T": float("inf")}], "x": float("-inf")}
+    path = extremes.write_station_json(result, tmp_path)
+    data = json.loads(path.read_text())
+    assert data["annual_maxima"][0]["gev_T"] is None
+    assert data["x"] is None
+
+
+def test_report_t_formats_missing_return_period():
+    assert extremes._t(None) == "> 10 000"

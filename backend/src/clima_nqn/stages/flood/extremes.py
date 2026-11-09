@@ -30,7 +30,6 @@ import numpy as np
 import pandas as pd
 from pyextremes.models import get_model
 from scipy.stats import genextreme, kstest
-from scipy.stats._continuous_distns import genextreme_gen
 
 from clima_nqn.io import flow
 from clima_nqn.stages.ar.extremes import _clean
@@ -92,7 +91,7 @@ IRREGULAR_XI = 0.5  # the MLE is regular only for xi < 0.5; above it the CI is u
 _START_SHAPES = (-0.2, 0.0, 0.2)  # scipy c = -xi: heavy, Gumbel, bounded
 
 
-class _MultiStartGEV(genextreme_gen):
+class _MultiStartGEV(type(genextreme)):  # public base: scipy's private module path may move
     """``genextreme`` whose MLE tries several shape starting values and keeps the best likelihood.
 
     scipy's default start can stall far from the optimum: on 2000 synthetic points with c = 0.2 it
@@ -236,11 +235,23 @@ def station_result(df: pd.DataFrame, meta: dict, n_samples: int = N_SAMPLES, top
     }
 
 
+def _finite(obj):
+    """Non-finite floats (e.g. gev_T = inf beyond the fitted support) -> None, for strict JSON."""
+    if isinstance(obj, dict):
+        return {k: _finite(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_finite(v) for v in obj]
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    return obj
+
+
 def write_station_json(result: dict, out_dir: Path | str) -> Path:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{result['station_id']}.json"
-    path.write_text(json.dumps(_clean(result), indent=2, ensure_ascii=False), encoding="utf-8")
+    text = json.dumps(_finite(_clean(result)), indent=2, ensure_ascii=False, allow_nan=False)
+    path.write_text(text, encoding="utf-8")
     return path
 
 
@@ -255,8 +266,8 @@ def _n(x: float, nd: int = 0) -> str:
     )
 
 
-def _t(x: float) -> str:
-    return "> 10 000" if x > 10_000 else _n(x, 1)
+def _t(x: float | None) -> str:
+    return "> 10 000" if x is None or x > 10_000 else _n(x, 1)
 
 
 def build_report(results: list[dict]) -> str:
