@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { readFileSync } from "node:fs";
 import { vi } from "vitest";
 import { es } from "../i18n/es";
 import { Shell } from "./Shell";
@@ -6,6 +7,8 @@ import { Shell } from "./Shell";
 vi.mock("@deck.gl/react", () => ({
   default: () => <div data-testid="deck-mock" />,
 }));
+
+const province = JSON.parse(readFileSync("public/geo/neuquen-province.geojson", "utf8"));
 
 const manifest = {
   id: "a",
@@ -24,7 +27,10 @@ beforeEach(() => {
     vi.fn(async (url: string) => ({
       ok: true,
       status: 200,
-      json: async () => (url.endsWith("/data") ? [{ id: "p1", lon: -69, lat: -38, value: 5.5 }] : [manifest]),
+      json: async () => {
+        if (url.endsWith(".geojson")) return province;
+        return url.endsWith("/data") ? [{ id: "p1", lon: -69, lat: -38, value: 5.5 }] : [manifest];
+      },
     })),
   );
 });
@@ -51,14 +57,27 @@ test("theme toggle in the top bar flips data-theme", () => {
 test("activating a fetched layer adds the deck layer and shows manifest source/period", async () => {
   render(<Shell />);
   fireEvent.click(await screen.findByTestId("layer-toggle-a"));
-  await waitFor(() => expect(screen.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", "points-a"));
+  await waitFor(() => expect(screen.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", expect.stringMatching(/^points-a(,|$)/)));
   expect(screen.getByTestId("layer-item-a")).toHaveAttribute("data-active", "true");
   expect(screen.getByTestId("inspector-source")).toHaveTextContent("Fuente X");
   expect(screen.getByTestId("inspector-period")).toHaveTextContent("2000-01-01/2000-12-31");
   fireEvent.click(screen.getByTestId("feature-p1"));
   expect(screen.getByTestId("inspector-point")).toHaveTextContent("5.5");
   fireEvent.click(screen.getByTestId("layer-toggle-a"));
-  expect(screen.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", "");
+  expect(screen.getByTestId("map-canvas").getAttribute("data-deck-layers")).not.toContain("points-a");
+});
+
+test("province outline, city marker and label are always drawn, with no layer active", async () => {
+  render(<Shell />);
+  const canvas = screen.getByTestId("map-canvas");
+  await waitFor(() => expect(canvas.getAttribute("data-deck-layers")).toContain("ref-province"));
+  for (const id of ["ref-province-halo", "ref-city", "ref-labels"])
+    expect(canvas.getAttribute("data-deck-layers")).toContain(id);
+  fireEvent.click(await screen.findByTestId("layer-toggle-a"));
+  fireEvent.click(screen.getByTestId("layer-toggle-a"));
+  for (const id of ["ref-province", "ref-city", "ref-labels"])
+    expect(canvas.getAttribute("data-deck-layers")).toContain(id);
+  expect(canvas.getAttribute("data-deck-layers")).not.toContain("points-a");
 });
 
 test("drawer toggles expose aria-expanded/aria-controls and open one panel at a time", () => {

@@ -27,7 +27,7 @@ export function Shell() {
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
   const reliefOn = s.deckLayers.some((l) => l.id.startsWith("relief-"));
   const ar = useArEvents(eventsLayer, eventsActive, reliefOn ? IVT_OVER_RELIEF_OPACITY : 1);
-  const refLayers = useReferenceLayers(eventsActive);
+  const refLayers = useReferenceLayers();
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);

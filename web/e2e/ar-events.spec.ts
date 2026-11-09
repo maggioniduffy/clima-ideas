@@ -70,7 +70,7 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
 
   // turning the layer off removes marks, raster and replay
   await page.getByTestId("layer-toggle-ar-events").uncheck();
-  await expect(canvas).toHaveAttribute("data-deck-layers", "");
+  await expect(canvas).toHaveAttribute("data-deck-layers", /^(ref-[a-z-]+(,|$))+$/);
   await expect(page.getByTestId("map-legend")).toHaveCount(0);
   await expect(page.getByTestId("timeline")).toContainText("Sin serie temporal");
 
