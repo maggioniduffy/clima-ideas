@@ -146,3 +146,45 @@ test("IVT view toggle: legend control only with the AR layer; isolines add conto
   fireEvent.click(screen.getByTestId("layer-toggle-ar-events"));
   expect(screen.queryByTestId("ivt-view-drape")).not.toBeInTheDocument();
 });
+
+test("ENSO panel: button only when the layer lists enso.json; opens over the map, closes with Esc and with the layer off", async () => {
+  const enso = {
+    meta: { period: "1980-01-01/2025-12-30", source: "ERA5 + ONI" },
+    results: {
+      n_perm: 10000, seed: 0, alpha: 0.05,
+      rows: [{
+        season: "SON", metric: "ivt_mean", phase_years: { nino: 14, neutral: 18, nina: 14 },
+        groups: { nino: { n: 14, mean: 527, sd: 80 }, neutral: { n: 18, mean: 500, sd: 70 }, nina: { n: 14, mean: 435, sd: 60 } },
+        diff_nino_nina: 92, p: 0.03, p_bh: 0.3, p_3group: 0.2, p_3group_bh: 0.4, f_3group: 1, sustained: true, sustained_bh: false,
+      }],
+    },
+  }; // fmt: skip
+  const arLayer = { ...manifest, id: "ar-events", kind: "events", files: ["events.json", "frames/index.json", "enso.json"] };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        if (url.endsWith(".geojson")) return province;
+        if (url.includes("enso.json")) return enso;
+        if (url.includes("frames%2Findex.json")) return { units: "", step_hours: 1, grid: { ny: 1, nx: 1, lat_min: 0, lat_max: 0, lon_min: 0, lon_max: 0 }, events: {} };
+        if (url.includes("events.json")) return [];
+        return [arLayer];
+      },
+    })),
+  );
+  render(<Shell />);
+  await screen.findByTestId("layer-toggle-ar-events");
+  expect(screen.queryByTestId("enso-open")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("layer-toggle-ar-events"));
+  fireEvent.click(await screen.findByTestId("enso-open"));
+  expect(await screen.findByTestId("enso-row-ivt_mean")).toHaveTextContent("527 ± 80 (n=14)");
+  expect(screen.getByTestId("map-canvas")).toContainElement(screen.getByTestId("enso-panel"));
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("enso-open"));
+  expect(screen.getByTestId("enso-panel")).toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("layer-toggle-ar-events"));
+  expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
+});

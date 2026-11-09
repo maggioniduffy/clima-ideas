@@ -62,6 +62,10 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
 - F1.8 hecha: con el polígono, 3 de 16 pruebas Niño−Niña con p < 0,05 (SON: días con RA, IVT máx. medio 527 vs. 435
   kg m⁻¹ s⁻¹, fracción de lluvia) y ninguna sostiene p BH < 0,05 (`reports/01/F1.8.md`). Con el rectángulo eran 6 de 16
   y el IVT máx. medio de SON sí sostenía BH: el resultado no es robusto a la elección del polígono.
+- F1.8 en el visor (pedido del usuario, 2026-11-08): la capa `ar-events` publica `F1.8.json` como `enso.json`
+  (`clima-nqn ar layer --enso-report`); botón "ENSO por estación" abre un panel con la tabla por estación. En el
+  panel, "¿Sostenida?" usa p BH < 0,05 (el informe usa p < 0,05). Cifras de SON revisadas contra `reports/01/F1.8.md`
+  con la capa real. F1.7 sigue solo como informe.
 
 ## Mejoras del visor (pedido del usuario, 2026-11-08)
 

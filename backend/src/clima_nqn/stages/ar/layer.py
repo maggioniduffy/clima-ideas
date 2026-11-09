@@ -6,6 +6,8 @@ Output in ``<out>/ar-events/``:
 - ``events.parquet`` the catalog as is (schema metadata included).
 - ``events.json``    the same rows for the viewer (no Parquet reader in the browser): ISO-8601 UTC
   strings, NaN as null.
+- ``enso.json``      optional: the F1.8 ENSO-phase report numbers (``F1.8.json``) copied as is, listed in
+  the manifest only when the report is given.
 - ``frames/index.json`` grid, units and, per event, ``start``/``n_frames``/``vmin``/``vmax``.
 - ``frames/<event_id>.bin`` hourly |IVT| over the regional grid for [start, end): little-endian
   Float32 ``[n_frames, ny, nx]``, row 0 = southernmost latitude, column 0 = westernmost longitude,
@@ -37,6 +39,7 @@ UNITS = "kg m-1 s-1"
 DEFAULT_OUT = Path("data/processed")
 FRAMES_DIR = "frames"
 INDEX_NAME = f"{FRAMES_DIR}/index.json"
+ENSO_NAME = "enso.json"
 DATETIME_COLUMNS = ("start", "end", "ivt_max_time")
 
 
@@ -142,9 +145,15 @@ def write_frames(events: pd.DataFrame, era5_paths: Sequence[Path], out_dir: Path
 
 
 def build_layer(
-    events_path: Path, era5_dir: Path, out_root: Path = DEFAULT_OUT
+    events_path: Path,
+    era5_dir: Path,
+    out_root: Path = DEFAULT_OUT,
+    enso_report: Path | None = None,
 ) -> tuple[Path, dict]:
-    """Publish ``<out_root>/ar-events/``; returns (layer dir, frames index)."""
+    """Publish ``<out_root>/ar-events/``; returns (layer dir, frames index).
+
+    ``enso_report`` (F1.8 JSON from ``clima-nqn ar enso``), when given, is copied as ``enso.json``.
+    """
     events_path = Path(events_path)
     df = pd.read_parquet(events_path)
     meta = catalog.read_metadata(events_path)
@@ -158,6 +167,10 @@ def build_layer(
     index = write_frames(df, stores, out_dir)
     shutil.copyfile(events_path, out_dir / "events.parquet")
     (out_dir / "events.json").write_text(json.dumps(events_records(df)), encoding="utf-8")
+    files = ["events.json", "events.parquet", INDEX_NAME]
+    if enso_report is not None:
+        shutil.copyfile(enso_report, out_dir / ENSO_NAME)
+        files.append(ENSO_NAME)
     manifest = LayerManifest(
         id=LAYER_ID,
         title=TITLE,
@@ -166,7 +179,7 @@ def build_layer(
         period=period,
         license=LICENSE,
         updated_at=datetime.now(UTC),
-        files=["events.json", "events.parquet", INDEX_NAME],
+        files=files,
     )
     (out_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     return out_dir, index
