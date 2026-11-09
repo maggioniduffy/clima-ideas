@@ -73,6 +73,22 @@ cd backend && uv run clima-nqn dem fetch && uv run clima-nqn dem build
   del checkout principal para reusar las teselas.
 - Tras regenerar la capa, recargar el visor sin caché: el navegador puede seguir mostrando el `relief.bin` anterior.
 
+### Caudales (SNIH)
+
+Caudal medio diario de seis estaciones de la Red Hidrológica Nacional (Neuquén, Agrio, Curí Leuvú y Limay), del SNIH/SIPH
+(Subsecretaría de Recursos Hídricos). Desde la raíz del repo:
+
+```
+cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
+```
+
+- `flow fetch` baja los datos a `data/raw/flow/` (`<id>.json` por estación y `stations.json` con la metadata y la fecha de
+  consulta), en ventanas de 10 años y con ~1 s entre pedidos. `--station` (repetible) limita las estaciones.
+- `flow ingest` no usa red: escribe `data/flow/<id>.parquet` (`date`, `q_m3s`, `qualifier`, `validated`; los huecos son
+  filas NaN), `data/flow/stations.json` y el informe `reports/02/F2.1.md`.
+- Términos del SNIH (§7): citar al SIPH/SNIH como fuente, declarar la fecha de última actualización y no alterar el
+  sentido original de los datos. El Parquet guarda fuente, URL y fecha de consulta en sus metadatos.
+
 ## API
 
 `GET /health` · `GET /layers` · `GET /layers/{id}` · `GET /layers/{id}/data` · `GET /layers/{id}/frames/{t}` (binario Float32 del conjunto de frames `t`; en `ar-events`, `t` es el id del evento y el índice está en `frames/index.json`)
