@@ -2,7 +2,7 @@
 .shell {
   display: grid;
   height: 100vh;
-  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  grid-template-columns: 200px minmax(0, 1fr) 260px;
   grid-template-rows: 48px minmax(0, 1fr) 136px;
   grid-template-areas:
     "top top top"
@@ -55,6 +55,11 @@
   background: var(--bg);
 }
 
+.events-help { display: flex; flex-direction: column; gap: var(--space-2); }
+.events-help h3 { margin: 0; font-size: 12px; color: var(--text); }
+.events-help p { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--text-muted); }
+.events-help .events-hint { color: var(--text); font-weight: 600; }
+
 .empty {
   margin: 0;
   font-size: 12px;
@@ -96,7 +101,7 @@
 .inspector-meta dd { color: var(--text-muted); text-align: right; overflow-wrap: anywhere; }
 
 /* AR events: list in the panel, replay controls and marks on the timeline */
-.event-list-item { padding: 0 0 var(--space-2) var(--space-5); }
+.event-list-item { padding: 0 0 var(--space-2) var(--space-2); }
 .event-list { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow: auto; }
 .event-list button {
   display: flex; justify-content: space-between; gap: var(--space-2); width: 100%;
@@ -146,6 +151,7 @@
 .map-legend-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .map-legend-ticks span:first-child { transform: none; }
 .map-legend-ticks span:last-child { transform: translateX(-100%); }
+.map-legend-note { margin-top: 4px; color: var(--text-muted); font-size: 10px; }
 .map-legend-source { margin-top: 4px; color: var(--text-muted); font-size: 10px; }
 .inspector-meta { grid-template-columns: auto minmax(0, 1fr); }
 .inspector-meta dd:not(.kv-wide) { white-space: normal; overflow-wrap: anywhere; min-width: 0; }

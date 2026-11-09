@@ -79,7 +79,16 @@ function EventDetails({
   loadingFrames: boolean;
   reading: CellReading | null;
 }) {
-  if (!selected) return <p className="empty">{es.events.hint}</p>;
+  if (!selected)
+    return (
+      <div className="events-help" data-testid="events-help">
+        <h3>{es.events.help.title}</h3>
+        <p>{es.events.help.ar}</p>
+        <p>{es.events.help.ivt}</p>
+        <p>{es.events.help.events}</p>
+        <p className="events-hint">{es.events.hint}</p>
+      </div>
+    );
   const f = eventFields(selected);
   return (
     <>

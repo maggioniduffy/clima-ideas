@@ -10,9 +10,20 @@ export const IVT_SCALE_MAX = 1200;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
-/** Raster opacity: nearly opaque (>= 0.85) so the field reads on both themes; slightly stronger at the top. */
-export const IVT_ALPHA_MIN = 0.85;
+/**
+ * Raster alpha ramp (map layer only). Below IVT_ALPHA_LOW (kg m-1 s-1) the layer is fully transparent so terrain
+ * shows where there is no river; alpha rises smoothly (smoothstep) to IVT_ALPHA_MAX at IVT_ALPHA_HIGH and above.
+ * The legend (MapLegend) derives its fade-in segment from these constants.
+ */
+export const IVT_ALPHA_LOW = 150;
+export const IVT_ALPHA_HIGH = 400;
 export const IVT_ALPHA_MAX = 0.95;
+
+/** Alpha 0..IVT_ALPHA_MAX for an IVT value: 0 at/below IVT_ALPHA_LOW, smoothstep up to IVT_ALPHA_MAX at IVT_ALPHA_HIGH. */
+export function ivtAlpha(value: number): number {
+  const t = Math.min(1, Math.max(0, (value - IVT_ALPHA_LOW) / (IVT_ALPHA_HIGH - IVT_ALPHA_LOW)));
+  return IVT_ALPHA_MAX * t * t * (3 - 2 * t);
+}
 
 const hex = (h: string): [number, number, number] => [
   parseInt(h.slice(1, 3), 16),
@@ -25,7 +36,7 @@ export type Rgba = [number, number, number, number];
 /**
  * Sequential ramp (`tokens.ivtRamp[theme]`, stops evenly spaced over [0, IVT_SCALE_MAX]); null/NaN is transparent.
  * Light theme: pale (low) to deep purple (high). Dark theme: dim blue (low) to bright yellow (high).
- * Opaque unless `translucent`, which gives alpha IVT_ALPHA_MIN..IVT_ALPHA_MAX (for the map raster).
+ * Opaque unless `translucent`, which applies the `ivtAlpha` ramp (transparent where IVT is low; for the map raster).
  */
 export function ivtColor(value: number | null | undefined, theme: Theme, translucent = false): Rgba {
   if (value == null || Number.isNaN(value)) return [0, 0, 0, 0];
@@ -35,7 +46,7 @@ export function ivtColor(value: number | null | undefined, theme: Theme, translu
   const i = Math.min(stops.length - 2, Math.floor(x));
   const f = x - i;
   const [r, g, b] = [0, 1, 2].map((c) => Math.round(stops[i]![c]! + (stops[i + 1]![c]! - stops[i]![c]!) * f));
-  const alpha = translucent ? IVT_ALPHA_MIN + (IVT_ALPHA_MAX - IVT_ALPHA_MIN) * t : 1;
+  const alpha = translucent ? ivtAlpha(value) : 1;
   return [r!, g!, b!, Math.round(255 * alpha)];
 }
 

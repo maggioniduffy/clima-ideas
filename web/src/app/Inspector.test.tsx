@@ -49,6 +49,10 @@ test("events layer: shows the selected event fields, source/period and the cell 
   const props = { layer: evLayer, features: [], selectedPointId: null, onSelectPoint: vi.fn() };
   const { rerender } = render(<Inspector {...props} />);
   expect(screen.getByText(es.events.hint)).toBeInTheDocument();
+  expect(screen.getByTestId("events-help")).toHaveTextContent(es.events.help.title);
+  expect(screen.getByTestId("events-help")).toHaveTextContent(es.events.help.ar);
+  expect(screen.getByTestId("events-help")).toHaveTextContent(es.events.help.ivt);
+  expect(screen.getByTestId("events-help")).toHaveTextContent(es.events.help.events);
   rerender(<Inspector {...props} event={{ selected, loadingFrames: false, reading: null }} />);
   const box = screen.getByTestId("inspector-event");
   for (const t of ["2000-03-10 06:00 UTC", "6 h", "612 kg m-1 s-1", "3120 m", "2890 m", "41.3 mm", "La Niña"])

@@ -20,6 +20,7 @@ export const es = {
     city: "Neuquén",
     legendTitle: "IVT (kg m⁻¹ s⁻¹)",
     legendLabel: "Escala de IVT",
+    legendLow: "Bajo ~150: transparente",
     outlineSource: "Contorno provincial: Natural Earth (dominio público)",
   },
   events: {
@@ -29,6 +30,12 @@ export const es = {
     none: "Sin eventos",
     ivtShort: "IVT",
     hint: "Elegí un evento en el panel o en la línea de tiempo",
+    help: {
+      title: "¿Qué muestra el mapa?",
+      ar: "Un río atmosférico es un corredor largo y angosto de transporte intenso de vapor de agua en la atmósfera baja (Glosario de Meteorología de la AMS).",
+      ivt: "El IVT (transporte integrado de vapor) mide cuánto vapor de agua atraviesa por segundo una franja de 1 m, sumado en toda la columna de aire, en kg m⁻¹ s⁻¹. Por encima de ~250 suele considerarse río atmosférico (Rutz et al. 2014).",
+      events: "Los eventos son ríos atmosféricos detectados con TECA BARD sobre ERA5 (1980–2025) que tocan la cordillera neuquina.",
+    },
     loadingFrames: "Cargando campos de IVT…",
     start: "Inicio",
     end: "Fin",

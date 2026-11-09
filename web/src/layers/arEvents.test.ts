@@ -7,6 +7,9 @@ import {
   frameValue,
   gridCells,
   ivtColor,
+  IVT_ALPHA_HIGH,
+  IVT_ALPHA_LOW,
+  IVT_ALPHA_MAX,
   IVT_SCALE_MAX,
   legendTicks,
   parseFrames,
@@ -80,16 +83,30 @@ test.each(["light", "dark"] as const)("ivtColor (%s) is monotonic in lightness a
   expect(sign * (l(600) - l(100))).toBeGreaterThan(40);
 });
 
-test("ivtColor: missing values are transparent; the raster is nearly opaque (alpha >= 0.85)", () => {
+test("ivtColor: missing values are transparent; opaque swatches stay fully opaque", () => {
   expect(ivtColor(null, "light")[3]).toBe(0);
   expect(ivtColor(NaN, "dark")[3]).toBe(0);
   expect(ivtColor(undefined, "dark")[3]).toBe(0);
   for (const theme of ["light", "dark"] as const) {
+    expect(ivtColor(0, theme)[3]).toBe(255);
     expect(ivtColor(500, theme)[3]).toBe(255);
-    expect(ivtColor(0, theme, true)[3]).toBeGreaterThanOrEqual(Math.floor(255 * 0.85));
-    expect(ivtColor(0, theme, true)[3]).toBeLessThanOrEqual(ivtColor(IVT_SCALE_MAX, theme, true)[3]);
-    expect(ivtColor(IVT_SCALE_MAX, theme, true)[3]).toBeLessThan(256);
   }
+});
+
+test.each(["light", "dark"] as const)("ivtColor (%s) translucent alpha fades to ~0 below IVT_ALPHA_LOW and saturates at IVT_ALPHA_HIGH", (theme) => {
+  expect(IVT_ALPHA_LOW).toBe(150);
+  expect(IVT_ALPHA_HIGH).toBe(400);
+  const a = (v: number) => ivtColor(v, theme, true)[3];
+  expect(a(0)).toBe(0);
+  expect(a(100)).toBe(0);
+  expect(a(IVT_ALPHA_LOW)).toBe(0);
+  expect(a(IVT_ALPHA_HIGH)).toBe(Math.round(255 * IVT_ALPHA_MAX));
+  expect(a(IVT_SCALE_MAX)).toBe(Math.round(255 * IVT_ALPHA_MAX));
+  for (let v = 0; v < IVT_ALPHA_HIGH + 50; v += 10) expect(a(v + 10)).toBeGreaterThanOrEqual(a(v));
+  expect(a(275)).toBeGreaterThan(0);
+  expect(a(275)).toBeLessThan(a(IVT_ALPHA_HIGH));
+  // color channels are unaffected by the alpha ramp
+  expect(ivtColor(600, theme, true).slice(0, 3)).toEqual(ivtColor(600, theme).slice(0, 3));
 });
 
 test("legendTicks spans 0..IVT_SCALE_MAX and labels the saturation value '≥1200'", () => {

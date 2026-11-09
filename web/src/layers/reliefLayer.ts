@@ -14,9 +14,9 @@ export const RELIEF_STOPS_M = [0, 800, 1800, 3000] as const;
 /** Hillshade: sun from the NW (azimuth clockwise from north) at 45 degrees; slopes exaggerated for shading only. */
 export const SUN_AZIMUTH_DEG = 315;
 export const SUN_ALTITUDE_DEG = 45;
-export const SHADE_EXAGGERATION = 2.5;
-const SHADE_MIN = 0.4;
-const SHADE_MAX = 1.3;
+export const SHADE_EXAGGERATION = 3.5;
+const SHADE_MIN = 0.25;
+const SHADE_MAX = 1.5;
 
 export interface ReliefData {
   length: number;

@@ -9,8 +9,8 @@ export interface CellRef {
   col: number;
 }
 
-/** IVT raster opacity while relief is drawn below it, so terrain reads through. */
-export const IVT_OVER_RELIEF_OPACITY = 0.5;
+/** IVT raster opacity while relief is drawn below it; the low-IVT transparency already exposes terrain, so the river stays strong. */
+export const IVT_OVER_RELIEF_OPACITY = 0.7;
 
 interface Props {
   layerId: string;
