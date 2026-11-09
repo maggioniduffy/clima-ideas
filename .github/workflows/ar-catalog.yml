@@ -107,6 +107,7 @@ jobs:
           uv run clima-nqn ar layer
           --events data/interim/ar/events.parquet
           --era5-dir ../era5
+          --enso-report data/interim/ar/F1.8.json
           --out data/processed
           && du -sh data/processed/ar-events
       - uses: actions/upload-artifact@v7

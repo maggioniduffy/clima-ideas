@@ -63,3 +63,25 @@ test("active events layer lists its events and reports selection", () => {
   fireEvent.click(screen.getByTestId("event-AR-2000-001"));
   expect(onSelectEvent).toHaveBeenCalledWith("AR-2000-001");
 });
+
+test("ENSO button shows only when the layer publishes a report and toggles the panel", () => {
+  const evLayer: LayerManifest = { ...layer, id: "ar-events", kind: "events", title: "Ríos" };
+  const onToggleEnso = vi.fn();
+  const events = {
+    layerId: "ar-events",
+    status: "ready" as const,
+    items: [],
+    selectedEventId: null,
+    onSelectEvent: vi.fn(),
+    ensoStatus: "none" as const,
+    onToggleEnso,
+  };
+  const props = { ...base, layers: [evLayer], activeIds: new Set(["ar-events"]), onToggle: vi.fn(), onSelect: vi.fn() };
+  const { rerender } = render(<LayerPanel {...props} events={events} />);
+  expect(screen.queryByTestId("enso-open")).toBeNull();
+  rerender(<LayerPanel {...props} events={{ ...events, ensoStatus: "ready", ensoOpen: true }} />);
+  expect(screen.getByTestId("enso-open")).toHaveTextContent(es.enso.open);
+  expect(screen.getByTestId("enso-open")).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByTestId("enso-open"));
+  expect(onToggleEnso).toHaveBeenCalled();
+});

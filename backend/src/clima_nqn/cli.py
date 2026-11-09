@@ -284,12 +284,20 @@ def ar_layer_cmd(
     out: Annotated[Path, typer.Option(help="Processed root; writes <out>/ar-events/.")] = (
         ar_layer.DEFAULT_OUT
     ),
+    enso_report: Annotated[
+        Path,
+        typer.Option(
+            help="F1.8 JSON (clima-nqn ar enso); published as enso.json when it exists, else skipped."
+        ),
+    ] = ar_catalog.DEFAULT_OUT.parent / "F1.8.json",
 ) -> None:
-    """Publish the ar-events viewer layer: events plus hourly IVT frames for replay (F1.6)."""
+    """Publish the ar-events viewer layer: events, hourly IVT frames and the ENSO report (F1.6, F1.8)."""
     if not events.exists():
         raise typer.BadParameter(f"catalog not found: {events}")
     if not any(era5_dir.glob("[0-9][0-9][0-9][0-9].zarr")):
         raise typer.BadParameter(f"no <year>.zarr stores in {era5_dir}")
-    layer_dir, index = ar_layer.build_layer(events, era5_dir, out)
+    layer_dir, index = ar_layer.build_layer(
+        events, era5_dir, out, enso_report if enso_report.is_file() else None
+    )
     frames = sum(e["n_frames"] for e in index["events"].values())
     typer.echo(f"{len(index['events'])} events with frames, {frames} hourly frames -> {layer_dir}")

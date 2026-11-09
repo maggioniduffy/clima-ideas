@@ -5,10 +5,12 @@ import type { FloodStationFeature } from "../api/client";
 import { buildFloodStationsLayer } from "../layers/floodStations";
 import { FLOOD_LAYER_ID } from "../layers/useFloodStation";
 import { useArEvents } from "../layers/useArEvents";
+import { useEnsoStats } from "../layers/useEnsoStats";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
 import { useLayers } from "../layers/useLayers";
 import { useTheme } from "../theme/themeStore";
+import { EnsoPanel } from "./EnsoPanel";
 import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
 import { MapCanvas } from "./MapCanvas";
@@ -30,6 +32,9 @@ export function Shell() {
   const s = useLayers();
   const eventsLayer = s.layers.find((l) => l.kind === "events");
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
+  const enso = useEnsoStats(eventsLayer, eventsActive);
+  const [ensoOpen, setEnsoOpen] = useState(false);
+  const showEnso = ensoOpen && eventsActive && enso.status !== "none";
   const [ivtView, setIvtView] = useState<IvtView>("drape");
   const theme = useTheme();
   const ar = useArEvents(eventsLayer, eventsActive, { relief: s.activeRelief?.data ?? null, view: ivtView });
@@ -88,6 +93,9 @@ export function Shell() {
             items: ar.events,
             selectedEventId: ar.selectedEventId,
             onSelectEvent: selectEvent,
+            ensoStatus: enso.status,
+            ensoOpen: showEnso,
+            onToggleEnso: () => setEnsoOpen((o) => !o),
           }
         }
       />
@@ -99,6 +107,15 @@ export function Shell() {
           ...refLayers,
         ]}
       >
+        {showEnso && eventsLayer && enso.status !== "none" && (
+          <EnsoPanel
+            status={enso.status}
+            stats={enso.data}
+            source={eventsLayer.source}
+            period={eventsLayer.period}
+            onClose={() => setEnsoOpen(false)}
+          />
+        )}
         {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} />}
       </MapCanvas>
       <Inspector

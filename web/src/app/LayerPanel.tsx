@@ -17,6 +17,10 @@ interface Props {
     items: ArEvent[];
     selectedEventId: string | null;
     onSelectEvent: (id: string) => void;
+    /** ENSO-phase statistics (F1.8): the button shows unless the layer publishes no report ("none"/absent). */
+    ensoStatus?: "none" | "loading" | "ready" | "error";
+    ensoOpen?: boolean;
+    onToggleEnso?: () => void;
   };
 }
 
@@ -53,6 +57,18 @@ export function LayerPanel({ layers, status, activeIds, selectedId, onToggle, on
                   {events.status === "loading" && <p className="empty">{es.events.loading}</p>}
                   {events.status === "error" && <p className="empty">{es.events.error}</p>}
                   {events.status === "ready" && events.items.length === 0 && <p className="empty">{es.events.none}</p>}
+                  {events.ensoStatus && events.ensoStatus !== "none" && (
+                    <button
+                      type="button"
+                      className="enso-open"
+                      data-testid="enso-open"
+                      aria-pressed={!!events.ensoOpen}
+                      aria-controls="enso-panel"
+                      onClick={events.onToggleEnso}
+                    >
+                      {es.enso.open}
+                    </button>
+                  )}
                   <ul className="event-list" data-testid="event-list" aria-label={es.events.list}>
                     {events.items.map((e) => (
                       <li key={e.event_id}>

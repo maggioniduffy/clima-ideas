@@ -147,3 +147,41 @@ def test_cli_layer(tmp_path):
     assert res.exit_code == 0, res.output
     assert "2 events with frames, 18 hourly frames" in res.output
     assert (tmp_path / "proc" / "ar-events" / "manifest.json").is_file()
+
+
+def test_enso_report_is_copied_and_listed(tmp_path):
+    (tmp_path / "era5").mkdir()
+    make_store(tmp_path / "era5", 2000, "2000-01-01", 72)
+    events = make_catalog(tmp_path)
+    report = tmp_path / "F1.8.json"
+    report.write_text('{"meta": {}, "results": {"rows": []}}', encoding="utf-8")
+    out_dir, _ = layer.build_layer(events, tmp_path / "era5", tmp_path / "processed", report)
+    m = load_manifest(out_dir / "manifest.json")
+    assert m.files == ["events.json", "events.parquet", "frames/index.json", "enso.json"]
+    assert (out_dir / "enso.json").read_text(encoding="utf-8") == report.read_text(encoding="utf-8")
+
+
+def test_layer_without_enso_report_has_no_enso_file(published):
+    out_dir, _ = published
+    assert not (out_dir / "enso.json").exists()
+    assert "enso.json" not in load_manifest(out_dir / "manifest.json").files
+
+
+def test_cli_layer_enso_report_option(tmp_path):
+    (tmp_path / "era5").mkdir()
+    make_store(tmp_path / "era5", 2000, "2000-01-01", 72)
+    events = make_catalog(tmp_path)
+    report = tmp_path / "F1.8.json"
+    report.write_text("{}", encoding="utf-8")
+    base = ["ar", "layer", "--events", str(events), "--era5-dir", str(tmp_path / "era5")]
+    res = CliRunner().invoke(
+        app, [*base, "--out", str(tmp_path / "a"), "--enso-report", str(report)]
+    )
+    assert res.exit_code == 0, res.output
+    assert (tmp_path / "a" / "ar-events" / "enso.json").is_file()
+    # a missing report is skipped, not an error
+    res = CliRunner().invoke(
+        app, [*base, "--out", str(tmp_path / "b"), "--enso-report", str(tmp_path / "nope.json")]
+    )
+    assert res.exit_code == 0, res.output
+    assert not (tmp_path / "b" / "ar-events" / "enso.json").exists()
