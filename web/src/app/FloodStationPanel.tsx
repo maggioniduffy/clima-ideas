@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { FloodMaximum, FloodStationDetail } from "../api/client";
 import { es } from "../i18n/es";
 import type { FloodStationState } from "../layers/useFloodStation";
@@ -16,13 +17,33 @@ import {
   type Pt,
 } from "./floodCharts";
 
-const W = 228;
-const H = 150;
-const HS = 120; // series chart height
+const W0 = 228; // chart width before the container is measured
 const M = { l: 36, r: 10, t: 16, b: 22 };
 const flowFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 const fmtQ = (q: number) => flowFmt.format(Math.round(q));
 const yearsOf = (period: string) => period.split("/").map((d) => d.slice(0, 4)).join("–");
+
+/** Chart size for a container width: text stays at its native size, the plot area grows with the panel. */
+const chartSize = (w: number) => {
+  const h = Math.round(Math.min(280, Math.max(150, w * 0.62)));
+  return { W: w, H: h, HS: Math.round(h * 0.8) };
+};
+
+/** Content width of the element, following the panel as it is resized. */
+function useWidth() {
+  // callback ref: the panel div mounts only after the loading state, so observe it when it appears
+  const [el, ref] = useState<HTMLDivElement | null>(null);
+  const [w, setW] = useState(W0);
+  useEffect(() => {
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const read = () => setW(Math.max(W0, Math.round(el.clientWidth)) || W0);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el]);
+  return [ref, w] as const;
+}
 
 const topSet = (d: FloodStationDetail) => new Set(d.top_floods.map((m) => m.hydro_year));
 
@@ -35,7 +56,8 @@ function tText(t: number | null): string {
   return es.flood.years(flowFmt.format(Math.round(t)));
 }
 
-function ReturnPeriodChart({ d }: { d: FloodStationDetail }) {
+function ReturnPeriodChart({ d, w }: { d: FloodStationDetail; w: number }) {
+  const { W, H } = chartSize(w);
   const curve = d.curve ?? [];
   const tMax = RETURN_TICKS[RETURN_TICKS.length - 1];
   const tMin = curve.length ? curve[0]!.t : 1.1;
@@ -112,7 +134,8 @@ function ReturnPeriodChart({ d }: { d: FloodStationDetail }) {
   );
 }
 
-function SeriesChart({ d }: { d: FloodStationDetail }) {
+function SeriesChart({ d, w }: { d: FloodStationDetail; w: number }) {
+  const { W, HS } = chartSize(w);
   const { start, q } = d.daily;
   const last = q.length - 1;
   const end = d.period.split("/")[1]!;
@@ -159,18 +182,19 @@ function SeriesChart({ d }: { d: FloodStationDetail }) {
 
 export function FloodStationPanel({ state }: { state: FloodStationState }) {
   const { status, detail: d } = state;
+  const [ref, w] = useWidth();
   if (status === "loading") return <p className="empty">{es.flood.loading}</p>;
   if (status === "error") return <p className="empty">{es.flood.error}</p>;
   if (!d) return null;
   return (
-    <div className="flood-panel" data-testid="flood-station-panel">
+    <div className="flood-panel" data-testid="flood-station-panel" ref={ref}>
       <h3 className="event-id">
         {d.name}
         <span className="flood-river">{d.river}</span>
       </h3>
       <h4>{es.flood.returnTitle}</h4>
       <figure className="flood-figure">
-        <ReturnPeriodChart d={d} />
+        <ReturnPeriodChart d={d} w={w} />
         <figcaption>
           {[d.source, yearsOf(d.period), d.has_gev && es.flood.ci].filter(Boolean).join(es.events.sep)}
         </figcaption>
@@ -187,7 +211,7 @@ export function FloodStationPanel({ state }: { state: FloodStationState }) {
       </figure>
       <h4>{es.flood.seriesTitle}</h4>
       <figure className="flood-figure">
-        <SeriesChart d={d} />
+        <SeriesChart d={d} w={w} />
       </figure>
       <h4>{es.flood.topTitle}</h4>
       <ol className="flood-top" data-testid="top-floods">

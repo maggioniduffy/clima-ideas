@@ -188,3 +188,18 @@ test("ENSO panel: button only when the layer lists enso.json; opens over the map
   fireEvent.click(screen.getByTestId("layer-toggle-ar-events"));
   expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
 });
+
+test("three resize separators exist and keyboard resizing updates the grid variable", () => {
+  localStorage.clear();
+  render(<Shell />);
+  const seps = screen.getAllByRole("separator");
+  expect(seps).toHaveLength(3);
+  expect(screen.getByTestId("resizer-layers")).toHaveAttribute("aria-orientation", "vertical");
+  expect(screen.getByTestId("resizer-timeline")).toHaveAttribute("aria-orientation", "horizontal");
+  const inspector = screen.getByTestId("resizer-inspector");
+  fireEvent.keyDown(inspector, { key: "ArrowLeft" });
+  expect(screen.getByTestId("shell").style.getPropertyValue("--inspector-w")).toBe("276px");
+  expect(JSON.parse(localStorage.getItem("panel-sizes")!).inspector).toBe(276);
+  fireEvent.doubleClick(inspector);
+  expect(screen.getByTestId("shell").style.getPropertyValue("--inspector-w")).toBe("260px");
+});

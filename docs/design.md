@@ -10,6 +10,8 @@ Base inicial; el usuario lo va a profundizar. Inspiración: `inspiration/README.
 - Nunca blanco ni negro puros: claros con tono crema, oscuros con tono azul.
 - Mismo layout en ambos temas: barra superior, panel de capas, lienzo, inspector, línea de tiempo.
 - Acento reservado para lo que importa (evento, anomalía, selección).
+- Paneles redimensionables (escritorio): arrastre o teclado (flechas 16 px, Inicio/Fin) en el borde interno de capas (160–480 px), inspector (220–720 px) y línea de tiempo (80–480 px); el mapa conserva al menos 320 × 200 px. La línea del borde se ve en acento solo al pasar, enfocar o arrastrar; doble clic restablece el tamaño por defecto.
+- Los tamaños se guardan en `localStorage` (`panel-sizes`); los valores inválidos vuelven al defecto. En pantallas angostas (≤ 800 px) los paneles son cajones sin tiradores.
 
 ## Colores de marca
 

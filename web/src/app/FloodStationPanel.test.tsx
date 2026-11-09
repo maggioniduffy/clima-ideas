@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import type { FloodStationDetail } from "../api/client";
 import { es } from "../i18n/es";
@@ -82,4 +83,21 @@ test("loading and error states", () => {
   expect(screen.getByText(es.flood.loading)).toBeInTheDocument();
   rerender(<FloodStationPanel state={{ status: "error", detail: null }} />);
   expect(screen.getByText(es.flood.error)).toBeInTheDocument();
+});
+
+test("charts follow the panel width after a loading state", () => {
+  const observed: Element[] = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe(el: Element) {
+        observed.push(el);
+      }
+      disconnect() {}
+    },
+  );
+  const { rerender } = render(<FloodStationPanel state={{ status: "loading", detail: null }} />);
+  rerender(<FloodStationPanel state={{ status: "ready", detail: base }} />);
+  expect(observed).toContain(screen.getByTestId("flood-station-panel"));
+  vi.unstubAllGlobals();
 });
