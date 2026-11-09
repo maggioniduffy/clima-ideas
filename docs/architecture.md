@@ -86,6 +86,8 @@ cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
   consulta), en ventanas de 10 años y con ~1 s entre pedidos. `--station` (repetible) limita las estaciones.
 - `flow ingest` no usa red: escribe `data/flow/<id>.parquet` (`date`, `q_m3s`, `qualifier`, `validated`; los huecos son
   filas NaN), `data/flow/stations.json` y el informe `reports/02/F2.1.md`.
+- `flow gev` ajusta una GEV (`pyextremes`, MLE, IC 95 % por bootstrap) a los máximos anuales de las estaciones naturales
+  (12004, 12010, 12012; 11803 queda fuera por regulada) y escribe `data/flow/gev/<id>.json` y `reports/02/F2.2.md`.
 - Términos del SNIH (§7): citar al SIPH/SNIH como fuente, declarar la fecha de última actualización y no alterar el
   sentido original de los datos. El Parquet guarda fuente, URL y fecha de consulta en sus metadatos.
 

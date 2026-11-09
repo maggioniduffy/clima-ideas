@@ -19,7 +19,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 |---|---|---|---|---|
 | T0 SNIH sources | S1, S4 | inline (Opus, built-in browser) | done | L2, L3 |
 | T1 F2.1 | S2, S4, S5 | delegated (builder, model-roles override) | done | 16 tests green, full suite 172 passed; real fetch: 4 stations with data (L4) |
-| T2 F2.2 | S3, S4, S5 | delegated (builder, model-roles override) | pending | |
+| T2 F2.2 | S3, S4, S5 | delegated (builder, model-roles override) | done | 8 tests, suite 180 passed, verifier OK on 6 items (L5) |
 
 ## Log
 
@@ -48,3 +48,9 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   Decision for T2 (phase file: "usar solo estaciones aguas arriba para la GEV"): GEV on 12004, 12010, 12012;
   11803 Paso Flores excluded as regulated (record starts 2006, after Alicurá; position vs. dam sin verificar).
   Qualifier `D` on 336 rows of 12010: meaning sin verificar.
+- L5 (2026-11-09) T2 result: GEV (pyextremes 2.6.1, MLE with multi-start scipy genextreme, 95 % bootstrap CI, 1000 resamples).
+  12004: 80 complete years, xi = 0.336, Q100 = 10 649 m3/s (IC 5 980–20 908); 2023-06-26 peak = GEV T 133.8 years (empirical 81).
+  12010: xi = 0.122, 66 years. 12012: 25 years, xi = 0.631 (>= 0.5, MLE irregular; CI flagged unreliable).
+  Independent verifier (Risk item 5, new dependency): lock adds only pyextremes and its deps, no lock drift, CI width,
+  shape sign and return levels recomputed OK. Open note: a bootstrap resample pinned at xi = 0.99 is not counted or logged.
+  User asked (2026-11-09): "Una vez terminado todo levanta localhost para ver esta fase visualmente" — F2.4 (layer) not built yet.

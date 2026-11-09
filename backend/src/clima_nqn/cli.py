@@ -9,6 +9,7 @@ from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.ar import enso as ar_enso
 from clima_nqn.stages.ar import extremes as ar_extremes
 from clima_nqn.stages.ar import layer as ar_layer
+from clima_nqn.stages.flood import extremes as flood_extremes
 
 app = typer.Typer(help="clima-nqn command line interface.")
 
@@ -91,6 +92,22 @@ def flow_ingest(
         raise typer.BadParameter(f"no raw series in {raw} (run clima-nqn flow fetch)")
     flow.write_report(flow.build_report(frames, meta), report)
     typer.echo(f"{len(frames)} stations -> {out}; report -> {report}")
+
+
+@flow_app.command("gev")
+def flow_gev(
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    out: Annotated[
+        Path, typer.Option(help="Output directory for <id>.json.")
+    ] = flood_extremes.GEV_DIR,
+    report: Annotated[Path, typer.Option(help="Report path.")] = flood_extremes.REPORT_PATH,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default 12004, 12010, 12012.")
+    ] = None,
+) -> None:
+    """Annual maxima and GEV return levels with 95 % CI (pyextremes) per natural station."""
+    results = flood_extremes.run(flow_dir, out, report, stations=station)
+    typer.echo(f"{len(results)} stations -> {out}; report -> {report}")
 
 
 era5_app = typer.Typer(help="Regional ERA5 for Neuquén (ARCO-ERA5 Zarr, no CDS account).")
