@@ -1,7 +1,6 @@
 import { PointCloudLayer } from "@deck.gl/layers";
 import type { Theme } from "../theme/themeStore";
 import { tokens } from "../theme/tokens";
-import type { LonLat } from "./referenceLayers";
 
 /** Binary layout of relief.bin: little-endian Float32 [lon, lat, elev_m] per point. */
 const STRIDE = 3;
@@ -66,17 +65,6 @@ export function hillshade(dzdx: number, dzdy: number): number {
   return Math.min(SHADE_MAX, Math.max(SHADE_MIN, dot / lz));
 }
 
-/** Ray-casting point-in-polygon on an open or closed ring of [lon, lat]. */
-export function pointInRing(lon: number, lat: number, ring: readonly LonLat[]): boolean {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i]!;
-    const [xj, yj] = ring[j]!;
-    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-
 /** RGBA per point: hypsometric tint multiplied by the hillshade. */
 export function reliefColors(relief: ReliefData, theme: Theme): Uint8Array {
   const cached = relief.colorCache[theme];
@@ -100,10 +88,10 @@ export function reliefColors(relief: ReliefData, theme: Theme): Uint8Array {
 
 /**
  * Parse relief.bin. Points sit on a regular lon/lat grid (not in a single row order: tiles are concatenated), so the
- * grid is rebuilt by index to compute the hillshade from neighbouring elevations; only then are points outside
- * `province` (when given; the province + 10 km ring, see provinceClip.ts) dropped.
+ * grid is rebuilt by index to compute the hillshade from neighbouring elevations. Every point is kept (the layer
+ * already spans the whole ERA5 rectangle; no clipping).
  */
-export function parseRelief(buffer: ArrayBuffer, province: readonly LonLat[] | null = null, step = RELIEF_STEP): ReliefData {
+export function parseRelief(buffer: ArrayBuffer, step = RELIEF_STEP): ReliefData {
   if (buffer.byteLength % (STRIDE * 4) !== 0) throw new Error("relief.bin: size is not a multiple of the stride");
   const src = new Float32Array(buffer);
   const n = src.length / STRIDE;
@@ -131,23 +119,7 @@ export function parseRelief(buffer: ArrayBuffer, province: readonly LonLat[] | n
     grid[cell[i]!] = src[i * STRIDE + 2]!;
   }
 
-  const bbox = province && [
-    Math.min(...province.map((p) => p[0])),
-    Math.min(...province.map((p) => p[1])),
-    Math.max(...province.map((p) => p[0])),
-    Math.max(...province.map((p) => p[1])),
-  ];
-  const keep = new Uint8Array(n);
-  let count = 0;
-  for (let i = 0; i < n; i++) {
-    const lon = src[i * STRIDE]!;
-    const lat = src[i * STRIDE + 1]!;
-    const ok =
-      !province ||
-      (lon >= bbox![0]! && lon <= bbox![2]! && lat >= bbox![1]! && lat <= bbox![3]! && pointInRing(lon, lat, province));
-    keep[i] = ok ? 1 : 0;
-    count += keep[i]!;
-  }
+  const count = n;
 
   const positions = new Float32Array(count * STRIDE);
   const elevation = new Float32Array(count);
@@ -156,7 +128,6 @@ export function parseRelief(buffer: ArrayBuffer, province: readonly LonLat[] | n
   const mPerDegLon = 111_320;
   let o = 0;
   for (let i = 0; i < n; i++) {
-    if (!keep[i]) continue;
     const lat = src[i * STRIDE + 1]!;
     const elev = src[i * STRIDE + 2]!;
     const ix = cell[i]! % nx;

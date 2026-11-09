@@ -59,6 +59,17 @@ test("loads events and index only when active, then frames on selection", async 
   expect(result.current.deckLayers).toEqual([]);
 });
 
+test("draws every cell of the frames grid, with no province clipping", async () => {
+  const f = stubFetch();
+  const { result } = renderHook(() => useArEvents(layer, true));
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+  act(() => result.current.select("AR-2000-001"));
+  await waitFor(() => expect(result.current.deckLayers).toHaveLength(1));
+  const { ny, nx } = index.grid;
+  expect((result.current.deckLayers[0]!.props as { data: unknown[] }).data).toHaveLength(ny * nx);
+  expect(f.mock.calls.some(([url]) => String(url).includes("/geo/"))).toBe(false);
+});
+
 test("steps, seeks within bounds, plays and stops on the last frame", async () => {
   stubFetch();
   const { result } = renderHook(() => useArEvents(layer, true));

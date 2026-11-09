@@ -4,7 +4,6 @@ import { fetchLayerBinary, fetchLayerData, fetchLayers, type LayerManifest, type
 import { buildPointsLayer } from "./pointsLayer";
 import { useTheme } from "../theme/themeStore";
 import { buildReliefLayer, parseRelief, RELIEF_STEP, type ReliefData } from "./reliefLayer";
-import { fetchClipRing } from "./provinceClip";
 
 /** Grid step (degrees) from the layer's `*.meta.json` (field `step`); RELIEF_STEP when absent or unreadable. */
 async function fetchReliefStep(id: string, layer: LayerManifest): Promise<number> {
@@ -62,8 +61,8 @@ export function useLayers() {
         const failed = () => setActiveIds((prev) => new Set([...prev].filter((x) => x !== id)));
         if (bin) {
           if (!reliefs[id]) {
-            Promise.all([fetchLayerBinary(id, bin), fetchClipRing(), fetchReliefStep(id, layer!)])
-              .then(([b, ring, step]) => setReliefs((prev) => ({ ...prev, [id]: parseRelief(b, ring, step) })))
+            Promise.all([fetchLayerBinary(id, bin), fetchReliefStep(id, layer!)])
+              .then(([b, step]) => setReliefs((prev) => ({ ...prev, [id]: parseRelief(b, step) })))
               .catch(failed);
           }
         } else if (layer?.kind === "points" && !data[id]) {

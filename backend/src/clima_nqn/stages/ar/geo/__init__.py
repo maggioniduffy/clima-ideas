@@ -16,7 +16,6 @@ from pathlib import Path
 HERE = Path(__file__).parent
 PROVINCE_FILE = HERE / "neuquen-province.geojson"
 CORDILLERA_FILE = HERE / "cordillera.geojson"
-BAND_FILE = HERE / "neuquen-province-buffer-10km.geojson"
 
 # clip window (lon_min, lon_max, lat_min, lat_max): only the east edge cuts the province in practice
 RECTANGLE = (-71.95, -70.0, -41.1, -36.0)
@@ -116,7 +115,3 @@ def load_cordillera(path: Path = CORDILLERA_FILE) -> list[Point]:
         raise ValueError(f"expected a Polygon in {path.name}, got {geom['type']}")
     return [(float(x), float(y)) for x, y in geom["coordinates"][0][:-1]]
 
-
-def province_band_ring(path: Path = BAND_FILE) -> list[Point]:
-    """Open outer ring (lon, lat) of the province outline buffered by 10 km (``scripts/buffer_province.py``)."""
-    return province_ring(path)

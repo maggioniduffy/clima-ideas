@@ -73,6 +73,8 @@ Tras ver la capa completa (433 eventos) en el visor, costaba leer qué muestra. 
 - [x] V3 Relieve con más contraste (sombreado 0,25–1,5, exageración 3,5, rampa estirada) y IVT a 0,7 sobre el relieve.
   El polígono de cordillera no se dibuja (decisión del usuario).
 - [x] V4 IVT transparente bajo 150 kg m⁻¹ s⁻¹, alfa con smoothstep hasta 0,95 en ≥ 400; la leyenda lo indica.
+- [x] Más área: IVT y relieve cubren todo el recorte ERA5 (34–43 °S, 74–66 °O), sin recorte a la provincia;
+  relieve regenerado con paso 1/66° (304 920 puntos; 2 teselas oceánicas sin DEM).
 
 ## Abierto
 

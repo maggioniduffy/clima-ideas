@@ -3,7 +3,6 @@ import {
   buildReliefLayer,
   hillshade,
   parseRelief,
-  pointInRing,
   RELIEF_EXAGGERATION,
   RELIEF_STEP,
   RELIEF_STOPS_M,
@@ -80,29 +79,9 @@ test("parseRelief shades a ramp using grid neighbours, independent of point orde
   expect(rev.shade[16 - 1 - 5]).toBeCloseTo(ordered.shade[5]!, 5);
 });
 
-test("pointInRing ray-casts a concave ring", () => {
-  const ring: [number, number][] = [[0, 0], [4, 0], [4, 4], [2, 1], [0, 4]];
-  expect(pointInRing(1, 1, ring)).toBe(true);
-  expect(pointInRing(2, 3, ring)).toBe(false); // in the notch
-  expect(pointInRing(5, 1, ring)).toBe(false);
-});
-
-test("parseRelief drops points outside the province but shades them from the full grid first", () => {
-  const province: [number, number][] = [
-    [-70 + 1.5 * RELIEF_STEP, -38 - 1],
-    [-70 + 10, -38 - 1],
-    [-70 + 10, -38 + 1],
-    [-70 + 1.5 * RELIEF_STEP, -38 + 1],
-    [-70 + 1.5 * RELIEF_STEP, -38 - 1],
-  ];
-  const data = grid(4, 4, (ix) => 1000 + ix * 100);
-  const all = parseRelief(data);
-  const clipped = parseRelief(data, province);
-  expect(all.length).toBe(16);
-  expect(clipped.length).toBe(8); // columns 2 and 3 only
-  expect(Array.from(clipped.elevation)).toEqual([1200, 1300, 1200, 1300, 1200, 1300, 1200, 1300]);
-  // point at column 2 keeps the shade computed with its dropped column-1 neighbour (not an edge fallback)
-  expect(clipped.shade[0]).toBeCloseTo(all.shade[2]!, 6);
+test("parseRelief keeps every point and shades by the grid step", () => {
+  const r = parseRelief(grid(4, 4, (ix) => 1000 + ix * 100), RELIEF_STEP);
+  expect(r.length).toBe(16);
 });
 
 test("parseRelief rejects a buffer that is not a multiple of the stride", () => {
