@@ -19,6 +19,51 @@ export interface PointFeature {
   value: number;
 }
 
+/** Row of `flood-stations/stations.json` (clima-nqn flow layer): `value` is the 100-year flow, or the max observed. */
+export interface FloodStationFeature extends PointFeature {
+  name?: string;
+  river?: string;
+  area_km2?: number | null;
+  has_gev?: boolean;
+  regulated?: boolean;
+}
+
+export interface FloodReturnPoint {
+  t: number;
+  q: number;
+  lo: number | null;
+  hi: number | null;
+}
+
+export interface FloodMaximum {
+  hydro_year: number;
+  date: string;
+  q: number;
+  t_empirical: number | null;
+  t_gev: number | null;
+}
+
+/** `flood-stations/stations/<id>.json`. `gev`, `return_levels` and `curve` are absent without a GEV fit. */
+export interface FloodStationDetail {
+  id: string;
+  name: string;
+  river: string;
+  lon: number;
+  lat: number;
+  area_km2: number | null;
+  has_gev: boolean;
+  regulated: boolean;
+  source: string;
+  period: string;
+  fetched: string;
+  daily: { start: string; q: (number | null)[] };
+  annual_maxima: FloodMaximum[];
+  top_floods: FloodMaximum[];
+  gev?: { loc: number; scale: number; shape_xi: number; n_years: number; ks_p: number; irregular: boolean };
+  return_levels?: FloodReturnPoint[];
+  curve?: FloodReturnPoint[];
+}
+
 const BASE = "/api";
 
 async function getJson<T>(url: string): Promise<T> {

@@ -1,6 +1,7 @@
 export const es = {
   appTitle: "Neuquén: lluvias extremas",
   theme: { toggle: "Cambiar tema" },
+  resize: { layers: "Ancho del panel de capas", inspector: "Ancho del panel de detalle", timeline: "Alto de la línea de tiempo" },
   drawers: { layers: "Capas", inspector: "Detalle", close: "Cerrar panel" },
   layers: { empty: "Sin capas", loading: "Cargando capas…", error: "No se pudieron cargar las capas", toggle: "Activar capa" },
   inspector: {
@@ -14,6 +15,23 @@ export const es = {
     lon: "Longitud",
     lat: "Latitud",
     value: "Valor",
+  },
+  flood: {
+    loading: "Cargando estación…",
+    error: "No se pudo cargar la estación",
+    returnTitle: "Período de retorno",
+    seriesTitle: "Caudal diario",
+    topTitle: "Mayores crecidas",
+    axisT: "Período de retorno (años)",
+    axisQ: "Caudal (m³/s)",
+    ci: "IC 95 % bootstrap",
+    irregular: "Registro corto: curva poco confiable",
+    noGev: "Río regulado aguas arriba: sin GEV",
+    unit: "m³/s",
+    chartLabel: "Curva de período de retorno",
+    seriesLabel: "Serie de caudal diario",
+    years: (t: string) => `T ≈ ${t} años`,
+    yearsOver: "T > 10 000 años",
   },
   timeline: { empty: "Sin serie temporal", events: "Eventos en la línea de tiempo", cursor: "Hora de la reproducción" },
   map: {

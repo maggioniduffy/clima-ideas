@@ -1,14 +1,17 @@
+import json
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from clima_nqn.io import dem, era5
+from clima_nqn.io import dem, era5, flow
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
+from clima_nqn.layers import flood_stations
 from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.ar import enso as ar_enso
 from clima_nqn.stages.ar import extremes as ar_extremes
 from clima_nqn.stages.ar import layer as ar_layer
+from clima_nqn.stages.flood import extremes as flood_extremes
 
 app = typer.Typer(help="clima-nqn command line interface.")
 
@@ -61,6 +64,70 @@ def dem_build(
     """Decimate tiles to relief.bin (Float32 [lon, lat, elev_m]) with its manifest."""
     path = dem.build_relief(raw, out, step=step)
     typer.echo(f"{path.stat().st_size / 1e6:.2f} MB -> {path}")
+
+
+flow_app = typer.Typer(help="Daily streamflow from SNIH (phase 2).")
+app.add_typer(flow_app, name="flow")
+
+
+@flow_app.command("fetch")
+def flow_fetch(
+    raw: Annotated[Path, typer.Option(help="Raw JSON directory.")] = flow.RAW_DIR,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default all.")
+    ] = None,
+) -> None:
+    """Download daily mean flow (SNIH, ~1 s between requests) to raw JSON."""
+    path = flow.fetch_flow(raw, stations=station, progress=typer.echo)
+    typer.echo(f"raw flow -> {path}")
+
+
+@flow_app.command("ingest")
+def flow_ingest(
+    raw: Annotated[Path, typer.Option(help="Raw JSON directory.")] = flow.RAW_DIR,
+    out: Annotated[Path, typer.Option(help="Output Parquet directory.")] = flow.OUT_DIR,
+    report: Annotated[Path, typer.Option(help="Gap report path.")] = flow.REPORT_PATH,
+) -> None:
+    """Build per-station Parquet files and the gap report from raw JSON (no network)."""
+    frames, meta = flow.ingest_flow(raw, out)
+    if not frames:
+        raise typer.BadParameter(f"no raw series in {raw} (run clima-nqn flow fetch)")
+    flow.write_report(flow.build_report(frames, meta), report)
+    typer.echo(f"{len(frames)} stations -> {out}; report -> {report}")
+
+
+@flow_app.command("gev")
+def flow_gev(
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    out: Annotated[
+        Path, typer.Option(help="Output directory for <id>.json.")
+    ] = flood_extremes.GEV_DIR,
+    report: Annotated[Path, typer.Option(help="Report path.")] = flood_extremes.REPORT_PATH,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default 12004, 12010, 12012.")
+    ] = None,
+) -> None:
+    """Annual maxima and GEV return levels with 95 % CI (pyextremes) per natural station."""
+    results = flood_extremes.run(flow_dir, out, report, stations=station)
+    typer.echo(f"{len(results)} stations -> {out}; report -> {report}")
+
+
+@flow_app.command("layer")
+def flow_layer(
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    gev_dir: Annotated[
+        Path, typer.Option(help="GEV JSON directory of F2.2.")
+    ] = flood_extremes.GEV_DIR,
+    out: Annotated[
+        Path, typer.Option(help="Layer directory (manifest.json, stations.json, stations/).")
+    ] = flood_stations.DEFAULT_OUT,
+) -> None:
+    """Publish the flood-stations viewer layer: stations, daily flow and GEV return periods (F2.4)."""
+    if not (flow_dir / "stations.json").is_file():
+        raise typer.BadParameter(f"no stations.json in {flow_dir} (run clima-nqn flow ingest)")
+    layer_dir = flood_stations.build_layer(flow_dir, gev_dir, out)
+    stations = json.loads((layer_dir / "stations.json").read_text(encoding="utf-8"))
+    typer.echo(f"{len(stations)} stations -> {layer_dir}")
 
 
 era5_app = typer.Typer(help="Regional ERA5 for Neuquén (ARCO-ERA5 Zarr, no CDS account).")

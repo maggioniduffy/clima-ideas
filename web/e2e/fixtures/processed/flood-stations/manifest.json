@@ -1,0 +1,14 @@
+{
+  "id": "flood-stations",
+  "title": "Crecidas: caudal y período de retorno",
+  "kind": "points",
+  "source": "Datos falsos de prueba",
+  "period": "2000-04-01/2003-03-31",
+  "license": "Uso libre citando la fuente (términos SNIH/SIPH); datos actualizados al 2026-01-01",
+  "updated_at": "2026-11-09T03:39:23.149437Z",
+  "files": [
+    "stations.json",
+    "stations/1001.json",
+    "stations/1002.json"
+  ]
+}

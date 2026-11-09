@@ -66,3 +66,20 @@ test("events layer: shows the selected event fields, source/period and the cell 
   rerender(<Inspector {...props} event={{ selected, loadingFrames: false, reading: { ...reading, value: null } }} />);
   expect(screen.getByTestId("cell-value")).toHaveTextContent(es.events.noData);
 });
+
+test("flood-stations layer lists station names and opens the station panel; other layers keep Punto labels", () => {
+  const floodLayer: LayerManifest = { ...layer, id: "flood-stations", title: "Crecidas" };
+  const stations = [{ id: "1001", lon: -69, lat: -38, value: 5, name: "Paso Falso", river: "Río Falso" }];
+  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) })));
+  const { rerender } = render(
+    <Inspector layer={floodLayer} features={stations} selectedPointId={null} onSelectPoint={vi.fn()} />,
+  );
+  expect(screen.getByTestId("feature-1001")).toHaveTextContent("Paso Falso, Río Falso");
+  expect(screen.getByTestId("feature-1001")).not.toHaveTextContent(es.inspector.point);
+  expect(screen.queryByTestId("flood-station-panel")).toBeNull();
+  rerender(<Inspector layer={floodLayer} features={features} selectedPointId="p1" onSelectPoint={vi.fn()} />);
+  expect(screen.queryByTestId("inspector-point")).toBeNull();
+  rerender(<Inspector layer={layer} features={features} selectedPointId={null} onSelectPoint={vi.fn()} />);
+  expect(screen.getByTestId("feature-p1")).toHaveTextContent(`${es.inspector.point} p1`);
+  vi.unstubAllGlobals();
+});

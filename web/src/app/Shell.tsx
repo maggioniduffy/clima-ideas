@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { es } from "../i18n/es";
 import type { IvtView } from "../layers/arEvents";
+import type { FloodStationFeature } from "../api/client";
+import { buildFloodStationsLayer } from "../layers/floodStations";
+import { FLOOD_LAYER_ID } from "../layers/useFloodStation";
 import { useArEvents } from "../layers/useArEvents";
 import { useEnsoStats } from "../layers/useEnsoStats";
 import { buildReliefLayer } from "../layers/reliefLayer";
@@ -12,11 +15,52 @@ import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
 import { MapCanvas } from "./MapCanvas";
 import { MapLegend } from "./MapLegend";
+import { PanelResizer } from "./PanelResizer";
+import {
+  clampAll,
+  clampSize,
+  limitsFor,
+  loadSizes,
+  PANEL_LIMITS,
+  saveSizes,
+  type PanelId,
+  type PanelSizes,
+} from "./panelSizes";
 import { Timeline } from "./Timeline";
 import { TopBar, type Drawer } from "./TopBar";
 import "./shell.css";
 
+const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
+
 export function Shell() {
+  // panel sizes (desktop only): the stored preference, re-clamped against the window on every render
+  const [pref, setPref] = useState<PanelSizes>(loadSizes);
+  const [vp, setVp] = useState(viewport);
+  useEffect(() => {
+    const onResize = () => setVp(viewport());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const sizes = useMemo(() => clampAll(pref, vp), [pref, vp]);
+  const resize = (panel: PanelId) => (value: number) =>
+    setPref((cur) => {
+      const next = { ...cur, [panel]: clampSize(panel, value, clampAll(cur, vp), vp) };
+      saveSizes(next);
+      return next;
+    });
+  const resizer = (panel: PanelId) => {
+    const { min, max } = limitsFor(panel, sizes, vp);
+    return {
+      value: sizes[panel],
+      min,
+      max,
+      defaultValue: PANEL_LIMITS[panel].def,
+      label: es.resize[panel],
+      testId: `resizer-${panel}`,
+      onChange: resize(panel),
+    };
+  };
+
   // narrow screens: the side panels are drawers, one open at a time (CSS decides whether it applies)
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const toggleDrawer = (d: Drawer) => setDrawer((cur) => (cur === d ? null : d));
@@ -47,13 +91,45 @@ export function Shell() {
         : s.deckLayers,
     [s.deckLayers, s.activeRelief, ar.drapeColors, theme],
   );
+  // Flood stations replace the generic points layer: sized by value, hollow when regulated.
+  const { select: selectLayer, selectPoint, selectedId, selectedPointId } = s;
+  const mapLayers = useMemo(
+    () =>
+      baseLayers.map((l) =>
+        l.id === `points-${FLOOD_LAYER_ID}`
+          ? buildFloodStationsLayer(
+              (l.props as { data: FloodStationFeature[] }).data,
+              selectedId === FLOOD_LAYER_ID ? selectedPointId : null,
+              theme,
+              (f) => {
+                selectLayer(FLOOD_LAYER_ID);
+                selectPoint(f.id);
+              },
+            )
+          : l,
+      ),
+    [baseLayers, selectedId, selectedPointId, theme, selectLayer, selectPoint],
+  );
+  // Stations go after the relief and IVT so nothing paints over them.
+  const isFlood = (l: { id: string }) => l.id === `points-${FLOOD_LAYER_ID}`;
   const refLayers = useReferenceLayers();
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);
   };
   return (
-    <div className="shell" data-testid="shell" data-drawer={drawer ?? undefined}>
+    <div
+      className="shell"
+      data-testid="shell"
+      data-drawer={drawer ?? undefined}
+      style={
+        {
+          "--layers-w": `${sizes.layers}px`,
+          "--inspector-w": `${sizes.inspector}px`,
+          "--timeline-h": `${sizes.timeline}px`,
+        } as CSSProperties
+      }
+    >
       <TopBar drawer={drawer} onToggleDrawer={toggleDrawer} />
       <LayerPanel
         layers={s.layers}
@@ -75,7 +151,14 @@ export function Shell() {
           }
         }
       />
-      <MapCanvas layers={[...baseLayers, ...ar.deckLayers, ...refLayers]}>
+      <MapCanvas
+        layers={[
+          ...mapLayers.filter((l) => !isFlood(l)),
+          ...ar.deckLayers,
+          ...mapLayers.filter(isFlood),
+          ...refLayers,
+        ]}
+      >
         {showEnso && eventsLayer && enso.status !== "none" && (
           <EnsoPanel
             status={enso.status}
@@ -94,6 +177,9 @@ export function Shell() {
         onSelectPoint={s.selectPoint}
         event={{ selected: ar.selectedEvent, loadingFrames: ar.loadingFrames, reading: ar.reading }}
       />
+      <PanelResizer className="panel-resizer panel-resizer-layers" orientation="vertical" dir={1} {...resizer("layers")} />
+      <PanelResizer className="panel-resizer panel-resizer-inspector" orientation="vertical" dir={-1} {...resizer("inspector")} />
+      <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
       <button
         type="button"
         className="drawer-scrim"

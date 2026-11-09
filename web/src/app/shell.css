@@ -2,8 +2,9 @@
 .shell {
   display: grid;
   height: 100vh;
-  grid-template-columns: 200px minmax(0, 1fr) 260px;
-  grid-template-rows: 48px minmax(0, 1fr) 136px;
+  position: relative;
+  grid-template-columns: var(--layers-w, 200px) minmax(0, 1fr) var(--inspector-w, 260px);
+  grid-template-rows: 48px minmax(0, 1fr) var(--timeline-h, 136px);
   grid-template-areas:
     "top top top"
     "layers canvas inspector"
@@ -11,6 +12,17 @@
   background: var(--bg);
   color: var(--text);
 }
+
+/* Drag handles on the inner edge of each panel (desktop only); the line shows in accent on interaction */
+.panel-resizer { position: absolute; z-index: 3; touch-action: none; outline: none; }
+.panel-resizer::after { content: ""; position: absolute; background: transparent; }
+.panel-resizer:hover::after, .panel-resizer:focus-visible::after, .panel-resizer[data-dragging]::after { background: var(--accent); }
+.panel-resizer-layers, .panel-resizer-inspector { top: 48px; bottom: var(--timeline-h, 136px); width: 6px; cursor: col-resize; }
+.panel-resizer-layers::after, .panel-resizer-inspector::after { top: 0; bottom: 0; left: 2px; width: 2px; }
+.panel-resizer-layers { left: calc(var(--layers-w, 200px) - 3px); }
+.panel-resizer-inspector { right: calc(var(--inspector-w, 260px) - 3px); }
+.panel-resizer-timeline { left: 0; right: 0; bottom: calc(var(--timeline-h, 136px) - 3px); height: 6px; cursor: row-resize; }
+.panel-resizer-timeline::after { left: 0; right: 0; top: 2px; height: 2px; }
 
 .shell-topbar {
   grid-area: top;
@@ -209,6 +221,7 @@
   .shell-topbar { gap: var(--space-2); padding: 0 var(--space-3); }
   .shell-topbar h1 { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .drawer-toggle { display: inline-block; }
+  .panel-resizer { display: none; }
   .shell-layers, .shell-inspector {
     position: fixed; top: 48px; bottom: 136px; z-index: 5; width: min(320px, 86vw); box-sizing: border-box;
     visibility: hidden; transition: transform 0.18s ease, visibility 0.18s;
@@ -229,3 +242,24 @@
 @media (prefers-reduced-motion: reduce) {
   .shell-layers, .shell-inspector { transition: none; }
 }
+
+/* Flood station panel (docs/design.md): tokens only, readable in both themes */
+.flood-panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.flood-panel h3 { margin: 0; }
+.flood-panel h4 { margin: var(--space-2) 0 0; font-size: 12px; color: var(--text); }
+.flood-river { display: block; font-size: 11px; font-weight: 400; color: var(--text-muted); }
+.flood-figure { margin: 0; min-width: 0; }
+.flood-figure figcaption { font-size: 10.5px; line-height: 1.35; color: var(--text-muted); overflow-wrap: anywhere; }
+.flood-warn { margin: var(--space-1) 0 0; font-size: 11px; color: var(--text); }
+.flood-chart { display: block; width: 100%; height: auto; }
+.flood-tick, .flood-axis { font-family: var(--font-mono); font-size: 8px; fill: var(--text-muted); }
+.flood-grid { stroke: var(--border); stroke-width: 1; }
+.flood-curve, .flood-series { fill: none; stroke: var(--text); stroke-width: 1.5; stroke-linejoin: round; }
+.flood-series { stroke-width: 0.75; }
+.flood-band { fill: var(--text-muted); fill-opacity: 0.25; stroke: none; }
+.flood-dot { fill: var(--text-muted); }
+.flood-dot-top { fill: var(--accent); stroke: var(--text); stroke-width: 1; }
+.flood-top { list-style: none; margin: 0; padding: 0; font-size: 10px; white-space: nowrap; }
+.flood-top li { display: grid; grid-template-columns: auto 1fr auto; column-gap: var(--space-1); padding: 2px 0; border-bottom: 1px solid var(--border); }
+.flood-top li span:nth-child(2) { text-align: right; }
+.flood-top li span:last-child { text-align: right; white-space: nowrap; color: var(--text-muted); }

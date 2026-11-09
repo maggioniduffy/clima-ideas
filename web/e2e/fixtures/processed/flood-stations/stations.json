@@ -1,0 +1,1 @@
+[{"id":"1001","lon":-69.9,"lat":-38.2,"value":751.8,"name":"Estación Falsa Natural","river":"Río Falso","area_km2":1000.0,"has_gev":true,"regulated":false},{"id":"1002","lon":-70.4,"lat":-39.0,"value":140.0,"name":"Estación Falsa Regulada","river":"Río Falso","area_km2":1000.0,"has_gev":false,"regulated":true}]
