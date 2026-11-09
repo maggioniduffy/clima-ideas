@@ -1,6 +1,8 @@
 import { PointCloudLayer } from "@deck.gl/layers";
+import type { FrameGrid } from "../api/client";
 import type { Theme } from "../theme/themeStore";
 import { tokens } from "../theme/tokens";
+import { IVT_ALPHA_MAX, IVT_SCALE_MAX, ivtColor } from "./arEvents";
 
 /** Binary layout of relief.bin: little-endian Float32 [lon, lat, elev_m] per point. */
 const STRIDE = 3;
@@ -151,14 +153,127 @@ export function parseRelief(buffer: ArrayBuffer, step = RELIEF_STEP): ReliefData
   return { length: count, positions, elevation, shade, colorCache: {} };
 }
 
-export function buildReliefLayer(layerId: string, relief: ReliefData, theme: Theme = "light") {
+// --- IVT drape: relief colored by the IVT field (view "drape") ------------------------------------------------------
+
+/** Neutral relief base (0..1 per channel) where there is no river, per theme; multiplied by the shade gray. Dark is a
+ * mid slate so terrain without a river does not glow against the dark UI. */
+export const DRAPE_NEUTRAL: Record<Theme, readonly [number, number, number]> = {
+  light: [0.95, 0.95, 0.93],
+  dark: [0.55, 0.6, 0.63],
+};
+/** Shade gray: hillshade (0.25..1.5, 1 = flat) mapped to a 0..1 brightness, so terrain stays visible under the river. */
+const drapeGray = (shade: number) => Math.min(1, Math.max(0, 0.35 + 0.75 * shade));
+
+/** Per-theme lookup over whole IVT units 0..IVT_SCALE_MAX: ramp rgb and blend weight k (ivtAlpha normalized to 0..1). */
+const lutCache: Partial<
+  Record<Theme, { rgb: Uint8Array; k: Float32Array; neutral: readonly [number, number, number] }>
+> = {};
+function drapeLut(theme: Theme) {
+  let lut = lutCache[theme];
+  if (!lut) {
+    const rgb = new Uint8Array((IVT_SCALE_MAX + 1) * 3);
+    const k = new Float32Array(IVT_SCALE_MAX + 1);
+    for (let v = 0; v <= IVT_SCALE_MAX; v++) {
+      const [r, g, b, a] = ivtColor(v, theme, true);
+      rgb.set([r, g, b], v * 3);
+      k[v] = a / 255 / IVT_ALPHA_MAX;
+    }
+    lut = lutCache[theme] = { rgb, k, neutral: DRAPE_NEUTRAL[theme] };
+  }
+  return lut;
+}
+
+/** Drape color of one relief point: mix(neutral, ramp color) by the IVT blend weight, times the shade gray. */
+export function drapeColor(ivt: number | null | undefined, shade: number, theme: Theme): [number, number, number] {
+  const out = new Uint8Array(4);
+  paintDrape(out, 0, ivt == null || Number.isNaN(ivt) ? 0 : ivt, shade, drapeLut(theme));
+  return [out[0]!, out[1]!, out[2]!];
+}
+
+function paintDrape(out: Uint8Array, o: number, ivt: number, shade: number, lut: ReturnType<typeof drapeLut>) {
+  const q = Math.min(IVT_SCALE_MAX, Math.max(0, Math.round(ivt)));
+  const k = lut.k[q]!;
+  const g = drapeGray(shade) * 255;
+  for (let c = 0; c < 3; c++)
+    out[o + c] = Math.round((lut.neutral[c]! * (1 - k) + (lut.rgb[q * 3 + c]! / 255) * k) * g);
+  out[o + 3] = 255;
+}
+
+/** Bilinear lookup precomputed once per relief + grid: the top-left node of each point's cell and its weights. */
+export interface DrapeSampler {
+  node: Int32Array;
+  wx: Float32Array;
+  wy: Float32Array;
+  nx: number;
+  ny: number;
+}
+
+/** Locate each relief point in the IVT grid (row 0 = south); points outside clamp to the nearest edge node. */
+export function buildDrapeSampler(relief: ReliefData, grid: FrameGrid): DrapeSampler {
+  const { nx, ny } = grid;
+  const dlon = nx > 1 ? (grid.lon_max - grid.lon_min) / (nx - 1) : 0;
+  const dlat = ny > 1 ? (grid.lat_max - grid.lat_min) / (ny - 1) : 0;
+  const node = new Int32Array(relief.length);
+  const wx = new Float32Array(relief.length);
+  const wy = new Float32Array(relief.length);
+  for (let i = 0; i < relief.length; i++) {
+    const fx = dlon ? (relief.positions[i * STRIDE]! - grid.lon_min) / dlon : 0;
+    const fy = dlat ? (relief.positions[i * STRIDE + 1]! - grid.lat_min) / dlat : 0;
+    const cx = Math.min(Math.max(fx, 0), nx - 1);
+    const cy = Math.min(Math.max(fy, 0), ny - 1);
+    const x0 = Math.min(Math.floor(cx), Math.max(nx - 2, 0));
+    const y0 = Math.min(Math.floor(cy), Math.max(ny - 2, 0));
+    node[i] = y0 * nx + x0;
+    wx[i] = cx - x0;
+    wy[i] = cy - y0;
+  }
+  return { node, wx, wy, nx, ny };
+}
+
+const finite = (v: number | undefined) => (v == null || Number.isNaN(v) ? 0 : v);
+
+/** IVT of frame `frame` at relief point `i` (bilinear; NaN nodes count as 0). */
+export function sampleIvt(s: DrapeSampler, frames: Float32Array, frame: number, i: number): number {
+  const base = frame * s.nx * s.ny;
+  const n = base + s.node[i]!;
+  const x1 = s.nx > 1 ? 1 : 0;
+  const y1 = s.ny > 1 ? s.nx : 0;
+  const a = finite(frames[n]);
+  const b = finite(frames[n + x1]);
+  const c = finite(frames[n + y1]);
+  const d = finite(frames[n + y1 + x1]);
+  const wx = s.wx[i]!;
+  return (a * (1 - wx) + b * wx) * (1 - s.wy[i]!) + (c * (1 - wx) + d * wx) * s.wy[i]!;
+}
+
+/** RGBA per relief point for one frame: per frame only a weighted sum of 4 nodes and a LUT lookup (no allocations). */
+export function drapeColors(
+  relief: ReliefData,
+  sampler: DrapeSampler,
+  frames: Float32Array,
+  frame: number,
+  theme: Theme,
+): Uint8Array {
+  const lut = drapeLut(theme);
+  const out = new Uint8Array(relief.length * 4);
+  for (let i = 0; i < relief.length; i++)
+    paintDrape(out, i * 4, sampleIvt(sampler, frames, frame, i), relief.shade[i]!, lut);
+  return out;
+}
+
+/** Relief point cloud; `colors` (RGBA per point, e.g. the IVT drape) replaces the slate colors. */
+export function buildReliefLayer(layerId: string, relief: ReliefData, theme: Theme = "light", colors?: Uint8Array) {
   return new PointCloudLayer({
     id: `relief-${layerId}`,
     data: {
       length: relief.length,
       attributes: {
         getPosition: { value: relief.positions, size: 3 },
-        getColor: { value: reliefColors(relief, theme), size: 4, normalized: true },
+        getColor: {
+          value: colors ?? reliefColors(relief, theme),
+          size: 4,
+          normalized: true,
+        },
       },
     },
     pickable: false,

@@ -9,9 +9,6 @@ export interface CellRef {
   col: number;
 }
 
-/** IVT raster opacity while relief is drawn below it; the low-IVT transparency already exposes terrain, so the river stays strong. */
-export const IVT_OVER_RELIEF_OPACITY = 0.7;
-
 interface Props {
   layerId: string;
   eventId: string;
@@ -21,8 +18,8 @@ interface Props {
   frame: number;
   theme: Theme;
   picked: CellRef | null;
-  /** Layer opacity (1 = as colored); lowered when terrain is drawn below so it reads through. */
-  opacity?: number;
+  /** False draws no fill (the IVT is shown by the relief drape or by contours); cells stay pickable for the readings. */
+  showFill?: boolean;
   onHover: (cell: CellRef | null) => void;
   onPick: (cell: CellRef) => void;
 }
@@ -33,7 +30,7 @@ const hex = (h: string): [number, number, number] => [
   parseInt(h.slice(5, 7), 16),
 ];
 
-/** Hourly |IVT| as one colored rectangle per ERA5 grid cell (≈1.2 k polygons), pickable. */
+/** Hourly |IVT| as one rectangle per ERA5 grid cell (≈1.2 k polygons), colored unless `showFill` is false; always pickable. */
 export function buildIvtRasterLayer(p: Props) {
   const outline = hex(tokens[p.theme].text);
   const isPicked = (c: Cell) => p.picked?.row === c.row && p.picked.col === c.col;
@@ -41,16 +38,18 @@ export function buildIvtRasterLayer(p: Props) {
     id: `ivt-${p.layerId}`,
     data: p.cells,
     pickable: true,
-    opacity: p.opacity ?? 1,
     // flat at z = 0: skip the depth test so the 3D relief below never hides it
     parameters: { depthCompare: "always" },
     getPolygon: (c) => c.polygon,
-    getFillColor: (c) => ivtColor(frameValue(p.frames, p.grid, p.frame, c.row, c.col), p.theme, true),
+    getFillColor: (c) =>
+      p.showFill === false
+        ? [0, 0, 0, 0]
+        : ivtColor(frameValue(p.frames, p.grid, p.frame, c.row, c.col), p.theme, true),
     getLineColor: (c) => (isPicked(c) ? [...outline, 255] : [0, 0, 0, 0]),
     stroked: true,
     lineWidthMinPixels: 2,
     updateTriggers: {
-      getFillColor: [p.eventId, p.frame, p.theme],
+      getFillColor: [p.eventId, p.frame, p.theme, p.showFill],
       getLineColor: [p.picked?.row, p.picked?.col, p.theme],
     },
     onHover: ({ object }) => p.onHover(object ? { row: object.row, col: object.col } : null),

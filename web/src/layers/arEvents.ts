@@ -31,6 +31,9 @@ const hex = (h: string): [number, number, number] => [
   parseInt(h.slice(5, 7), 16),
 ];
 
+/** How the IVT shows over the relief: "drape" colors the terrain by IVT; "isolines" draws contour lines over it. */
+export type IvtView = "drape" | "isolines";
+
 export type Rgba = [number, number, number, number];
 
 /**

@@ -21,6 +21,9 @@ export const es = {
     legendTitle: "IVT (kg m⁻¹ s⁻¹)",
     legendLabel: "Escala de IVT",
     legendLow: "Bajo ~150: transparente",
+    viewLabel: "Vista del IVT",
+    viewDrape: "Color sobre relieve",
+    viewIsolines: "Isolíneas",
     outlineSource: "Contorno provincial: Natural Earth (dominio público)",
   },
   events: {

@@ -35,7 +35,12 @@ Valores neutros a ajustar; contraste mínimo WCAG AA.
 ## Rampa IVT (secuencial)
 
 Tokens `--ivt-0..5` por tema (tokens.css / tokens.ts), 6 paradas parejas sobre 0–1200 kg m⁻¹ s⁻¹ (satura en 1200, "≥1200").
-Alfa por celda según el IVT (`ivtAlpha`): 0 hasta 150 kg m⁻¹ s⁻¹ (`IVT_ALPHA_LOW`), sube con smoothstep hasta 0,95 en 400 (`IVT_ALPHA_HIGH`); donde no hay río la capa es transparente y se ve el relieve. La leyenda lo indica ("Bajo ~150: transparente"). Con la capa de relieve activa, la opacidad de toda la capa baja además a 0,7 (`IVT_OVER_RELIEF_OPACITY`). El raster y el relieve cubren todo el recorte ERA5 (ver `docs/architecture.md`, "Área del visor"). Claro: pálido a violeta profundo. Oscuro: azul tenue a amarillo claro.
+Alfa por celda según el IVT (`ivtAlpha`): 0 hasta 150 kg m⁻¹ s⁻¹ (`IVT_ALPHA_LOW`), sube con smoothstep hasta 0,95 en 400 (`IVT_ALPHA_HIGH`); donde no hay río la capa es transparente y se ve el relieve. La leyenda lo indica ("Bajo ~150: transparente"). Dos vistas, elegibles con un control segmentado en la leyenda (solo con la capa de ríos atmosféricos activa; `data-testid` `ivt-view-drape` / `ivt-view-isolines`):
+
+- **Color sobre relieve** (por defecto): con el relieve activo, el IVT del cuadro se interpola bilinealmente sobre cada punto del relieve y lo tiñe: color = mezcla(gris neutro, rampa IVT) con peso `ivtAlpha / 0,95` (0 bajo 150, 1 desde 400), multiplicada por el gris del sombreado (`0,35 + 0,75·sombra`, máx. 1); el relieve sigue legible bajo el río y, sin río, queda gris sombreado. Sin relieve, el raster de celdas translúcido de siempre.
+- **Isolíneas**: el relieve conserva su rampa pizarra y el IVT se dibuja como curvas de nivel en 250, 500, 750 y 1000 kg m⁻¹ s⁻¹, coloreadas con la rampa en cada nivel, de 1,5 / 2 / 2,5 / 3 px (más grueso = más intenso) y con un halo del color de fondo para legibilidad; la leyenda lista los cuatro niveles.
+
+En ambas vistas las celdas ERA5 siguen siendo seleccionables (hover/clic) aunque no se vean. El raster y el relieve cubren todo el recorte ERA5 (ver `docs/architecture.md`, "Área del visor"). Claro: pálido a violeta profundo. Oscuro: azul tenue a amarillo claro.
 
 | Token | Claro | Oscuro |
 |---|---|---|

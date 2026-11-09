@@ -96,3 +96,53 @@ test("drawer toggles expose aria-expanded/aria-controls and open one panel at a 
   fireEvent.keyDown(window, { key: "Escape" });
   expect(screen.getByTestId("shell")).not.toHaveAttribute("data-drawer");
 });
+
+test("IVT view toggle: legend control only with the AR layer; isolines add contour layers and cell readings keep working", async () => {
+  const arLayer = { ...manifest, id: "ar-events", kind: "events", files: ["events.json", "frames/index.json"] };
+  const event = {
+    event_id: "AR-1", start: "2000-03-10T06:00:00Z", end: "2000-03-10T07:00:00Z", duration_h: 2, n_steps: 1,
+    prob_max: 0.8, area_frac_max: 0.5, ivt_max: 300, ivt_max_time: null, ivt_max_lat: null, ivt_max_lon: null,
+    deg0l_max: null, deg0l_mean: null, tp_sum_mm: null, enso_phase: null,
+  }; // fmt: skip
+  const index = {
+    units: "kg m-1 s-1",
+    step_hours: 1,
+    grid: { ny: 3, nx: 3, lat_min: -39, lat_max: -38, lon_min: -70, lon_max: -69 },
+    events: { "AR-1": { start: event.start, n_frames: 1, vmin: 0, vmax: 900 } },
+  };
+  const frame = new Float32Array([0, 0, 0, 0, 900, 0, 0, 0, 0]).buffer; // a single peak in the middle
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => frame,
+      json: async () => {
+        if (url.endsWith(".geojson")) return province;
+        if (url.includes("frames%2Findex.json")) return index;
+        if (url.includes("events.json")) return [event];
+        return [arLayer];
+      },
+    })),
+  );
+  render(<Shell />);
+  const canvas = screen.getByTestId("map-canvas");
+  expect(screen.queryByTestId("map-legend")).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByTestId("layer-toggle-ar-events"));
+  expect(screen.getByTestId("ivt-view-drape")).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(await screen.findByTestId("event-AR-1"));
+  await waitFor(() => expect(canvas.getAttribute("data-deck-layers")).toContain("ivt-ar-events"));
+  expect(canvas.getAttribute("data-deck-layers")).not.toContain("ivt-contours");
+
+  fireEvent.click(screen.getByTestId("ivt-view-isolines"));
+  expect(screen.getByTestId("ivt-view-isolines")).toHaveAttribute("aria-pressed", "true");
+  expect(canvas.getAttribute("data-deck-layers")).toContain("ivt-contours-halo-ar-events,ivt-contours-ar-events");
+  // outlines stay on top of the contours
+  expect(canvas.getAttribute("data-deck-layers")).toMatch(/ivt-contours-ar-events,.*ref-province/);
+
+  fireEvent.click(screen.getByTestId("ivt-view-drape"));
+  expect(canvas.getAttribute("data-deck-layers")).not.toContain("ivt-contours");
+
+  fireEvent.click(screen.getByTestId("layer-toggle-ar-events"));
+  expect(screen.queryByTestId("ivt-view-drape")).not.toBeInTheDocument();
+});

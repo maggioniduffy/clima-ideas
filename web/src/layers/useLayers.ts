@@ -103,6 +103,13 @@ export function useLayers() {
     [layers, activeIds, data, reliefs, theme, selectedId, selectedPointId, pickPoint],
   );
 
+  const reliefId = layers.find((l) => activeIds.has(l.id) && reliefs[l.id])?.id;
+  /** The active relief (id + parsed data), for layers that color it (IVT drape); null when none is on. */
+  const activeRelief = useMemo(
+    () => (reliefId ? { layerId: reliefId, data: reliefs[reliefId]! } : null),
+    [reliefId, reliefs],
+  );
+
   const selectedLayer = layers.find((l) => l.id === selectedId) ?? null;
   const selectedFeatures = selectedLayer && activeIds.has(selectedLayer.id) ? (data[selectedLayer.id] ?? []) : [];
 
@@ -115,6 +122,7 @@ export function useLayers() {
     selectedFeatures,
     selectedPointId,
     deckLayers,
+    activeRelief,
     toggle,
     select,
     selectPoint: (pid: string) => setSelectedPointId(pid),

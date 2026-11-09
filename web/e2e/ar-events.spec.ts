@@ -76,3 +76,46 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
 
   expect(errors).toEqual([]);
 });
+
+test("IVT view toggle: drape over the relief by default, isolines add contour layers, cell readings work in both", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("pageerror", (e) => errors.push(e.message));
+
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-relief").check();
+  await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /^relief-relief(,|$)/);
+  await page.getByTestId("layer-toggle-ar-events").check();
+  await page.getByTestId("timeline-event-AR-2000-001").click();
+  const canvas = page.getByTestId("map-canvas");
+  const drape = page.getByTestId("ivt-view-drape");
+  const lines = page.getByTestId("ivt-view-isolines");
+  await expect(canvas).toHaveAttribute("data-deck-layers", /^relief-relief,ivt-ar-events,ref-/);
+  await expect(drape).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("map-legend-bar")).toBeVisible();
+
+  // drape: the cells carry no fill but still answer the click (hour 1 of the fake field is 250)
+  await page.getByTestId("replay-slider").fill("1");
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.getByTestId("cell-value")).toHaveText("250 kg m-1 s-1");
+
+  // isolines: contour layers (halo + line) sit above the raster and below the reference outlines
+  await lines.click();
+  await expect(lines).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("map-legend-levels")).toContainText("1000");
+  await expect(canvas).toHaveAttribute(
+    "data-deck-layers",
+    /^relief-relief,ivt-ar-events,ivt-contours-halo-ar-events,ivt-contours-ar-events,ref-/,
+  );
+  await page.getByTestId("replay-slider").fill("2");
+  await expect(page.getByTestId("cell-value")).toHaveText("300 kg m-1 s-1");
+
+  // back to drape: contours gone
+  await drape.click();
+  await expect(canvas).not.toHaveAttribute("data-deck-layers", /ivt-contours/);
+
+  expect(errors).toEqual([]);
+});

@@ -146,6 +146,18 @@
   opacity: 0.96; pointer-events: none;
 }
 .map-legend-title { font-weight: 600; margin-bottom: 4px; }
+.map-legend-views { display: flex; margin-bottom: 6px; pointer-events: auto; }
+.map-legend-views button {
+  flex: 1; padding: 2px var(--space-2); font: inherit; font-size: 10px; cursor: pointer;
+  background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+}
+.map-legend-views button:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.map-legend-views button:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; margin-left: -1px; }
+.map-legend-views button[aria-pressed="true"] { background: var(--raised); color: var(--text); font-weight: 600; }
+.map-legend-views button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; position: relative; }
+.map-legend-levels { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.map-legend-levels li { display: flex; align-items: center; gap: var(--space-2); }
+.map-legend-line { display: inline-block; width: 28px; border-radius: 1px; }
 .map-legend-bar { height: 10px; border-radius: 2px; border: 1px solid var(--border); }
 .map-legend-ticks { position: relative; height: 14px; margin-top: 2px; color: var(--text-muted); }
 .map-legend-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
