@@ -63,6 +63,16 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   kg m⁻¹ s⁻¹, fracción de lluvia) y ninguna sostiene p BH < 0,05 (`reports/01/F1.8.md`). Con el rectángulo eran 6 de 16
   y el IVT máx. medio de SON sí sostenía BH: el resultado no es robusto a la elección del polígono.
 
+## Pendiente: mejoras del visor (pedido del usuario, 2026-11-08)
+
+Tras ver la capa completa (433 eventos) en el visor, sigue costando leer qué muestra. Sin hacer todavía:
+
+- [ ] V1 Texto de ayuda en el panel derecho cuando no hay evento elegido: qué es un río atmosférico y qué es el IVT.
+- [ ] V2 Más mapa: agrandar el panel del mapa respecto de la lista y el inspector.
+- [ ] V3 Relieve con más contraste y menor opacidad del IVT. El polígono de cordillera no se dibuja (decisión del usuario).
+- [ ] V4 IVT con más contraste: donde no hay río (IVT bajo) la capa debe quedar casi transparente, para que se vea el
+  relieve y la franja del río resalte.
+
 ## Abierto
 
 - Pocos años por fase ENSO: informar n y no afirmar diferencias que el test no sostiene.
