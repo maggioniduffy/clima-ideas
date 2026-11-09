@@ -24,3 +24,8 @@ test("layer colors: accent when selected, hollow fill when regulated", () => {
   const radius = layer.props.getRadius as unknown as (d: (typeof data)[0]) => number;
   expect(radius(data[0]!)).toBeGreaterThan(radius(data[1]!));
 });
+
+it("draws stations without depth test so the 3D relief does not hide them", () => {
+  const layer = buildFloodStationsLayer([], null, "light", () => undefined);
+  expect(layer.props.parameters).toMatchObject({ depthCompare: "always" });
+});

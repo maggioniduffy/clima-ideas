@@ -64,6 +64,8 @@ export function Shell() {
       ),
     [baseLayers, selectedId, selectedPointId, theme, selectLayer, selectPoint],
   );
+  // Stations go after the relief and IVT so nothing paints over them.
+  const isFlood = (l: { id: string }) => l.id === `points-${FLOOD_LAYER_ID}`;
   const refLayers = useReferenceLayers();
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
@@ -89,7 +91,14 @@ export function Shell() {
           }
         }
       />
-      <MapCanvas layers={[...mapLayers, ...ar.deckLayers, ...refLayers]}>
+      <MapCanvas
+        layers={[
+          ...mapLayers.filter((l) => !isFlood(l)),
+          ...ar.deckLayers,
+          ...mapLayers.filter(isFlood),
+          ...refLayers,
+        ]}
+      >
         {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} />}
       </MapCanvas>
       <Inspector

@@ -48,6 +48,8 @@ export function buildFloodStationsLayer(
     getLineColor: (d) => (d.id === selectedId ? accent : outline),
     getLineWidth: (d) => (d.regulated || d.id === selectedId ? 2 : 1),
     lineWidthUnits: "pixels",
+    // Flat at z = 0: without this the 3D relief hides the stations (same as the reference layers).
+    parameters: { depthCompare: "always" },
     updateTriggers: { getFillColor: [selectedId], getLineColor: [selectedId, theme], getLineWidth: [selectedId] },
     onClick: ({ object }) => {
       if (object) onPick(object);
