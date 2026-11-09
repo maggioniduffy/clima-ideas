@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
+import { ivtColor } from "./arEvents";
+import { parseRelief } from "./reliefLayer";
 import { REPLAY_INTERVAL_MS, useArEvents } from "./useArEvents";
 
 const layer = {
@@ -13,9 +15,21 @@ const layer = {
   files: ["events.json", "frames/index.json"],
 };
 const event = {
-  event_id: "AR-2000-001", start: "2000-03-10T06:00:00Z", end: "2000-03-10T09:00:00Z", duration_h: 3,
-  n_steps: 1, prob_max: 0.8, area_frac_max: 0.5, ivt_max: 300, ivt_max_time: null, ivt_max_lat: null,
-  ivt_max_lon: null, deg0l_max: null, deg0l_mean: null, tp_sum_mm: null, enso_phase: null,
+  event_id: "AR-2000-001",
+  start: "2000-03-10T06:00:00Z",
+  end: "2000-03-10T09:00:00Z",
+  duration_h: 3,
+  n_steps: 1,
+  prob_max: 0.8,
+  area_frac_max: 0.5,
+  ivt_max: 300,
+  ivt_max_time: null,
+  ivt_max_lat: null,
+  ivt_max_lon: null,
+  deg0l_max: null,
+  deg0l_mean: null,
+  tp_sum_mm: null,
+  enso_phase: null,
 }; // fmt: skip
 const index = {
   units: "kg m-1 s-1",
@@ -42,7 +56,9 @@ afterEach(() => {
 
 test("loads events and index only when active, then frames on selection", async () => {
   const f = stubFetch();
-  const { result, rerender } = renderHook(({ active }) => useArEvents(layer, active), { initialProps: { active: false } });
+  const { result, rerender } = renderHook(({ active }) => useArEvents(layer, active), {
+    initialProps: { active: false },
+  });
   expect(result.current.status).toBe("idle");
   expect(f).not.toHaveBeenCalled();
   rerender({ active: true });
@@ -57,6 +73,17 @@ test("loads events and index only when active, then frames on selection", async 
   rerender({ active: false });
   expect(result.current.selectedEventId).toBeNull();
   expect(result.current.deckLayers).toEqual([]);
+});
+
+test("draws every cell of the frames grid, with no province clipping", async () => {
+  const f = stubFetch();
+  const { result } = renderHook(() => useArEvents(layer, true));
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+  act(() => result.current.select("AR-2000-001"));
+  await waitFor(() => expect(result.current.deckLayers).toHaveLength(1));
+  const { ny, nx } = index.grid;
+  expect((result.current.deckLayers[0]!.props as unknown as { data: unknown[] }).data).toHaveLength(ny * nx);
+  expect(f.mock.calls.some(([url]) => String(url).includes("/geo/"))).toBe(false);
 });
 
 test("steps, seeks within bounds, plays and stops on the last frame", async () => {
@@ -85,4 +112,62 @@ test("steps, seeks within bounds, plays and stops on the last frame", async () =
   act(() => result.current.toggle());
   expect(result.current.frame).toBe(0);
   expect(result.current.playing).toBe(true);
+});
+
+const relief = parseRelief(new Float32Array([-70, -39, 500, -69.5, -39, 900, -69, -39, 700]).buffer);
+
+async function selected(opts: Parameters<typeof useArEvents>[2]) {
+  stubFetch();
+  const hook = renderHook((o) => useArEvents(layer, true, o), { initialProps: opts });
+  await waitFor(() => expect(hook.result.current.status).toBe("ready"));
+  act(() => hook.result.current.select("AR-2000-001"));
+  await waitFor(() => expect(hook.result.current.deckLayers.length).toBeGreaterThan(0));
+  return hook;
+}
+
+test("drape view with relief: colors for the relief points, invisible but pickable cells, no contours", async () => {
+  const { result } = await selected({ relief, view: "drape" });
+  expect(result.current.drapeColors).toHaveLength(relief.length * 4);
+  expect(result.current.deckLayers.map((l) => l.id)).toEqual(["ivt-ar-events"]);
+  const raster = result.current.deckLayers[0]!.props as unknown as { pickable: boolean; getFillColor: (c: unknown) => number[] };
+  expect(raster.pickable).toBe(true);
+  expect(raster.getFillColor({ row: 0, col: 1 })).toEqual([0, 0, 0, 0]);
+});
+
+test("drape colors follow the frame", async () => {
+  const { result } = await selected({ relief, view: "drape" });
+  const f0 = Array.from(result.current.drapeColors!);
+  act(() => result.current.seek(2)); // frames 100/110 -> 300/310: more IVT, different colors
+  expect(Array.from(result.current.drapeColors!)).not.toEqual(f0);
+});
+
+test("drape view without relief keeps the colored cell raster and no drape colors", async () => {
+  const { result } = await selected({ relief: null, view: "drape" });
+  expect(result.current.drapeColors).toBeNull();
+  expect(result.current.deckLayers.map((l) => l.id)).toEqual(["ivt-ar-events"]);
+  act(() => result.current.seek(2)); // frame 2, cell (0, 0) = 300
+  const raster = result.current.deckLayers[0]!.props as unknown as { getFillColor: (c: unknown) => number[] };
+  expect(raster.getFillColor({ row: 0, col: 0 })).toEqual(ivtColor(300, "light", true));
+});
+
+test("isolines view: contour layers added, no drape, cells still give readings; switching back removes them", async () => {
+  const { result, rerender } = await selected({ relief, view: "isolines" });
+  expect(result.current.drapeColors).toBeNull();
+  expect(result.current.deckLayers.map((l) => l.id)).toEqual([
+    "ivt-ar-events",
+    "ivt-contours-halo-ar-events",
+    "ivt-contours-ar-events",
+  ]);
+  const raster = result.current.deckLayers[0]!.props as unknown as {
+    pickable: boolean;
+    getFillColor: (c: unknown) => number[];
+    onHover: (i: { object: { row: number; col: number } }) => void;
+  };
+  expect(raster.pickable).toBe(true);
+  expect(raster.getFillColor({ row: 0, col: 0 })).toEqual([0, 0, 0, 0]);
+  act(() => raster.onHover({ object: { row: 0, col: 1 } }));
+  expect(result.current.reading?.value).toBe(110);
+  rerender({ relief, view: "drape" });
+  expect(result.current.deckLayers.map((l) => l.id)).toEqual(["ivt-ar-events"]);
+  expect(result.current.drapeColors).not.toBeNull();
 });

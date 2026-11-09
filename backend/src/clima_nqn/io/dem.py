@@ -10,8 +10,8 @@ import httpx
 import numpy as np
 from rasterio.enums import Resampling
 
+from clima_nqn.io import era5
 from clima_nqn.layers.manifest import LayerManifest
-from clima_nqn.stages.ar import geo
 from clima_nqn.stages.ar.catalog import _points_in_polygon
 
 BUCKET_URL = "https://copernicus-dem-30m.s3.amazonaws.com"
@@ -25,11 +25,13 @@ LICENSE = (
 )
 # AWS registry: "Copernicus DEM 2021 release" (acquisition period not verified).
 PERIOD = "2021-01-01/2021-12-31"
-# Bbox (lon_min, lat_min, lon_max, lat_max) containing the province + 10 km band (band extent is
-# lon -72.075..-67.895, lat -41.184..-36.039); a search rectangle, not the border.
-NEUQUEN_BBOX = (-72.1, -41.2, -67.88, -36.02)
-# degrees (~890 m in lat; 1/0.008 = 125 samples per tile degree) -> see build_relief for the point count
-DEFAULT_STEP = 0.008
+# Bbox (lon_min, lat_min, lon_max, lat_max): the whole ERA5 crop rectangle the IVT frames cover (era5.NEUQUEN_BOX is
+# N, W, S, E), so the relief spans the same area as the IVT raster.
+_N, _W, _S, _E = era5.NEUQUEN_BOX
+NEUQUEN_BBOX = (_W, _S, _E, _N)
+# degrees: 1/66 so each 1-degree tile decimates to exactly 66 samples (~1.68 km in lat); the 72 tiles of the
+# rectangle give 72 * 66^2 = 313,632 points at most (fewer: tiles over the Pacific do not exist), ~3.8 MB.
+DEFAULT_STEP = 1 / 66
 MAX_BYTES = 15_000_000
 STRIDE = 3
 
@@ -60,25 +62,38 @@ def tiles_for_bbox(bbox: tuple[float, float, float, float]) -> list[tuple[int, i
     ]
 
 
+def _absent_marker(path: Path) -> Path:
+    return path.with_suffix(".404")
+
+
 def fetch_tiles(
     bbox: tuple[float, float, float, float] = NEUQUEN_BBOX,
     dest: Path = RAW_DIR,
     timeout: float = 120.0,
     retries: int = 4,
 ) -> list[Path]:
-    """Stream each tile to `dest`, skipping files that already exist."""
+    """Stream each tile to `dest`, skipping files that already exist.
+
+    A tile that does not exist in the bucket (HTTP 404: open ocean, no DEM) gets an empty `<name>.404` marker so it is
+    not requested again and `build_relief` knows it is absent on purpose; it is not in the returned list.
+    """
     dest.mkdir(parents=True, exist_ok=True)
     paths = []
     with httpx.Client(timeout=timeout, follow_redirects=True) as client:
         for lat, lon in tiles_for_bbox(bbox):
             path = dest / f"{tile_name(lat, lon)}.tif"
-            paths.append(path)
             if path.exists():
+                paths.append(path)
+                continue
+            if _absent_marker(path).exists():
                 continue
             tmp = path.with_suffix(".part")
             for attempt in range(1, retries + 1):
                 try:
                     with client.stream("GET", tile_url(lat, lon)) as r:
+                        if r.status_code == 404:
+                            _absent_marker(path).touch()
+                            break
                         r.raise_for_status()
                         with tmp.open("wb") as f:
                             for chunk in r.iter_bytes(1 << 20):
@@ -88,7 +103,9 @@ def fetch_tiles(
                     if attempt == retries:
                         raise
                     time.sleep(2 * attempt)
-            tmp.rename(path)
+            if tmp.exists():
+                tmp.rename(path)
+                paths.append(path)
     return paths
 
 
@@ -176,19 +193,21 @@ def build_relief(
 ) -> Path:
     """Decimate each tile in turn (one in memory at a time) and write the layer.
 
-    Points are clipped to the bbox and then to `clip_ring` (default: the Neuquén province outline buffered by 10 km,
-    `geo.province_band_ring()`), the same band the viewer clips the IVT raster to. The bbox in relief.meta.json stays the rectangle searched.
+    Points are clipped to `bbox` (default: the whole ERA5 rectangle) and, only when `clip_ring` is given, to that
+    polygon; by default there is no polygon clip. Tiles marked absent by `fetch_tiles` (`.404`) are skipped; any
+    other missing tile is an error.
     """
-    if clip_ring is None:
-        clip_ring = geo.province_band_ring()
     import rasterio
 
     chunks = []
     for lat, lon in tiles_for_bbox(bbox):
         path = raw_dir / f"{tile_name(lat, lon)}.tif"
         if not path.exists():
+            if _absent_marker(path).exists():
+                continue
             raise FileNotFoundError(f"missing tile {path}; run `clima-nqn dem fetch`")
         with rasterio.open(path) as ds:
-            chunks.append(clip_polygon(clip_bbox(decimate_tile(ds, step), bbox), clip_ring))
+            pts = clip_bbox(decimate_tile(ds, step), bbox)
+            chunks.append(pts if clip_ring is None else clip_polygon(pts, clip_ring))
     pts = np.concatenate(chunks) if chunks else np.empty((0, 3), dtype=np.float32)
     return write_relief(pts, out_dir, bbox, step)

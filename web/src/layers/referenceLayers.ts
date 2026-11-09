@@ -109,25 +109,19 @@ export function buildReferenceLayers({ theme, province }: Props): Layer[] {
   ];
 }
 
-/** Reference layers while `active`; the outlines load once and are skipped if they cannot be fetched. */
-export function useReferenceLayers(active: boolean): Layer[] {
+/** Reference layers, always drawn; the outline loads once on mount and is skipped if it cannot be fetched. */
+export function useReferenceLayers(): Layer[] {
   const theme = useTheme();
   const [province, setProvince] = useState<LonLat[] | null>(null);
   useEffect(() => {
-    if (!active || province) return;
     let cancelled = false;
-    const load = (url: string, set: (r: LonLat[] | null) => void) =>
-      fetch(url)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((j) => !cancelled && set(parseRing(j)))
-        .catch(() => undefined);
-    void load(PROVINCE_URL, setProvince);
+    fetch(PROVINCE_URL)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => !cancelled && setProvince(parseRing(j)))
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [active, province]);
-  return useMemo(
-    () => (active ? buildReferenceLayers({ theme, province }) : []),
-    [active, theme, province],
-  );
+  }, []);
+  return useMemo(() => buildReferenceLayers({ theme, province }), [theme, province]);
 }

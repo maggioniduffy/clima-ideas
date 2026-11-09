@@ -24,7 +24,7 @@ export const tokens = {
   },
   /** Monochrome slate relief ramp (mockup), far/low to peaks (elevations in RELIEF_STOPS_M); `--relief-0..3` in tokens.css. */
   reliefRamp: {
-    light: ["#A7AEAF", "#77848A", "#4A5A64", "#2A343B"],
-    dark: ["#4E5F6A", "#7D8D96", "#B3BEC4", "#ECE7DC"],
+    light: ["#C4CBCC", "#8B989E", "#4A5A64", "#1C262D"],
+    dark: ["#3A4852", "#76878F", "#BAC5CB", "#F6F1E6"],
   },
 } as const;

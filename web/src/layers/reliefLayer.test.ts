@@ -1,15 +1,20 @@
 import { PointCloudLayer } from "@deck.gl/layers";
 import {
+  buildDrapeSampler,
   buildReliefLayer,
+  DRAPE_NEUTRAL,
+  drapeColor,
+  drapeColors,
   hillshade,
   parseRelief,
-  pointInRing,
   RELIEF_EXAGGERATION,
   RELIEF_STEP,
   RELIEF_STOPS_M,
   reliefColor,
   reliefColors,
+  sampleIvt,
 } from "./reliefLayer";
+import { ivtColor } from "./arEvents";
 import { tokens } from "../theme/tokens";
 
 const buffer = (vals: number[]) => new Float32Array(vals).buffer;
@@ -80,29 +85,12 @@ test("parseRelief shades a ramp using grid neighbours, independent of point orde
   expect(rev.shade[16 - 1 - 5]).toBeCloseTo(ordered.shade[5]!, 5);
 });
 
-test("pointInRing ray-casts a concave ring", () => {
-  const ring: [number, number][] = [[0, 0], [4, 0], [4, 4], [2, 1], [0, 4]];
-  expect(pointInRing(1, 1, ring)).toBe(true);
-  expect(pointInRing(2, 3, ring)).toBe(false); // in the notch
-  expect(pointInRing(5, 1, ring)).toBe(false);
-});
-
-test("parseRelief drops points outside the province but shades them from the full grid first", () => {
-  const province: [number, number][] = [
-    [-70 + 1.5 * RELIEF_STEP, -38 - 1],
-    [-70 + 10, -38 - 1],
-    [-70 + 10, -38 + 1],
-    [-70 + 1.5 * RELIEF_STEP, -38 + 1],
-    [-70 + 1.5 * RELIEF_STEP, -38 - 1],
-  ];
-  const data = grid(4, 4, (ix) => 1000 + ix * 100);
-  const all = parseRelief(data);
-  const clipped = parseRelief(data, province);
-  expect(all.length).toBe(16);
-  expect(clipped.length).toBe(8); // columns 2 and 3 only
-  expect(Array.from(clipped.elevation)).toEqual([1200, 1300, 1200, 1300, 1200, 1300, 1200, 1300]);
-  // point at column 2 keeps the shade computed with its dropped column-1 neighbour (not an edge fallback)
-  expect(clipped.shade[0]).toBeCloseTo(all.shade[2]!, 6);
+test("parseRelief keeps every point and shades by the grid step", () => {
+  const r = parseRelief(
+    grid(4, 4, (ix) => 1000 + ix * 100),
+    RELIEF_STEP,
+  );
+  expect(r.length).toBe(16);
 });
 
 test("parseRelief rejects a buffer that is not a multiple of the stride", () => {
@@ -121,4 +109,101 @@ test("buildReliefLayer returns a PointCloudLayer with binary attributes", () => 
   const layer = buildReliefLayer("relief", parseRelief(buffer([-70, -38, 100])), "dark");
   expect(layer).toBeInstanceOf(PointCloudLayer);
   expect(layer.id).toBe("relief-relief");
+});
+
+// --- IVT drape ---------------------------------------------------------------------------------------------------
+
+const gray = (shade: number) => Math.min(1, Math.max(0, 0.35 + 0.75 * shade));
+
+test("drapeColor: no IVT is the theme neutral x shade, with no ramp hue", () => {
+  for (const theme of ["light", "dark"] as const) {
+    const [r, g, b] = drapeColor(0, 1, theme);
+    [r, g, b].forEach((v, c) => expect(v).toBeCloseTo(255 * DRAPE_NEUTRAL[theme][c]! * gray(1), -0.5));
+    expect(drapeColor(null, 1, theme)).toEqual([r, g, b]);
+    expect(drapeColor(100, 1, theme)).toEqual([r, g, b]); // below IVT_ALPHA_LOW
+  }
+});
+
+test("drapeColor: IVT >= 400 is the ramp color x gray; shade modulates brightness; theme switches the ramp", () => {
+  for (const theme of ["light", "dark"] as const) {
+    const ramp = ivtColor(800, theme);
+    const lit = drapeColor(800, 1, theme);
+    [0, 1, 2].forEach((c) => expect(Math.abs(lit[c]! - ramp[c]! * gray(1))).toBeLessThanOrEqual(1));
+    expect(drapeColor(500, 1, theme)).toEqual(drapeColor(500, 1, theme));
+    const dark = drapeColor(800, 0.25, theme);
+    expect(dark[0] + dark[1] + dark[2]).toBeLessThan(lit[0] + lit[1] + lit[2]);
+  }
+  expect(drapeColor(800, 1, "light")).not.toEqual(drapeColor(800, 1, "dark"));
+  // between the thresholds the color sits between the neutral gray and the ramp color
+  const mid = drapeColor(275, 1, "light");
+  expect(mid).not.toEqual(drapeColor(0, 1, "light"));
+  expect(mid).not.toEqual(drapeColor(400, 1, "light"));
+});
+
+const g2 = {
+  ny: 2,
+  nx: 2,
+  lat_min: -39,
+  lat_max: -38,
+  lon_min: -70,
+  lon_max: -69,
+};
+const f2 = new Float32Array([100, 200, 300, 500]); // row 0 (south): 100, 200; row 1: 300, 500
+
+test("bilinear sampling: grid nodes return the node value, midpoints the average", () => {
+  const relief = parseRelief(
+    buffer([-70, -39, 0, -69, -39, 0, -70, -38, 0, -69, -38, 0, -69.5, -38.5, 0, -69.5, -39, 0]),
+  );
+  const sampler = buildDrapeSampler(relief, g2);
+  const at = (i: number) => sampleIvt(sampler, f2, 0, i);
+  expect(at(0)).toBeCloseTo(100, 3);
+  expect(at(1)).toBeCloseTo(200, 3);
+  expect(at(2)).toBeCloseTo(300, 3);
+  expect(at(3)).toBeCloseTo(500, 3);
+  expect(at(4)).toBeCloseTo(275, 3); // center: mean of the 4 nodes
+  expect(at(5)).toBeCloseTo(150, 3); // south edge midpoint
+});
+
+test("bilinear sampling reads the requested frame and clamps points outside the grid", () => {
+  const relief = parseRelief(buffer([-71, -40, 0, -69, -38, 0]));
+  const sampler = buildDrapeSampler(relief, g2);
+  const two = new Float32Array([...f2, 1, 2, 3, 4]);
+  expect(sampleIvt(sampler, two, 1, 0)).toBeCloseTo(1, 3); // clamped to the SW node
+  expect(sampleIvt(sampler, two, 1, 1)).toBeCloseTo(4, 3);
+});
+
+test("drapeColors paints every point like drapeColor on the sampled IVT and shade", () => {
+  const relief = parseRelief(
+    grid(5, 4, (ix, iy) => 500 + ix * 40 + iy * 25),
+    RELIEF_STEP,
+  );
+  const g = {
+    ny: 2,
+    nx: 2,
+    lat_min: -38,
+    lat_max: -37.97,
+    lon_min: -70,
+    lon_max: -69.97,
+  };
+  const sampler = buildDrapeSampler(relief, g);
+  const frames = new Float32Array([0, 0, 0, 0, 900, 700, 500, 300]);
+  const out = drapeColors(relief, sampler, frames, 1, "dark");
+  expect(out.length).toBe(relief.length * 4);
+  for (const i of [0, 7, relief.length - 1]) {
+    const exp = drapeColor(sampleIvt(sampler, frames, 1, i), relief.shade[i]!, "dark");
+    [0, 1, 2].forEach((c) => expect(Math.abs(out[i * 4 + c]! - exp[c]!)).toBeLessThanOrEqual(1));
+    expect(out[i * 4 + 3]).toBe(255);
+  }
+  // an event frame of zeros is the plain gray-shaded relief
+  const calm = drapeColors(relief, sampler, frames, 0, "dark");
+  expect(Array.from(calm.slice(0, 3))).toEqual(drapeColor(0, relief.shade[0]!, "dark"));
+});
+
+test("buildReliefLayer accepts a color override (drape) in place of the slate colors", () => {
+  const r = parseRelief(buffer([-70, -38, 100]));
+  const colors = new Uint8Array([1, 2, 3, 255]);
+  const layer = buildReliefLayer("relief", r, "light", colors);
+  const attrs = (layer.props.data as unknown as { attributes: { getColor: { value: Uint8Array } } }).attributes;
+  expect(attrs.getColor.value).toBe(colors);
+  expect(r.colorCache.light).toBeUndefined();
 });

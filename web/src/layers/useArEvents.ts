@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Layer } from "@deck.gl/core";
 import { fetchFrames, fetchLayerData, type ArEvent, type FramesIndex, type LayerManifest } from "../api/client";
 import { useTheme } from "../theme/themeStore";
-import { frameTime, frameValue, gridCells, parseFrames } from "./arEvents";
-import { clipCells, useClipRing } from "./provinceClip";
+import { frameTime, frameValue, gridCells, parseFrames, type IvtView } from "./arEvents";
+import { buildIvtContourLayers } from "./ivtContours";
 import { buildIvtRasterLayer, type CellRef } from "./ivtRasterLayer";
+import { buildDrapeSampler, drapeColors, type ReliefData } from "./reliefLayer";
 
 /** Milliseconds between replay frames (one frame = one hour). */
 export const REPLAY_INTERVAL_MS = 250;
@@ -16,8 +17,23 @@ export interface CellReading {
   timeMs: number;
 }
 
-/** Events of an `events` layer with hourly IVT frames: selection, replay clock and picked cell. */
-export function useArEvents(layer: LayerManifest | undefined, active: boolean, opacity = 1) {
+export interface ArViewOptions {
+  /** Relief drawn below the IVT (null/undefined: none). */
+  relief?: ReliefData | null;
+  /** "drape" (default): IVT colors the relief, or the cell raster when there is no relief; "isolines": contour lines. */
+  view?: IvtView;
+}
+
+/**
+ * Events of an `events` layer with hourly IVT frames: selection, replay clock and picked cell. The IVT cells are always
+ * built (pickable, for the readings); they only show a fill when no relief carries the IVT as a drape.
+ * `drapeColors` (RGBA per relief point) is set in the drape view with relief and an event selected.
+ */
+export function useArEvents(
+  layer: LayerManifest | undefined,
+  active: boolean,
+  { relief = null, view = "drape" }: ArViewOptions = {},
+) {
   const layerId = layer?.id;
   const eventsFile = layer?.files.find((f) => f.endsWith("events.json"));
   const indexFile = layer?.files.find((f) => f === "frames/index.json");
@@ -113,31 +129,34 @@ export function useArEvents(layer: LayerManifest | undefined, active: boolean, o
   const step = useCallback((d: number) => seek(frame + d), [seek, frame]);
 
   const cells = useMemo(() => (index ? gridCells(index.grid) : []), [index]);
-  // the raster is drawn only inside the province + 10 km band (undefined while the outline loads, null if unavailable)
-  const clipRing = useClipRing(active);
-  const drawCells = useMemo(
-    () => (clipRing === undefined ? [] : clipRing ? clipCells(cells, clipRing) : cells),
-    [cells, clipRing],
+  const grid = index?.grid;
+  const sampler = useMemo(() => (relief && grid ? buildDrapeSampler(relief, grid) : null), [relief, grid]);
+  const drape = useMemo(
+    () => (view === "drape" && frames && relief && sampler ? drapeColors(relief, sampler, frames, frame, theme) : null),
+    [view, frames, relief, sampler, frame, theme],
   );
-
   const deckLayers = useMemo((): Layer[] => {
     if (!layerId || !index || !selectedEventId || !frames) return [];
-    return [
-      buildIvtRasterLayer({
-        layerId,
-        eventId: selectedEventId,
-        grid: index.grid,
-        cells: drawCells,
-        frames,
-        frame,
-        theme,
-        picked,
-        opacity,
-        onHover: setHover,
-        onPick: setPicked,
-      }),
-    ];
-  }, [layerId, index, selectedEventId, frames, drawCells, frame, theme, picked, opacity]);
+    const raster = buildIvtRasterLayer({
+      layerId,
+      eventId: selectedEventId,
+      grid: index.grid,
+      cells,
+      frames,
+      frame,
+      theme,
+      picked,
+      showFill: view === "drape" && !relief,
+      onHover: setHover,
+      onPick: setPicked,
+    });
+    return view === "isolines"
+      ? [
+          raster,
+          ...buildIvtContourLayers({ layerId, eventId: selectedEventId, grid: index.grid, frames, frame, theme }),
+        ]
+      : [raster];
+  }, [layerId, index, selectedEventId, frames, cells, frame, theme, picked, view, relief]);
 
   const startIso = entry?.start;
   const timeMs = startIso ? frameTime(startIso, frame, index?.step_hours) : null;
@@ -165,6 +184,7 @@ export function useArEvents(layer: LayerManifest | undefined, active: boolean, o
     cursorMs: timeMs,
     reading,
     deckLayers,
+    drapeColors: drape,
     select,
     toggle,
     seek,

@@ -2,7 +2,7 @@
 .shell {
   display: grid;
   height: 100vh;
-  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  grid-template-columns: 200px minmax(0, 1fr) 260px;
   grid-template-rows: 48px minmax(0, 1fr) 136px;
   grid-template-areas:
     "top top top"
@@ -55,6 +55,11 @@
   background: var(--bg);
 }
 
+.events-help { display: flex; flex-direction: column; gap: var(--space-2); }
+.events-help h3 { margin: 0; font-size: 12px; color: var(--text); }
+.events-help p { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--text-muted); }
+.events-help .events-hint { color: var(--text); font-weight: 600; }
+
 .empty {
   margin: 0;
   font-size: 12px;
@@ -96,7 +101,7 @@
 .inspector-meta dd { color: var(--text-muted); text-align: right; overflow-wrap: anywhere; }
 
 /* AR events: list in the panel, replay controls and marks on the timeline */
-.event-list-item { padding: 0 0 var(--space-2) var(--space-5); }
+.event-list-item { padding: 0 0 var(--space-2) var(--space-2); }
 .event-list { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow: auto; }
 .event-list button {
   display: flex; justify-content: space-between; gap: var(--space-2); width: 100%;
@@ -141,11 +146,24 @@
   opacity: 0.96; pointer-events: none;
 }
 .map-legend-title { font-weight: 600; margin-bottom: 4px; }
+.map-legend-views { display: flex; margin-bottom: 6px; pointer-events: auto; }
+.map-legend-views button {
+  flex: 1; padding: 2px var(--space-2); font: inherit; font-size: 10px; cursor: pointer;
+  background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+}
+.map-legend-views button:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.map-legend-views button:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; margin-left: -1px; }
+.map-legend-views button[aria-pressed="true"] { background: var(--raised); color: var(--text); font-weight: 600; }
+.map-legend-views button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; position: relative; }
+.map-legend-levels { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.map-legend-levels li { display: flex; align-items: center; gap: var(--space-2); }
+.map-legend-line { display: inline-block; width: 28px; border-radius: 1px; }
 .map-legend-bar { height: 10px; border-radius: 2px; border: 1px solid var(--border); }
 .map-legend-ticks { position: relative; height: 14px; margin-top: 2px; color: var(--text-muted); }
 .map-legend-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .map-legend-ticks span:first-child { transform: none; }
 .map-legend-ticks span:last-child { transform: translateX(-100%); }
+.map-legend-note { margin-top: 4px; color: var(--text-muted); font-size: 10px; }
 .map-legend-source { margin-top: 4px; color: var(--text-muted); font-size: 10px; }
 .inspector-meta { grid-template-columns: auto minmax(0, 1fr); }
 .inspector-meta dd:not(.kv-wide) { white-space: normal; overflow-wrap: anywhere; min-width: 0; }

@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
-import { IVT_OVER_RELIEF_OPACITY } from "../layers/ivtRasterLayer";
+import { useEffect, useMemo, useState } from "react";
 import { es } from "../i18n/es";
+import type { IvtView } from "../layers/arEvents";
 import { useArEvents } from "../layers/useArEvents";
+import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
 import { useLayers } from "../layers/useLayers";
+import { useTheme } from "../theme/themeStore";
 import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
 import { MapCanvas } from "./MapCanvas";
@@ -25,9 +27,22 @@ export function Shell() {
   const s = useLayers();
   const eventsLayer = s.layers.find((l) => l.kind === "events");
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
-  const reliefOn = s.deckLayers.some((l) => l.id.startsWith("relief-"));
-  const ar = useArEvents(eventsLayer, eventsActive, reliefOn ? IVT_OVER_RELIEF_OPACITY : 1);
-  const refLayers = useReferenceLayers(eventsActive);
+  const [ivtView, setIvtView] = useState<IvtView>("drape");
+  const theme = useTheme();
+  const ar = useArEvents(eventsLayer, eventsActive, { relief: s.activeRelief?.data ?? null, view: ivtView });
+  // In the drape view the relief itself carries the IVT: swap its slate colors for the frame's drape colors.
+  const baseLayers = useMemo(
+    () =>
+      ar.drapeColors && s.activeRelief
+        ? s.deckLayers.map((l) =>
+            l.id === `relief-${s.activeRelief!.layerId}`
+              ? buildReliefLayer(s.activeRelief!.layerId, s.activeRelief!.data, theme, ar.drapeColors!)
+              : l,
+          )
+        : s.deckLayers,
+    [s.deckLayers, s.activeRelief, ar.drapeColors, theme],
+  );
+  const refLayers = useReferenceLayers();
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);
@@ -52,8 +67,8 @@ export function Shell() {
           }
         }
       />
-      <MapCanvas layers={[...s.deckLayers, ...ar.deckLayers, ...refLayers]}>
-        {eventsActive && <MapLegend />}
+      <MapCanvas layers={[...baseLayers, ...ar.deckLayers, ...refLayers]}>
+        {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} />}
       </MapCanvas>
       <Inspector
         layer={s.selectedLayer}

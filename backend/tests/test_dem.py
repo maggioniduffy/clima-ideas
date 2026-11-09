@@ -1,15 +1,14 @@
 import json
-from pathlib import Path
 
+import httpx
 import numpy as np
 import pytest
 import rasterio
 from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 
-from clima_nqn.io import dem
+from clima_nqn.io import dem, era5
 from clima_nqn.layers.manifest import LayerManifest
-from clima_nqn.stages.ar import geo
 
 
 def _tile(values: np.ndarray, west: float, north: float, nodata=-32767.0) -> MemoryFile:
@@ -44,25 +43,15 @@ def test_tiles_for_bbox_covers_edges():
     assert (-36, -72) not in tiles and (-42, -68) not in tiles
 
 
-def test_default_bbox_contains_the_band():
-    ring = geo.province_band_ring()
-    lon_min, lat_min, lon_max, lat_max = dem.NEUQUEN_BBOX
-    assert all(lon_min <= x <= lon_max and lat_min <= y <= lat_max for x, y in ring)
+def test_default_bbox_is_the_era5_rectangle():
+    north, west, south, east = era5.NEUQUEN_BOX
+    assert dem.NEUQUEN_BBOX == (west, south, east, north)
+    assert len(dem.tiles_for_bbox(dem.NEUQUEN_BBOX)) == 72
 
 
-def test_band_clip_keeps_5_km_outside_the_border_and_drops_20_km():
-    km = 1 / 110.574
-    lon, lat = -70.431, -36.129  # northern tip of the province outline
-    pts = np.array([[lon, lat + 5 * km, 2], [lon, lat + 20 * km, 3]], dtype=np.float32)
-    assert len(dem.clip_polygon(pts, geo.province_ring())) == 0
-    assert dem.clip_polygon(pts, geo.province_band_ring())[:, 2].tolist() == [2.0]
-
-
-def test_band_copies_are_identical():
-    web = (
-        Path(__file__).resolve().parents[2] / "web/public/geo/neuquen-province-buffer-10km.geojson"
-    )
-    assert web.read_bytes() == geo.BAND_FILE.read_bytes()
+def test_default_step_gives_an_integer_sample_count_per_tile_and_a_bounded_point_count():
+    assert round(1 / dem.DEFAULT_STEP) == 66 and abs(1 / dem.DEFAULT_STEP - 66) < 1e-9
+    assert 250_000 <= 72 * 66**2 <= 400_000
 
 
 def test_decimate_known_values_and_nodata_dropped():
@@ -114,6 +103,53 @@ def test_build_relief_from_tiles(tmp_path):
     )
     pts = np.fromfile(out, dtype="<f4").reshape(-1, 3)
     assert pts.shape == (16, 3) and set(pts[:, 2]) == {100.0}
+
+
+def test_build_relief_has_no_polygon_clip_by_default(tmp_path):
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    (raw / f"{dem.tile_name(-38, -70)}.tif").write_bytes(
+        _tile(np.full((20, 20), 100.0), -70.0, -37.0).read()
+    )
+    out = dem.build_relief(raw, tmp_path / "out", bbox=(-70.0, -38.0, -69.0, -37.0), step=0.25)
+    assert np.fromfile(out, dtype="<f4").reshape(-1, 3).shape == (16, 3)
+
+
+def test_build_relief_skips_tiles_marked_absent_but_rejects_other_missing_tiles(tmp_path):
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    (raw / f"{dem.tile_name(-38, -70)}.tif").write_bytes(
+        _tile(np.full((20, 20), 100.0), -70.0, -37.0).read()
+    )
+    bbox = (-71.0, -38.0, -69.0, -37.0)  # west neighbour tile (-38, -71) is not there
+    with pytest.raises(FileNotFoundError, match="missing tile"):
+        dem.build_relief(raw, tmp_path / "out", bbox=bbox, step=0.25)
+    (raw / f"{dem.tile_name(-38, -71)}.404").touch()
+    out = dem.build_relief(raw, tmp_path / "out", bbox=bbox, step=0.25)
+    assert np.fromfile(out, dtype="<f4").reshape(-1, 3).shape == (16, 3)
+
+
+def test_fetch_tiles_marks_404_tiles_and_does_not_retry_them(tmp_path, monkeypatch):
+    seen = []
+    tif = _tile(np.full((4, 4), 7.0), -70.0, -37.0).read()
+
+    def handler(request):
+        seen.append(request.url.path)
+        return (
+            httpx.Response(200, content=tif) if "W070" in request.url.path else httpx.Response(404)
+        )
+
+    real = httpx.Client
+    monkeypatch.setattr(
+        dem.httpx, "Client", lambda **kw: real(transport=httpx.MockTransport(handler), **kw)
+    )
+    bbox = (-71.0, -38.0, -69.0, -37.0)  # tiles W071 (404) and W070 (200)
+    paths = dem.fetch_tiles(bbox=bbox, dest=tmp_path)
+    assert [p.name for p in paths] == [f"{dem.tile_name(-38, -70)}.tif"]
+    assert (tmp_path / f"{dem.tile_name(-38, -71)}.404").exists()
+    n = len(seen)
+    assert [p.name for p in dem.fetch_tiles(bbox=bbox, dest=tmp_path)] == [paths[0].name]
+    assert len(seen) == n  # nothing requested again
 
 
 def test_clip_polygon_keeps_only_points_inside_ring():

@@ -12,7 +12,7 @@ test("relief layer appears, activates and renders as a point cloud without conso
 
   await page.getByTestId("layer-toggle-relief").check();
   await expect(item).toHaveAttribute("data-active", "true");
-  await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", "relief-relief");
+  await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /^relief-relief(,|$)/);
   await expect(page.getByTestId("inspector-source")).toHaveText("Relieve falso de prueba");
   await expect(page.getByTestId("inspector-period")).toHaveText("2021-01-01/2021-12-31");
 
