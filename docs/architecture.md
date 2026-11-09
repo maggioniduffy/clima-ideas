@@ -43,6 +43,14 @@ Cada paso es un comando CLI idempotente (`clima-nqn <stage> <step>`).
 Formatos: tablas en Parquet/GeoParquet; grillas en Zarr; frames para el visor en PNG o binario Float32.
 La UI toma fuente y período del manifiesto.
 
+`data/` no está en git. Las capas pesadas se construyen en Actions y se bajan a mano; sin ellas, el visor local
+queda vacío o, con `CLIMA_NQN_DATA=e2e/fixtures/processed`, muestra solo los 2 eventos sintéticos de los fixtures.
+Capa `ar-events` completa (433 eventos, ~37 MB), desde la corrida de `ar-catalog.yml`:
+
+```
+gh run download <run-id> -n ar-events-layer -D data/processed/ar-events
+```
+
 ## API
 
 `GET /health` · `GET /layers` · `GET /layers/{id}` · `GET /layers/{id}/data` · `GET /layers/{id}/frames/{t}` (binario Float32 del conjunto de frames `t`; en `ar-events`, `t` es el id del evento y el índice está en `frames/index.json`)

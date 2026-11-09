@@ -45,7 +45,8 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   centro-sur con umbral ≥ 35 mm/día (Valenzuela y Garreaud 2019).
 - F1.6 hecha y revisada en el visor con la capa real (2026-11-08): rampa secuencial de alto contraste en ambos temas,
   leyenda (satura en 1200 kg m-1 s-1), contorno provincial (Natural Earth 1:10m, dominio público), polígono de
-  cordillera y marcador de Neuquén capital; inspector sin scroll a 1400x820.
+  cordillera y marcador de Neuquén capital; inspector sin scroll a 1400x820. Capa completa en el visor local
+  (2026-11-08): artefacto `ar-events-layer` del run 42516927153, 433 eventos 1980–2025, todos con frames de IVT.
 - Hallazgo del visor: el polígono de cordillera (71,95–70 O) se sale al oeste del límite provincial, sobre Chile, en
   buena parte de la cordillera. Afecta F1.3/F1.4. Corregido: el polígono ahora es la provincia (Natural Earth 1:10m)
   recortada al oeste de 70° O (`backend/src/clima_nqn/stages/ar/geo/`, 88 celdas BARD contra 140 del rectángulo);
