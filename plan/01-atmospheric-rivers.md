@@ -84,4 +84,4 @@ Tras ver la capa completa (433 eventos) en el visor, costaba leer qué muestra. 
 
 - Pocos años por fase ENSO: informar n y no afirmar diferencias que el test no sostiene.
 
-- Umbral de "lluvia extrema" (p99 diario propuesto). Opus confirma tras F1.4.
+- Resuelto: el umbral de lluvia extrema es p99 diario (F1.4); p95 y por celda quedan como sensibilidad.

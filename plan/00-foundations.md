@@ -1,6 +1,6 @@
 # Fase 0 — Bases
 
-Estado: hecha (F0.2: CI verde en el PR #7, 2026-11-07) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
+Estado: hecha salvo F0.11 (F0.2: CI verde en el PR #7, 2026-11-07) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
 
 ## Objetivo
 
@@ -20,6 +20,7 @@ Repo listo para que cada etapa solo sume capas: pipeline, API y visor andando co
 | F0.8 | Investigación de acceso a datos (lista abajo) → `docs/research/data-access.md` | opencode | Cada ítem con estado, URL y licencia, o "sin verificar" |
 | F0.9 | Instalar TECA y correr BARD sobre un año de ERA5 | opencode (largo) | Log y máscara de salida, o el error exacto |
 | F0.10 | Índice ENSO compartido: ONI mensual (NOAA CPC) 1950–hoy y fase por mes (Niño ≥ +0,5, Niña ≤ −0,5, Neutro) en `backend/` como única fuente para todas las fases | Sonnet | Parquet + unit: umbrales y fase sobre una serie sintética |
+| F0.11 | Publicar en línea: `clima-nqn publish` sube `data/processed/` y un índice `layers.json` a Cloudflare R2; la web se despliega estática y los lee por `VITE_DATA_URL` (decisión del usuario, 2026-11-05). El usuario crea el bucket y las claves | Sonnet | Una capa de la fase 1 carga en la web publicada + unit del índice |
 
 ## F0.8: qué investigar
 

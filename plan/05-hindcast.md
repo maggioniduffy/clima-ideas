@@ -1,6 +1,6 @@
 # Fase 5 — Predicción retrospectiva
 
-Estado: pendiente · Depende de: 1, 3 · Refs: `docs/architecture.md`
+Estado: pendiente · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -13,11 +13,13 @@ CAPE, convergencia).
 
 ## Tareas
 
+Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de convección se suma al cerrar la fase 3.
+
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
 | F5.1 | Ingesta de pronósticos para las fechas de eventos y días de control | Sonnet escribe, opencode corre | Zarr por modelo y anticipación |
 | F5.2 | Verificación por días de anticipación, separada en ríos atmosféricos y convección | opencode analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
-| F5.3 | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet | Brier y PR-AUC en test temporal, no exactitud |
+| F5.3 | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet; advisor si hace falta (partición temporal) | Brier y PR-AUC en test temporal, no exactitud |
 | F5.4 | AIFS vs. IFS en los eventos neuquinos | opencode | Tabla por evento y anticipación |
 | F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
 | F5.6 | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |
@@ -30,4 +32,6 @@ convección casi no.
 
 ## Abierto
 
+- Licencia de GEFS sin verificar: confirmarla antes de F5.1.
+- F5.7 es la comprobación ENSO de esta fase: una tabla, sin más peso (ver `plan.md`, Rumbo 1).
 - Partición temporal estricta para evitar fuga entre entrenamiento y test.
