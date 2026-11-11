@@ -18,7 +18,7 @@ datos pasados y actuales --- entrenamiento ---> predicciones futuras ---> verifi
 | Horizonte | Qué se predice | Entradas | Baselines |
 |---|---|---|---|
 | Corto (1–10 días) | Día de riesgo (F5.3) y caudal diario (LSTM F2.5) | ECMWF open data y GEFS operativos, ERA5T, caudal reciente | Climatología del día, persistencia |
-| Estacional (1–6 meses) | Terciles de lluvia en cordillera, cantidad de ríos atmosféricos y caudal medio de la estación | ONI actual y pronosticado (F0.10, IRI/C3S), nieve y humedad de suelo ERA5-Land, caudal reciente | Climatología, persistencia, análogos de años con la misma fase ENSO |
+| Estacional (1–6 meses) | Terciles de lluvia en cordillera, cantidad de ríos atmosféricos y caudal medio de la estación | Nieve y humedad de suelo ERA5-Land y caudal reciente primero; ONI actual y pronosticado (F0.10, C3S) como una entrada más | Climatología, persistencia, análogos de años con la misma fase ENSO |
 
 ## Datos
 
@@ -27,10 +27,14 @@ emisión; nada posterior.
 
 ## Tareas
 
+Orden: F6.1 y F6.4 primero, con baselines solos (climatología, persistencia), para que el registro junte
+predicciones puntuadas antes del invierno de 2027; los modelos se suman cuando existan. F6.2 se hace solo si F2.7
+encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en baselines y se informa así.
+
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
 | F6.1 | Ingesta operativa idempotente de entradas actuales (ERA5T, ERA5-Land, ECMWF open data, GEFS, ONI, caudal) | Sonnet escribe, opencode corre | Una corrida trae el último día disponible + unit de idempotencia |
-| F6.2 | Modelo estacional (regresión logística y LightGBM) + baselines, validado según "Validación (F6.2)" | Sonnet implementa, opencode entrena | RPS y Brier por año de test vs. cada baseline + unit de particiones sin fuga |
+| F6.2 | Modelo estacional (regresión logística y LightGBM) + baselines, validado según "Validación (F6.2)" | Sonnet implementa, opencode entrena; advisor si hace falta | RPS y Brier por año de test vs. cada baseline + unit de particiones sin fuga |
 | F6.3 | Corrida de corto plazo: F5.3 y LSTM F2.5 alimentados con pronósticos operativos | Sonnet | Predicción emitida para hoy con incertidumbre |
 | F6.4 | Registro de predicciones congeladas: append-only con fecha de emisión, versión de modelo y hash de entradas | Sonnet | Unit: no se puede editar ni emitir con fecha pasada |
 | F6.5 | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, opencode corre | Tabla de skill por horizonte + unit de métricas |
@@ -66,6 +70,8 @@ lo que ya se observó.
 
 ## Abierto
 
+- Pronóstico ENSO: IRI ya no ofrece descarga de datos; queda C3S por CDS. Archivo histórico de pronósticos emitidos:
+  sin verificar.
 - Qué cuenta como "modelo bueno" (por ejemplo: skill > 0 vs. climatología con IC que excluya 0 tras N
   predicciones). Lo decide el usuario después de ver resultados.
 - Dónde corre la ingesta periódica (cron local o CI programado). Decide Opus en F6.1.
