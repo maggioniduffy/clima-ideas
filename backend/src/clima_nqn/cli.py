@@ -6,7 +6,7 @@ from typing import Annotated
 import typer
 
 from clima_nqn.api.app import DEFAULT_DATA_ROOT
-from clima_nqn.io import dem, era5, flow, forcing, snow
+from clima_nqn.io import camels_cl, dem, era5, flow, forcing, snow
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.layers import flood_stations
 from clima_nqn.publish import (
@@ -22,6 +22,8 @@ from clima_nqn.stages.ar import layer as ar_layer
 from clima_nqn.stages.flood import causes as flood_causes
 from clima_nqn.stages.flood import enso as flood_enso
 from clima_nqn.stages.flood import extremes as flood_extremes
+from clima_nqn.stages.flood import lstm as flood_lstm
+from clima_nqn.stages.flood import streamflow_eval
 
 app = typer.Typer(help="clima-nqn command line interface.")
 
@@ -231,6 +233,116 @@ def flow_forcing(
     if result["missing_t2m_years"]:
         years = ", ".join(str(y) for y in result["missing_t2m_years"])
         typer.echo(f"no temperature (NaN) for years: {years}; rerun once --t2m-dir has them")
+
+
+@flow_app.command("lstm-train")
+def flow_lstm_train(
+    run_name: Annotated[str, typer.Option(help="Run name: output goes to <out-dir>/<run-name>.")],
+    mode: Annotated[
+        str, typer.Option(help="sim: forcing only; forecast: + observed flow up to the issue day.")
+    ] = "sim",
+    split: Annotated[
+        str, typer.Option(help="default: test 2014-2025; alt: test 1980-1991 (hydrological years).")
+    ] = "default",
+    pretrain: Annotated[
+        bool,
+        typer.Option(
+            "--pretrain/--no-pretrain",
+            help="Pretrain on CAMELS-CL, then fine-tune on Neuquén (default), or train on Neuquén only.",
+        ),
+    ] = True,
+    seeds: Annotated[int, typer.Option(help="Ensemble size (seeds 0..N-1).")] = 5,
+    epochs: Annotated[
+        int, typer.Option(help="Epochs of the Neuquén stage (fine-tune, or the whole training).")
+    ] = 30,
+    pretrain_epochs: Annotated[int, typer.Option(help="Epochs of the CAMELS-CL stage.")] = 10,
+    samples_per_epoch: Annotated[
+        int, typer.Option(help="Windows sampled per epoch (caps the cost of pretraining).")
+    ] = 20000,
+    hidden: Annotated[int, typer.Option(help="LSTM hidden size.")] = 64,
+    seq_len: Annotated[int, typer.Option(help="Window (sim) or history (forecast) in days.")] = 365,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default: all in the forcing.")
+    ] = None,
+    forcing_path: Annotated[
+        Path, typer.Option("--forcing", help="Forcing Parquet (clima-nqn flow forcing).")
+    ] = forcing.DEFAULT_OUT,
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    camels_dir: Annotated[
+        Path, typer.Option(help="Directory with the CAMELS-CL zips (PANGAEA download).")
+    ] = camels_cl.DEFAULT_DIR,
+    camels_cache: Annotated[
+        Path, typer.Option(help="Tidy CAMELS-CL Parquet (built from the zips if missing).")
+    ] = camels_cl.DEFAULT_OUT,
+    out_dir: Annotated[Path, typer.Option(help="Runs directory.")] = flood_lstm.DEFAULT_RUNS_DIR,
+) -> None:
+    """Train the daily-streamflow LSTM (needs `uv sync --group ml`): CAMELS-CL pretraining + Neuquén (F2.5)."""
+    try:
+        flood_lstm.import_torch()
+    except flood_lstm.TorchMissing as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1) from e
+    cfg = flood_lstm.TrainConfig(
+        mode=mode, split=split, pretrain=pretrain, seeds=tuple(range(seeds)), epochs=epochs,
+        pretrain_epochs=pretrain_epochs, samples_per_epoch=samples_per_epoch, hidden=hidden,
+        seq_len=seq_len,
+    )  # fmt: skip
+    if mode not in ("sim", "forecast"):
+        raise typer.BadParameter("mode must be sim or forecast", param_hint="--mode")
+    if split not in flood_lstm.SPLITS:
+        raise typer.BadParameter(
+            f"split must be one of {sorted(flood_lstm.SPLITS)}", param_hint="--split"
+        )
+    try:
+        neuquen, info = flood_lstm.neuquen_basins(forcing_path, flow_dir, station)
+        camels = None
+        if pretrain:
+            table, attrs = camels_cl.load_camels(camels_dir, camels_cache)
+            ids = camels_cl.select_basins(table)
+            typer.echo(
+                f"CAMELS-CL: {len(ids)} of {table['gauge_id'].nunique()} basins with >= 10 years of flow"
+            )
+            camels = flood_lstm.camels_basins(table, attrs, ids)
+    except (FileNotFoundError, ValueError, KeyError) as e:
+        raise typer.BadParameter(str(e)) from e
+    run = flood_lstm.train_run(
+        neuquen, camels, cfg, info={"run_name": run_name, "neuquen": info}, progress=typer.echo
+    )
+    path = flood_lstm.save_run(run, out_dir / run_name)
+    typer.echo(f"run -> {path}")
+
+
+@flow_app.command("streamflow-eval")
+def flow_streamflow_eval(
+    run_name: Annotated[str, typer.Option(help="Run name (see flow lstm-train).")],
+    forcing_path: Annotated[
+        Path, typer.Option("--forcing", help="Forcing Parquet (clima-nqn flow forcing).")
+    ] = forcing.DEFAULT_OUT,
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    out_dir: Annotated[Path, typer.Option(help="Runs directory.")] = flood_lstm.DEFAULT_RUNS_DIR,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default: those of the run.")
+    ] = None,
+) -> None:
+    """Test-period NSE/KGE of the LSTM vs GR4J+CemaNeige and persistence; writes metrics.json (F2.5)."""
+    try:
+        flood_lstm.import_torch()
+    except flood_lstm.TorchMissing as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1) from e
+    try:
+        run = flood_lstm.load_run(out_dir / run_name)
+        ids = station or [int(i) for i in run.info.get("neuquen_basins", [])] or None
+        basins, _ = flood_lstm.neuquen_basins(forcing_path, flow_dir, ids)
+    except (FileNotFoundError, ValueError, KeyError) as e:
+        raise typer.BadParameter(str(e)) from e
+    cfg = run.config
+    metrics = streamflow_eval.evaluate(
+        basins, cfg.mode, cfg.split, hist=cfg.seq_len, lead=cfg.lead, run=run, progress=typer.echo
+    )
+    path = streamflow_eval.write_metrics(metrics, out_dir / run_name)
+    typer.echo(streamflow_eval.metrics_table(metrics))
+    typer.echo(f"metrics -> {path}")
 
 
 @flow_app.command("causes")

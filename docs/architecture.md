@@ -104,6 +104,16 @@ cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
   celdas con centro adentro. Escribe un Parquet largo (`data/flow/forcing.parquet`) con fuente, licencia, unidades y período en los metadatos, y
   `forcing.static.json` con área, elevación (GLO-30) y fracción sobre 2000 m. Los días son UTC y los de caudal locales (UTC−3), sin corregir. Omite
   los años ya guardados; sin `t2m` deja la temperatura y la PET en NaN, lista los años faltantes y un nuevo corrido con `--t2m-dir` los completa.
+- `flow lstm-train` (`--mode sim|forecast`, `--split default|alt`, `--pretrain/--no-pretrain`, `--seeds`, `--epochs`, `--pretrain-epochs`, `--samples-per-epoch`, `--hidden`, `--seq-len`, `--station`, `--forcing`, `--flow-dir`, `--camels-dir`, `--camels-cache`, `--out-dir`, `--run-name`) entrena el LSTM de caudal diario (F2.5; PyTorch CPU,
+  grupo opcional `ml`: `uv sync --group ml`; CI y API no lo instalan, y sin torch el comando lo avisa). Preentrena con CAMELS-CL (PANGAEA, DOI 10.1594/PANGAEA.894885, CC-BY-4.0; zips en `data/raw/camels-cl/zip`,
+  forzante CR2MET con PET de Hargreaves, distinto del ERA5 de Neuquén; cuencas con ≥ 10 años de caudal válido) y ajusta en Neuquén con menor tasa de aprendizaje. Entradas: P, Tmedia, Tmin, Tmax, PET + log(área), elevación media y latitud;
+  objetivo en mm/d normalizado con las filas de entrenamiento; pérdida NSE* por cuenca (Kratzert et al. 2019). `sim` usa solo forzante (ventana de 365 días); `forecast` suma el caudal observado hasta el día de emisión
+  (más un canal de máscara) y lee los horizontes 1–7 con meteorología observada (ERA5), no un pronóstico operativo. Años hidrológicos (abril–marzo): `default` entrena 1980–2006, valida 2007–2013 y prueba 2014–2025; `alt` prueba 1980–1991,
+  valida 1992–1998 y entrena 1999–2025; las ventanas de entrenamiento y validación nunca incluyen días de prueba. Conjunto de semillas (mediana) y banda del 90 % desde los cuantiles 5/95 % del log((obs+ε)/(pred+ε)) de validación (ε = 0,01 mm/d).
+  Escribe `data/flow/lstm/<run-name>/` (pesos por semilla, `norm.json`, `quantiles.json`, `config.json`, `history.json`; archivos chicos).
+- `flow streamflow-eval` (`--run-name`, `--forcing`, `--flow-dir`, `--out-dir`, `--station`) compara en los años de prueba el LSTM con GR4J+CemaNeige (calibrado en los años de entrenamiento, 3 semillas, la mejor KGE) y, en `forecast`,
+  con persistencia: NSE/KGE por estación (y por horizonte 1–7), cobertura de la banda del 90 %, sensibilidad sin el año hidrológico 2023 y NSE del log(q + 0,01 × caudal medio de entrenamiento). Escribe `metrics.json` y `metrics.md` en la carpeta del run.
+  Los días de caudal son locales y los del forzante UTC, sin corregir; se excluyen los primeros 365 días de cada serie.
 - `flow causes` (`--flow-dir`, `--gev-dir`, `--catalog`, `--snow`, `--out`, `--report`, `--station`, `--n-perm`) etiqueta los máximos anuales por
   causa probable (río atmosférico del catálogo F1.3 en `[pico − 3, pico]` y lluvia sobre nieve), con la sensibilidad a la ventana
   `w = 0..7` frente a la línea base por azar (permutación); escribe `data/flow/causes.json` y `reports/02/F2.3.md`. Sin archivo de nieve
