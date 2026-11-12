@@ -31,7 +31,7 @@ export function buildFloodStationsLayer(
 ) {
   const max = Math.max(0, ...data.map((d) => d.value));
   const main = hex(tokens.brand.main);
-  const accent = hex(tokens.brand.accent);
+  const accent = hex(tokens[theme].accent);
   const outline = hex(theme === "dark" ? tokens.dark.text : tokens.brand.main);
   return new ScatterplotLayer<FloodStationFeature>({
     id: `points-${FLOOD_LAYER_ID}`,

@@ -1,13 +1,18 @@
 /** Mirrors tokens.css (docs/design.md); tokens.test.ts keeps them in sync. For deck.gl colors etc. */
 export const tokens = {
-  brand: { main: "#3E505B", accent: "#8EB8E5", secondary: "#A4AF69" },
+  brand: { main: "#3E505B", secondary: "#A4AF69" },
   light: {
-    bg: "#F5F2EA",
-    surface: "#ECE8DE",
-    raised: "#E2DDD1",
-    border: "#D3CDBF",
+    bg: "#F1EEE6",
+    surface: "#F9F7F2",
+    raised: "#EFECE4",
+    border: "#DDD8CD",
     text: "#2A343B",
-    "text-muted": "#6E7377",
+    "text-muted": "#5F6468",
+    ctrl: "#3E505B",
+    "on-ctrl": "#F5F2EA",
+    accent: "#8EB8E5",
+    water: "#3A6E8F",
+    casing: "#2A343B",
   },
   dark: {
     bg: "#16212A",
@@ -16,6 +21,11 @@ export const tokens = {
     border: "#3E505B",
     text: "#ECE7DC",
     "text-muted": "#A3AEB4",
+    ctrl: "#4D6372",
+    "on-ctrl": "#ECE7DC",
+    accent: "#FDDA0D",
+    water: "#7FA9C6",
+    casing: "#16212A",
   },
   /** IVT sequential ramp stops, low to high (evenly spaced over [0, IVT_SCALE_MAX]); `--ivt-0..5` in tokens.css. */
   ivtRamp: {
@@ -24,7 +34,7 @@ export const tokens = {
   },
   /** Monochrome slate relief ramp (mockup), far/low to peaks (elevations in RELIEF_STOPS_M); `--relief-0..3` in tokens.css. */
   reliefRamp: {
-    light: ["#C4CBCC", "#8B989E", "#4A5A64", "#1C262D"],
-    dark: ["#3A4852", "#76878F", "#BAC5CB", "#F6F1E6"],
+    light: ["#A7AEAF", "#77848A", "#4A5A64", "#2A343B"],
+    dark: ["#4E5F6A", "#7D8D96", "#B3BEC4", "#ECE7DC"],
   },
 } as const;

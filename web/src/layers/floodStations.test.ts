@@ -29,3 +29,10 @@ it("draws stations without depth test so the 3D relief does not hide them", () =
   const layer = buildFloodStationsLayer([], null, "light", () => undefined);
   expect(layer.props.parameters).toMatchObject({ depthCompare: "always" });
 });
+
+it("selected station uses the per-theme accent", () => {
+  const data = [{ id: "a", lon: -69, lat: -38, value: 100, regulated: false }];
+  const layer = buildFloodStationsLayer(data, "a", "dark", () => undefined);
+  const fill = layer.props.getFillColor as unknown as (d: (typeof data)[0]) => number[];
+  expect(fill(data[0]!)).toEqual([0xfd, 0xda, 0x0d, 255]);
+});
