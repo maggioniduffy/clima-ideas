@@ -26,9 +26,9 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 | T1 F2.1 | S2, S4, S5 | delegated (builder, model-roles override) | done | 16 tests green, full suite 172 passed; real fetch: 4 stations with data (L4) |
 | T2 F2.2 | S3, S4, S5 | delegated (builder, model-roles override) | done | 8 tests, suite 180 passed, verifier OK on 6 items (L5) |
 | T3 F2.4 | S4, S6 | delegated (builder, one unit backend+web, model-roles override) | done | backend 191 passed, web 109 passed, e2e 7 passed; real layer 436 KB (L7) |
-| T4 F2.7 | S4, S5, S7 | delegated (builder, model-roles override) | done; advisor consult on the verdict open | 10 tests, suite 204 passed, ruff clean; commit 4897562 (L10) |
-| T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | done | 27 tests, suite 231 passed, ruff clean; real run 114 floods (L13) |
-| T6 F2.7 addendum | S4, S7, L12 | delegated (builder), after T5 (shared cli.py) | pending | |
+| T4 F2.7 | S4, S5, S7 | delegated (builder, model-roles override) | done; advisor consult closed (L11) | 10 tests, suite 204 passed, ruff clean; commit 4897562 (L10) |
+| T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | done | 27 tests, suite 231 passed, ruff clean; real run 114 floods; commit 1f58dd1 (L13) |
+| T6 F2.7 addendum | S4, S7, L12 | delegated (builder), after T5 (shared cli.py) | done | 19 tests in file, suite 240 passed, ruff clean; commit 31fe8dc (L14) |
 
 ## Log
 
@@ -107,3 +107,10 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   not rain on snow. Snow: ERA5 0.25° `snow_depth` from ARCO, 114 windows, 83 KB, downloaded in about 1 minute.
   Builder's additions: floods need peak − 7 d inside the catalog; short record = fewer than 30 complete years.
   Open: upstream boxes and ERA5 snow not checked against observations; flow days are UTC−3 and the catalog is UTC.
+- L14 (2026-11-12) T6 result: (a) permutation p of the primary LRT 0.0011 at 12010 and 0.0207 at 12004; (b) January–March ONI:
+  12010 mu1 = −15.9, permutation p 0.559; 12004 mu1 = −69.7, p 0.367; correlation with the April–September ONI 0.35 and 0.36;
+  (c) with a linear trend mu1 = 190.9 (p 0.0016) at 12010 and 408.5 (p 0.032) at 12004; on 1953–2009, 204.8 (p 0.0038) and
+  472.3 (p 0.040). Verdict unchanged ("señal"); gate for F6.2: does not pass. Differential check against 4897562: pre-existing
+  JSON keys identical. Not verified: the permutation refits use a lighter optimiser than the main fit (agreement checked on the
+  observed statistics and one synthetic case only). Whether F6.2 is dropped, run without ENSO, or kept is the user's decision.
+  Next: F2.5 (LSTM) and F2.6. User (2026-11-12): "i'm leaving so don't ask for confirmation, when you are done open the PR".
