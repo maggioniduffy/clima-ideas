@@ -433,6 +433,10 @@ def publish_cmd(
 ) -> None:
     """Upload layers and the layers.json index to Cloudflare R2 (reads R2_* env vars)."""
     data_root = Path(root or os.environ.get("CLIMA_NQN_DATA") or DEFAULT_DATA_ROOT)
+    # A missing root would publish an empty layers.json over the live catalog.
+    if not data_root.is_dir():
+        typer.echo(f"data root not found: {data_root}", err=True)
+        raise typer.Exit(1)
     if dry_run:
         uploads = plan_uploads(data_root, prefix)
         for u in uploads:

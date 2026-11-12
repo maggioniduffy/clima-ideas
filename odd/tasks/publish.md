@@ -37,3 +37,4 @@ reads them through `VITE_DATA_URL`. Branch: `fm/f0-11-publish`. Delivery: ask-on
   suggested `AllowedOrigins: ["*"]` (public read-only data). Public r2.dev URL still pending.
 - L5 (2026-11-12, user): public URL `https://pub-89e22e4a31da4ba2bde9dd24522147a9.r2.dev` → `VITE_DATA_URL` in Vercel.
 - L6: verifier (item 5): S1–S4 pass, no defects; every web fetch maps to an uploaded key (433 frames, 4 stations, relief). Static build with VITE_DATA_URL ok. Pending: T4 upload and check on the published site.
+- L7 (2026-11-12, user): "vercel no lo voy a configurar por ahora". The published-site check (S1) waits; meanwhile verify the local web against R2 (`VITE_DATA_URL`, API off).

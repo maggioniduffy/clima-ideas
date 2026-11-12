@@ -53,17 +53,49 @@ def index_json(index: list[LayerManifest]) -> bytes:
     return json.dumps([m.model_dump(mode="json") for m in index]).encode("utf-8")
 
 
+def _layer_files(root: Path, m: LayerManifest) -> list[str]:
+    """Relative paths to upload for one layer: listed files plus frames (same rule as the API)."""
+    folder = root / m.id
+    rels = list(m.files)
+    if FRAMES_INDEX in m.files:
+        rels += [
+            f"frames/{p.name}"
+            for p in sorted((folder / "frames").glob("*.bin"))
+            if _FRAME_ID.fullmatch(p.stem)
+        ]
+    return list(dict.fromkeys(rels))
+
+
 def build_index(root: Path) -> list[LayerManifest]:
-    return discover_layers(root)
+    """Valid layers whose listed files all exist; incomplete layers are logged and left out."""
+    root = Path(root)
+    if not root.is_dir():
+        raise FileNotFoundError(f"data root not found: {root}")
+    index = []
+    for m in discover_layers(root):
+        missing = [f for f in m.files if not (root / m.id / f).is_file()]
+        if missing:
+            logger.warning("layer %s skipped: listed files missing: %s", m.id, ", ".join(missing))
+            continue
+        index.append(m)
+    return index
 
 
 def plan_uploads(root: Path, prefix: str = "") -> list[Upload]:
+    """Upload order: each layer's data, then its manifest; `layers.json` last.
+
+    A failed run then never exposes a manifest or index entry whose objects are not uploaded yet.
+    """
     root = Path(root)
     pre = prefix.strip("/") + "/" if prefix.strip("/") else ""
     index = build_index(root)
-    uploads = [Upload(pre + INDEX_NAME, "application/json", INDEX_CACHE, data=index_json(index))]
+    uploads: list[Upload] = []
     for m in index:
         folder = root / m.id
+        for rel in _layer_files(root, m):
+            uploads.append(
+                Upload(f"{pre}{m.id}/{rel}", content_type(rel), DATA_CACHE, path=folder / rel)
+            )
         uploads.append(
             Upload(
                 f"{pre}{m.id}/{MANIFEST_NAME}",
@@ -72,26 +104,9 @@ def plan_uploads(root: Path, prefix: str = "") -> list[Upload]:
                 path=folder / MANIFEST_NAME,
             )
         )
-        rels = list(m.files)
-        for f in m.files:
-            if not (folder / f).is_file():
-                logger.warning("layer %s lists missing file %s; skipped", m.id, f)
-        if FRAMES_INDEX in m.files:
-            rels += [
-                f"frames/{p.name}"
-                for p in sorted((folder / "frames").glob("*.bin"))
-                if _FRAME_ID.fullmatch(p.stem)
-            ]
-        for rel in dict.fromkeys(rels):
-            if (folder / rel).is_file():
-                uploads.append(
-                    Upload(
-                        f"{pre}{m.id}/{rel}",
-                        content_type(rel),
-                        DATA_CACHE,
-                        path=folder / rel,
-                    )
-                )
+    uploads.append(
+        Upload(pre + INDEX_NAME, "application/json", INDEX_CACHE, data=index_json(index))
+    )
     return uploads
 
 
@@ -119,8 +134,6 @@ def publish_layers(root: Path, client: Any, bucket: str, prefix: str = "") -> tu
     """Upload every planned object; returns (objects, total bytes)."""
     total = 0
     uploads = plan_uploads(root, prefix)
-    # The index goes last so a failed run never lists layers whose files are not uploaded yet.
-    uploads = uploads[1:] + uploads[:1]
     for u in uploads:
         body = u.body
         client.put_object(
