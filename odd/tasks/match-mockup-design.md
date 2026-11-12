@@ -44,7 +44,7 @@ Design source: https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y, artboards unde
 - [x] T2 Shell layout and collapsible handles — S5, S10, S11, S13 — route: delegated — commit:
 - [x] T3 Cards and controls — S3, S4, S6, S7, S8, S9 (chrome), S13 — route: delegated — commit:
 - [x] T4 Map colors — S9 (deck.gl) — route: delegated — commit:
-- [ ] T5 Verify: e2e and browser comparison against the artboards, light and dark, 1440×900 and phone width — route: inline
+- [x] T5 Verify: e2e and browser comparison against the artboards, light and dark, 1440×900 and phone width — route: inline
 
 ## Log
 
@@ -54,3 +54,4 @@ Design source: https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y, artboards unde
 - L4 (2026-11-12) User, on the plan's drag handles: "Keep them, and make them able to hide completely what they drag". On docs/design.md: "Update it to this design".
 - L5 (2026-11-12) Forecast is above 400 changed lines; tasks are sequential because they share `shell.css`.
 - L6 (2026-11-12) T2 done: unit 148 pass, shell e2e 4 pass. Open for T3: `e2e/ar-events.spec.ts:154` (inspector must not overflow its card in the row), card-row label still local in `Shell.tsx` (move to `i18n/es.ts`).
+- L7 (2026-11-12) T3 44cba6a, T4 c0a7301. Verified: unit 160 pass, typecheck and lint clean, e2e 10 pass; screenshots light and dark at 1440x900 and 390 wide reviewed against the artboards. Known gaps: inspector card scrolls with an AR event at the default row height; legend ticks "900" and "≥1200" touch at 390 px; no rivers layer yet so `--water` is unused; prev/next step replay hours, not events; RED not observed for T3 and T4 tests.
