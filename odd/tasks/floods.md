@@ -16,7 +16,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 - S7 (F2.7) "Máximos anuales y caudal estacional por fase ENSO; GEV con ONI como covariable vs. estacionaria. Su resultado decide si se hace el modelo estacional F6.2" — "Comparación por verosimilitud + unit con GEV sintética dependiente de covariable".
   Fixed before looking at results (assumption, Opus): primary covariate = mean ONI of AMJJAS of the hydrological year, location `mu = mu0 + mu1·ONI`; one alternate (ONI of the peak's season) as sensitivity; all p-values BH-adjusted together. Stations 12004 and 12010; 12012 reported and flagged unreliable.
 - S8 (F2.3) "Etiquetar crecidas mayores con el catálogo F1.3 y lluvia sobre nieve" — "Tabla de crecidas con causa probable + sensibilidad a la ventana de días entre río atmosférico y pico".
-  Approved scope (plan of 2026-11-12): floods = annual maxima of complete years inside the catalog period; AR label = catalog event active in `[peak − w, peak]`, primary `w = 3`, sensitivity `w = 0..7`; chance-coincidence baseline by permutation; rain on snow checked against downloaded snow (L9): snow water equivalent before the peak and its change over the window, over an approximate upstream area per station; label "lluvia sobre nieve probable" only with snow present, an AR in the window and the 0 °C isotherm above the snow. Source is ERA5 `snow_depth`/`snowmelt` at 0.25° from the anonymous ARCO store, not ERA5-Land (no CDS key on this machine); the report must say so, and the upstream areas are "sin verificar".
+  Approved scope (plan of 2026-11-12): floods = annual maxima of complete years inside the catalog period; AR label = catalog event active in `[peak − w, peak]`, primary `w = 3`, sensitivity `w = 0..7`; chance-coincidence baseline by permutation; rain on snow checked against downloaded snow (L9): snow water equivalent before the peak and its change over the window, over an approximate upstream area per station; rule fixed before the run (assumption, Opus): "lluvia sobre nieve probable" = AR in the window + snow-covered fraction of the area ≥ 0.2 (cells with ≥ 10 mm w.e.) at the window start + area-mean snow water equivalent lower at the peak than at the window start; the event's 0 °C isotherm is reported next to it, not thresholded. Other labels: "río atmosférico", "deshielo sin río atmosférico" (same snow conditions, no AR), "sin causa identificada". Source is ERA5 `snow_depth`/`snowmelt` at 0.25° from the anonymous ARCO store, not ERA5-Land (no CDS key on this machine); the report must say so, and the upstream areas are "sin verificar".
 
 ## Tasks
 
@@ -26,8 +26,9 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 | T1 F2.1 | S2, S4, S5 | delegated (builder, model-roles override) | done | 16 tests green, full suite 172 passed; real fetch: 4 stations with data (L4) |
 | T2 F2.2 | S3, S4, S5 | delegated (builder, model-roles override) | done | 8 tests, suite 180 passed, verifier OK on 6 items (L5) |
 | T3 F2.4 | S4, S6 | delegated (builder, one unit backend+web, model-roles override) | done | backend 191 passed, web 109 passed, e2e 7 passed; real layer 436 KB (L7) |
-| T4 F2.7 | S4, S5, S7 | delegated (builder, model-roles override) | pending | |
+| T4 F2.7 | S4, S5, S7 | delegated (builder, model-roles override) | done; advisor consult on the verdict open | 10 tests, suite 204 passed, ruff clean; commit 4897562 (L10) |
 | T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | pending | |
+| T6 F2.7 addendum | S4, S7, L12 | delegated (builder), after T5 (shared cli.py) | pending | |
 
 ## Log
 
@@ -77,3 +78,25 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   exists on this machine (`~/.cdsapirc` missing) and the agent does not create or enter credentials. Decision (Opus): use ERA5
   `snow_depth` and `snowmelt` (m w.e., 0.25°) from the public ARCO-ERA5 store already used by `io/era5.py` (variables confirmed
   present), only for the flood windows. ERA5-Land (0.1°) stays in "Abierto" as a refinement that needs the user's CDS key.
+- L10 (2026-11-12) T4 result (`reports/02/F2.7.md`): rule gives "señal" on one test: 12010 primary LRT chi2 9.95, BH p 0.019, mu1 = 191 m3/s
+  per ONI unit; 12004 BH p 0.082; no phase test under 0.05 after BH. 12004 uses 75 years (ONI starts in 1950), stationary xi 0.316
+  (0.336 with the 80 years of F2.2). Builder's choices: seasonal flow = April–September mean; phase by ±0.5 on the AMJJAS mean without
+  persistence rule. The covariate is concurrent with the flood season, so this is association, not forecast skill.
+- L11 (2026-11-12) Advisor consult (general read-only agent under `.claude/agents/advisor.md`; the `advisor` type was not
+  registered in this session). Question: record "señal" as is, and what before it opens F6.2? Recommendation: keep the rule's
+  outcome verbatim, add a reading line ("señal débil, concurrente, sostenida por una estación": 12010 is nested in 12004, the
+  covariate overlaps the flood season, no phase test passes), run a declared post-hoc robustness addendum that cannot change the
+  verdict, and gate F6.2 on a lagged-ONI check. F1.8 is compatible (it tested AR counts, 1980–2025), but leaves the mechanism
+  unexplained: "sin verificar". Decision (Opus): adopted. Whether a single-station signal justifies F6.2 effort, and any rewording
+  of "Rumbo" point 1, stay with the user.
+  Pre-specification, stated honestly: the threshold "BH p < 0.05 at 12004 or 12010" was fixed in the builder handoff before the
+  run, not in S7 and not in a commit; the report must say so.
+- L12 (2026-11-12) T6 addendum spec, written before running it. Label in the report: "posterior al resultado, no cambia el
+  veredicto". Exactly three checks, stations 12004 and 12010, no others added afterwards:
+  (a) permutation p of the primary LRT (shuffle ONI across years, 10 000, fixed seed);
+  (b) lagged covariate: mean ONI of JFM before the hydrological year starts (known on 1 April), LRT with chi-square and
+      permutation p, plus its correlation with the April–September ONI;
+  (c) trend control: mu = mu0 + mu1·ONI + mu2·year against mu = mu0 + mu2·year, and the primary model on 1953–2009 only.
+  F6.2 gate, fixed now: lagged LRT at 12010 with permutation p < 0.05 and mu1 of the same sign as the primary. If it fails,
+  F6.2 runs without ENSO or stays in baselines. Also report the non-stationary xi (it falls to about 0.01 at 12010) next to
+  the Wald interval, as a warning on that interval.
