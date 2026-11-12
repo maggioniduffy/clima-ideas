@@ -98,6 +98,12 @@ cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
   el agua equivalente de nieve de ERA5 (`snow_depth`, 0,25°; no es ERA5-Land) a las 00 UTC de `[pico − 8, pico + 1]` de cada crecida
   dentro del período del catálogo, recortada a un rectángulo aproximado aguas arriba (sin verificar); escribe un Parquet
   (`data/raw/era5/snow-floods/snow-floods.parquet`), omite las ventanas ya guardadas y reintenta lecturas fallidas.
+- `flow forcing` (`--era5-dir`, `--t2m-dir`, `--t2m-run-id`, `--dem-dir`, `--out`, `--station`) calcula, desde los Zarr locales de ERA5, el forzante
+  diario (UTC) por cuenca para GR4J y el LSTM (F2.5): precipitación (`tp`, suma de D 01:00 a D+1 00:00), nivel de 0 °C, temperatura media,
+  mínima y máxima (`t2m`) y PET de Oudin et al. (2005); promedio del rectángulo aproximado aguas arriba (sin verificar) ponderado por cos(lat) sobre las
+  celdas con centro adentro. Escribe un Parquet largo (`data/flow/forcing.parquet`) con fuente, licencia, unidades y período en los metadatos, y
+  `forcing.static.json` con área, elevación (GLO-30) y fracción sobre 2000 m. Los días son UTC y los de caudal locales (UTC−3), sin corregir. Omite
+  los años ya guardados; sin `t2m` deja la temperatura y la PET en NaN, lista los años faltantes y un nuevo corrido con `--t2m-dir` los completa.
 - `flow causes` (`--flow-dir`, `--gev-dir`, `--catalog`, `--snow`, `--out`, `--report`, `--station`, `--n-perm`) etiqueta los máximos anuales por
   causa probable (río atmosférico del catálogo F1.3 en `[pico − 3, pico]` y lluvia sobre nieve), con la sensibilidad a la ventana
   `w = 0..7` frente a la línea base por azar (permutación); escribe `data/flow/causes.json` y `reports/02/F2.3.md`. Sin archivo de nieve

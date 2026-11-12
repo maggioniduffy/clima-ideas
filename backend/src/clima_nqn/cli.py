@@ -6,7 +6,7 @@ from typing import Annotated
 import typer
 
 from clima_nqn.api.app import DEFAULT_DATA_ROOT
-from clima_nqn.io import dem, era5, flow, snow
+from clima_nqn.io import dem, era5, flow, forcing, snow
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.layers import flood_stations
 from clima_nqn.publish import (
@@ -187,6 +187,50 @@ def flow_snow_fetch(
         windows, out, workers=workers, retries=retries, retry_wait=retry_wait, progress=typer.echo
     )
     typer.echo(f"snow -> {path}")
+
+
+@flow_app.command("forcing")
+def flow_forcing(
+    era5_dir: Annotated[
+        Path, typer.Option(help="Per-year ERA5 Zarr stores with tp and deg0l (era5 fetch).")
+    ] = forcing.DEFAULT_ERA5_DIR,
+    t2m_dir: Annotated[
+        Path,
+        typer.Option(
+            help="Per-year ERA5 Zarr stores with t2m (era5 fetch --variables 2m_temperature). "
+            "Missing years leave the temperature and PET columns NaN; rerun to fill them."
+        ),
+    ] = forcing.DEFAULT_T2M_DIR,
+    t2m_run_id: Annotated[
+        str | None, typer.Option(help="Workflow run id of the t2m download, recorded as source.")
+    ] = None,
+    dem_dir: Annotated[
+        Path, typer.Option(help="GLO-30 tiles for the static elevation attributes.")
+    ] = dem.RAW_DIR,
+    out: Annotated[Path, typer.Option(help="Output Parquet (static JSON goes next to it).")] = (
+        forcing.DEFAULT_OUT
+    ),
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default 12004, 12010, 12012.")
+    ] = None,
+) -> None:
+    """Daily ERA5 forcing (P, freezing level, T, PET) per upstream basin for the flow models (F2.5)."""
+    try:
+        chosen = flood_causes.validate_stations(station)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    try:
+        result = forcing.build_forcing(
+            era5_dir, out, t2m_dir, t2m_run_id, stations=chosen, progress=typer.echo
+        )
+    except (FileNotFoundError, ValueError) as e:
+        raise typer.BadParameter(str(e)) from e
+    static = forcing.build_static(out, dem_dir, stations=chosen)
+    typer.echo(f"forcing -> {result['path']}")
+    typer.echo(f"static -> {static}")
+    if result["missing_t2m_years"]:
+        years = ", ".join(str(y) for y in result["missing_t2m_years"])
+        typer.echo(f"no temperature (NaN) for years: {years}; rerun once --t2m-dir has them")
 
 
 @flow_app.command("causes")
