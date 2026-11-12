@@ -11,6 +11,7 @@ from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.ar import enso as ar_enso
 from clima_nqn.stages.ar import extremes as ar_extremes
 from clima_nqn.stages.ar import layer as ar_layer
+from clima_nqn.stages.flood import enso as flood_enso
 from clima_nqn.stages.flood import extremes as flood_extremes
 
 app = typer.Typer(help="clima-nqn command line interface.")
@@ -110,6 +111,34 @@ def flow_gev(
     """Annual maxima and GEV return levels with 95 % CI (pyextremes) per natural station."""
     results = flood_extremes.run(flow_dir, out, report, stations=station)
     typer.echo(f"{len(results)} stations -> {out}; report -> {report}")
+
+
+@flow_app.command("enso")
+def flow_enso(
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    enso: Annotated[Path, typer.Option(help="ENSO Parquet (clima-nqn enso fetch).")] = DEFAULT_PATH,
+    out: Annotated[Path, typer.Option(help="Output JSON.")] = flood_enso.OUT_PATH,
+    report: Annotated[Path, typer.Option(help="Report path.")] = flood_enso.REPORT_PATH,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default 12004, 12010, 12012.")
+    ] = None,
+    analysis_station: Annotated[
+        list[int] | None,
+        typer.Option(
+            help="Station that counts for the F6.2 verdict (repeatable); default 12004, 12010. Others are flagged unreliable."
+        ),
+    ] = None,
+    n_perm: Annotated[int, typer.Option(help="Permutations per phase test.")] = flood_enso.N_PERM,
+) -> None:
+    """Flow by ENSO phase and GEV with ONI covariate vs. stationary, BH-adjusted (F2.7)."""
+    if not enso.exists():
+        raise typer.BadParameter(f"ENSO table not found: {enso} (run clima-nqn enso fetch)")
+    res = flood_enso.run(
+        flow_dir, enso, out, report, stations=station,
+        analysis=tuple(analysis_station or flood_enso.ANALYSIS_STATIONS), n_perm=n_perm,
+    )  # fmt: skip
+    typer.echo(f"{len(res['stations'])} stations; verdict F6.2: {res['meta']['verdict']}")
+    typer.echo(f"-> {out}, {report}")
 
 
 @flow_app.command("layer")

@@ -13,6 +13,10 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 - S4 (rule, CLAUDE.md) "Nada inventado: lo no verificado se marca \"sin verificar\"; todo dato modelado muestra fuente y período."
 - S5 (assumption) Hydrological year and complete-year rule (≥ 330 valid days) fixed after seeing the data in T0.
 - S6 (F2.4) "Capa: estaciones + panel de período de retorno y serie" — "e2e: elegir estación, ver curva y crecidas". User: "Sí, hacer F2.4" and "levanta localhost para ver esta fase visualmente".
+- S7 (F2.7) "Máximos anuales y caudal estacional por fase ENSO; GEV con ONI como covariable vs. estacionaria. Su resultado decide si se hace el modelo estacional F6.2" — "Comparación por verosimilitud + unit con GEV sintética dependiente de covariable".
+  Fixed before looking at results (assumption, Opus): primary covariate = mean ONI of AMJJAS of the hydrological year, location `mu = mu0 + mu1·ONI`; one alternate (ONI of the peak's season) as sensitivity; all p-values BH-adjusted together. Stations 12004 and 12010; 12012 reported and flagged unreliable.
+- S8 (F2.3) "Etiquetar crecidas mayores con el catálogo F1.3 y lluvia sobre nieve" — "Tabla de crecidas con causa probable + sensibilidad a la ventana de días entre río atmosférico y pico".
+  Approved scope (plan of 2026-11-12): floods = annual maxima of complete years inside the catalog period; AR label = catalog event active in `[peak − w, peak]`, primary `w = 3`, sensitivity `w = 0..7`; chance-coincidence baseline by permutation; rain on snow checked against downloaded snow (L9): snow water equivalent before the peak and its change over the window, over an approximate upstream area per station; label "lluvia sobre nieve probable" only with snow present, an AR in the window and the 0 °C isotherm above the snow. Source is ERA5 `snow_depth`/`snowmelt` at 0.25° from the anonymous ARCO store, not ERA5-Land (no CDS key on this machine); the report must say so, and the upstream areas are "sin verificar".
 
 ## Tasks
 
@@ -22,6 +26,8 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 | T1 F2.1 | S2, S4, S5 | delegated (builder, model-roles override) | done | 16 tests green, full suite 172 passed; real fetch: 4 stations with data (L4) |
 | T2 F2.2 | S3, S4, S5 | delegated (builder, model-roles override) | done | 8 tests, suite 180 passed, verifier OK on 6 items (L5) |
 | T3 F2.4 | S4, S6 | delegated (builder, one unit backend+web, model-roles override) | done | backend 191 passed, web 109 passed, e2e 7 passed; real layer 436 KB (L7) |
+| T4 F2.7 | S4, S5, S7 | delegated (builder, model-roles override) | pending | |
+| T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | pending | |
 
 ## Log
 
@@ -63,3 +69,11 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   Panel: return-period SVG (CI band only within stored T 2–100), daily series (max-per-bucket downsample), top floods.
   CodeRabbit review fixes on PR #30 committed separately (b0220c6): partial fetch keeps metadata, strict JSON, public scipy base.
   Light theme not checked visually by the builder.
+- L8 (2026-11-12) User: "Resume work in detached mode so I can turn the computer off and it will continue". Asked where to run
+  (data/ is git-ignored, 2.5 GB local): user chose "Stay local". Plan approved: F2.7 (T4) then F2.3 (T5) on branch
+  `fm/detached-mode-resume-f4572e`, one commit per task, push + PR at the end, no merge. Data read from the main checkout's
+  `data/` by absolute path. Not in this run: F2.5/F2.6, viewer changes, ERA5/ERA5-Land downloads, workflow dispatches.
+- L9 (2026-11-12) User, on the rain-on-snow gap of F2.3: "Yes, download". ERA5-Land is served by CDS with a personal key; none
+  exists on this machine (`~/.cdsapirc` missing) and the agent does not create or enter credentials. Decision (Opus): use ERA5
+  `snow_depth` and `snowmelt` (m w.e., 0.25°) from the public ARCO-ERA5 store already used by `io/era5.py` (variables confirmed
+  present), only for the flood windows. ERA5-Land (0.1°) stays in "Abierto" as a refinement that needs the user's CDS key.

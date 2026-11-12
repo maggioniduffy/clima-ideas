@@ -88,6 +88,9 @@ cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
   filas NaN), `data/flow/stations.json` y el informe `reports/02/F2.1.md`.
 - `flow gev` ajusta una GEV (`pyextremes`, MLE, IC 95 % por bootstrap) a los máximos anuales de las estaciones naturales
   (12004, 12010, 12012; 11803 queda fuera por regulada) y escribe `data/flow/gev/<id>.json` y `reports/02/F2.2.md`.
+- `flow enso` (`--flow-dir`, `--enso`, `--out`, `--report`, `--station`, `--analysis-station`, `--n-perm`) compara máximos anuales y caudal
+  abr–sep por fase de ENSO (permutación) y una GEV con ONI como covariable de la ubicación contra la estacionaria (LRT y AIC), con
+  valores p ajustados por BH; escribe `data/flow/enso.json` y `reports/02/F2.7.md` con el veredicto para F6.2. Necesita `enso fetch`.
 - Términos del SNIH (§7): citar al SIPH/SNIH como fuente, declarar la fecha de última actualización y no alterar el
   sentido original de los datos. El Parquet guarda fuente, URL y fecha de consulta en sus metadatos.
 
