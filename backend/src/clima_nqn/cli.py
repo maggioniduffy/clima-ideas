@@ -4,13 +4,15 @@ from typing import Annotated
 
 import typer
 
-from clima_nqn.io import dem, era5, flow
+from clima_nqn.io import dem, era5, flow, snow
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.layers import flood_stations
 from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.ar import enso as ar_enso
 from clima_nqn.stages.ar import extremes as ar_extremes
 from clima_nqn.stages.ar import layer as ar_layer
+from clima_nqn.stages.flood import causes as flood_causes
+from clima_nqn.stages.flood import enso as flood_enso
 from clima_nqn.stages.flood import extremes as flood_extremes
 
 app = typer.Typer(help="clima-nqn command line interface.")
@@ -110,6 +112,113 @@ def flow_gev(
     """Annual maxima and GEV return levels with 95 % CI (pyextremes) per natural station."""
     results = flood_extremes.run(flow_dir, out, report, stations=station)
     typer.echo(f"{len(results)} stations -> {out}; report -> {report}")
+
+
+@flow_app.command("enso")
+def flow_enso(
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    enso: Annotated[Path, typer.Option(help="ENSO Parquet (clima-nqn enso fetch).")] = DEFAULT_PATH,
+    out: Annotated[Path, typer.Option(help="Output JSON.")] = flood_enso.OUT_PATH,
+    report: Annotated[Path, typer.Option(help="Report path.")] = flood_enso.REPORT_PATH,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default 12004, 12010, 12012.")
+    ] = None,
+    analysis_station: Annotated[
+        list[int] | None,
+        typer.Option(
+            help="Station that counts for the F6.2 verdict (repeatable); default 12004, 12010. Others are flagged unreliable."
+        ),
+    ] = None,
+    n_perm: Annotated[int, typer.Option(help="Permutations per phase test.")] = flood_enso.N_PERM,
+    addendum: Annotated[
+        bool, typer.Option(help="Run the post-hoc robustness addendum (12004, 12010).")
+    ] = True,
+    addendum_n_perm: Annotated[
+        int, typer.Option(help="Permutations per addendum permutation test.")
+    ] = flood_enso.N_PERM,
+) -> None:
+    """Flow by ENSO phase and GEV with ONI covariate vs. stationary, BH-adjusted (F2.7)."""
+    if not enso.exists():
+        raise typer.BadParameter(f"ENSO table not found: {enso} (run clima-nqn enso fetch)")
+    res = flood_enso.run(
+        flow_dir, enso, out, report, stations=station,
+        analysis=tuple(analysis_station or flood_enso.ANALYSIS_STATIONS), n_perm=n_perm,
+        addendum=addendum, addendum_n_perm=addendum_n_perm,
+    )  # fmt: skip
+    typer.echo(f"{len(res['stations'])} stations; verdict F6.2: {res['meta']['verdict']}")
+    if "addendum" in res:
+        typer.echo(f"gate F6.2 (addendum): {res['addendum']['gate']['outcome']}")
+    typer.echo(f"-> {out}, {report}")
+
+
+@flow_app.command("snow-fetch")
+def flow_snow_fetch(
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    catalog: Annotated[
+        Path, typer.Option(help="AR event catalog (clima-nqn ar catalog).")
+    ] = flood_causes.DEFAULT_CATALOG,
+    out: Annotated[Path, typer.Option(help="Output Parquet.")] = snow.DEFAULT_OUT,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default 12004, 12010, 12012.")
+    ] = None,
+    workers: Annotated[int, typer.Option(help="Concurrent day reads.")] = 16,
+    retries: Annotated[int, typer.Option(help="Attempts per read.")] = 3,
+    retry_wait: Annotated[float, typer.Option(help="Seconds of linear backoff.")] = 30,
+) -> None:
+    """Download ERA5 snow water equivalent around the flood peaks (ARCO-ERA5, anonymous; F2.3)."""
+    if not catalog.is_file():
+        raise typer.BadParameter(f"AR catalog not found: {catalog}")
+    try:
+        flood_causes.validate_stations(station)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    _, period = flood_causes.load_catalog(catalog)
+    floods = flood_causes.collect_floods(flow_dir, station, period)
+    windows = [(sid, d) for sid, df in floods.items() for d in df["date"]]
+    path = snow.fetch_snow(
+        windows, out, workers=workers, retries=retries, retry_wait=retry_wait, progress=typer.echo
+    )
+    typer.echo(f"snow -> {path}")
+
+
+@flow_app.command("causes")
+def flow_causes(
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    gev_dir: Annotated[
+        Path, typer.Option(help="GEV JSON directory of F2.2.")
+    ] = flood_extremes.GEV_DIR,
+    catalog: Annotated[
+        Path, typer.Option(help="AR event catalog (clima-nqn ar catalog).")
+    ] = flood_causes.DEFAULT_CATALOG,
+    snow_path: Annotated[
+        Path, typer.Option("--snow", help="Snow Parquet (clima-nqn flow snow-fetch).")
+    ] = snow.DEFAULT_OUT,
+    out: Annotated[Path, typer.Option(help="Output JSON.")] = flood_causes.OUT_PATH,
+    report: Annotated[Path, typer.Option(help="Report path.")] = flood_causes.REPORT_PATH,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default 12004, 12010, 12012.")
+    ] = None,
+    n_perm: Annotated[
+        int, typer.Option(help="Draws of the chance baseline.")
+    ] = flood_causes.N_PERM,
+) -> None:
+    """Label the annual floods by probable cause: AR window, chance baseline and snow (F2.3)."""
+    if not catalog.is_file():
+        raise typer.BadParameter(f"AR catalog not found: {catalog} (run clima-nqn ar catalog)")
+    try:
+        flood_causes.validate_stations(station)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    if not snow_path.is_file():
+        typer.echo(
+            f"warning: no snow file {snow_path}; snow is 'sin dato' (run clima-nqn flow snow-fetch)"
+        )
+    res = flood_causes.run(
+        flow_dir, gev_dir, catalog, snow_path, out, report, stations=station, n_perm=n_perm
+    )
+    for s in res["stations"]:
+        typer.echo(f"{s['station_id']}: {s['n_floods']} floods, {s['label_counts']}")
+    typer.echo(f"-> {out}, {report}")
 
 
 @flow_app.command("layer")

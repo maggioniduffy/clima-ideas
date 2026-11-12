@@ -88,6 +88,18 @@ cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
   filas NaN), `data/flow/stations.json` y el informe `reports/02/F2.1.md`.
 - `flow gev` ajusta una GEV (`pyextremes`, MLE, IC 95 % por bootstrap) a los máximos anuales de las estaciones naturales
   (12004, 12010, 12012; 11803 queda fuera por regulada) y escribe `data/flow/gev/<id>.json` y `reports/02/F2.2.md`.
+- `flow enso` (`--flow-dir`, `--enso`, `--out`, `--report`, `--station`, `--analysis-station`, `--n-perm`, `--addendum/--no-addendum`, `--addendum-n-perm`) compara máximos anuales y caudal
+  abr–sep por fase de ENSO (permutación) y una GEV con ONI como covariable de la ubicación contra la estacionaria (LRT y AIC), con
+  valores p ajustados por BH; escribe `data/flow/enso.json` y `reports/02/F2.7.md` con el veredicto para F6.2 y una adenda de robustez posterior al resultado
+  (p de permutación, ONI rezagado JFM (un único valor trimestral, fechado en febrero), control de tendencia y 1953–2009; solo 12004 y 12010) que no cambia el veredicto. Necesita `enso fetch`.
+- `flow snow-fetch` (`--flow-dir`, `--catalog`, `--out`, `--station`, `--workers`, `--retries`, `--retry-wait`) baja de ARCO-ERA5 (anónimo)
+  el agua equivalente de nieve de ERA5 (`snow_depth`, 0,25°; no es ERA5-Land) a las 00 UTC de `[pico − 8, pico + 1]` de cada crecida
+  dentro del período del catálogo, recortada a un rectángulo aproximado aguas arriba (sin verificar); escribe un Parquet
+  (`data/raw/era5/snow-floods/snow-floods.parquet`), omite las ventanas ya guardadas y reintenta lecturas fallidas.
+- `flow causes` (`--flow-dir`, `--gev-dir`, `--catalog`, `--snow`, `--out`, `--report`, `--station`, `--n-perm`) etiqueta los máximos anuales por
+  causa probable (río atmosférico del catálogo F1.3 en `[pico − 3, pico]` y lluvia sobre nieve), con la sensibilidad a la ventana
+  `w = 0..7` frente a la línea base por azar (permutación); escribe `data/flow/causes.json` y `reports/02/F2.3.md`. Sin archivo de nieve
+  etiqueta solo por río atmosférico. Necesita el catálogo (`ar catalog`).
 - Términos del SNIH (§7): citar al SIPH/SNIH como fuente, declarar la fecha de última actualización y no alterar el
   sentido original de los datos. El Parquet guarda fuente, URL y fecha de consulta en sus metadatos.
 

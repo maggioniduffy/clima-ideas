@@ -10,7 +10,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 |---|---|---|---|---|
 | 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | hecha, salvo F0.11 (publicar en línea) |
 | 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | hecha (F1.7 solo 2023; 3 estudios de F1.5 sin verificar) |
-| 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | en curso (F2.1, F2.2, F2.4 hechas; siguen F2.3 y F2.7) |
+| 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | en curso (F2.1–F2.4 y F2.7 hechas; siguen F2.5 y F2.6; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa) |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | pendiente (lluvia horaria de estación sin verificar: F3.0) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | pendiente |
 | 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | pendiente |
