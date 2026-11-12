@@ -27,7 +27,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 | T2 F2.2 | S3, S4, S5 | delegated (builder, model-roles override) | done | 8 tests, suite 180 passed, verifier OK on 6 items (L5) |
 | T3 F2.4 | S4, S6 | delegated (builder, one unit backend+web, model-roles override) | done | backend 191 passed, web 109 passed, e2e 7 passed; real layer 436 KB (L7) |
 | T4 F2.7 | S4, S5, S7 | delegated (builder, model-roles override) | done; advisor consult on the verdict open | 10 tests, suite 204 passed, ruff clean; commit 4897562 (L10) |
-| T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | pending | |
+| T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | done | 27 tests, suite 231 passed, ruff clean; real run 114 floods (L13) |
 | T6 F2.7 addendum | S4, S7, L12 | delegated (builder), after T5 (shared cli.py) | pending | |
 
 ## Log
@@ -100,3 +100,10 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   F6.2 gate, fixed now: lagged LRT at 12010 with permutation p < 0.05 and mu1 of the same sign as the primary. If it fails,
   F6.2 runs without ENSO or stays in baselines. Also report the non-stationary xi (it falls to about 0.01 at 12010) next to
   the Wald interval, as a warning on that interval.
+- L13 (2026-11-12) T5 result (`reports/02/F2.3.md`): catalog 1980–2025, 433 events. Floods with an AR in [peak − 3, peak]:
+  12004 30/45 (66.7 %, chance 14.8 %), 12010 31/44 (70.5 %, 15.2 %), 12012 17/25 (68 %, 16.6 %); permutation p = 0.0001 (floor of
+  10 000 draws), not adjusted across windows or stations. Labels AR+snow / AR / snowmelt only / none: 12004 6/24/6/9, 12010 13/18/6/7,
+  12012 3/14/1/7. 2023-06-26 at 12004: AR-2023-008, snow water equivalent rose 61 → 76 mm over the window, so "río atmosférico",
+  not rain on snow. Snow: ERA5 0.25° `snow_depth` from ARCO, 114 windows, 83 KB, downloaded in about 1 minute.
+  Builder's additions: floods need peak − 7 d inside the catalog; short record = fewer than 30 complete years.
+  Open: upstream boxes and ERA5 snow not checked against observations; flow days are UTC−3 and the catalog is UTC.
