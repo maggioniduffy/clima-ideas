@@ -135,6 +135,87 @@ def test_unknown_station_has_no_box(tmp_path):
         )
 
 
+BOX_A = (-38.8, -36.2, -71.2, -70.0)
+BOX_B = (-38.0, -37.0, -71.0, -70.5)
+
+
+def _file_bytes(path):
+    return path.read_bytes()
+
+
+def test_metadata_round_trips_the_boxes_actually_used(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow(
+        [(12004, pd.Timestamp("2000-03-10"))], out, boxes={12004: BOX_B}, opener=Opener(), **KW
+    )
+    assert snow.read_metadata(out)["boxes"] == {12004: BOX_B}
+    df = pd.read_parquet(out)
+    assert df["lat"].between(BOX_B[0], BOX_B[1]).all()
+
+
+def test_same_boxes_resume_as_before(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow(
+        [(12004, pd.Timestamp("2000-03-10"))], out, boxes={12004: BOX_B}, opener=Opener(), **KW
+    )
+    snow.fetch_snow(
+        [(12004, pd.Timestamp("2000-03-10")), (12004, pd.Timestamp("2000-03-14"))],
+        out,
+        boxes={12004: BOX_B},
+        opener=Opener(),
+        **KW,
+    )
+    assert len(snow.stored_windows(out)) == 2
+
+
+def test_different_box_for_a_stored_station_is_refused_and_file_unchanged(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-10"))], out, opener=Opener(), **KW)
+    before = _file_bytes(out)
+    with pytest.raises(ValueError, match="12004") as exc:
+        snow.fetch_snow(
+            [(12004, pd.Timestamp("2000-03-14"))],
+            out,
+            boxes={12004: BOX_B},
+            opener=Opener(),
+            **KW,
+        )
+    assert "new output file" in str(exc.value)
+    assert _file_bytes(out) == before
+
+
+def test_new_station_with_other_boxes_can_be_appended(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-10"))], out, opener=Opener(), **KW)
+    snow.fetch_snow(
+        [(12012, pd.Timestamp("2000-03-12"))], out, boxes={12012: BOX_B}, opener=Opener(), **KW
+    )
+    stored = snow.read_metadata(out)["boxes"]
+    assert stored[12004] == snow.UPSTREAM_BOXES[12004] and stored[12012] == BOX_B
+
+
+def test_file_without_stored_boxes_is_refused_for_appending(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-10"))], out, opener=Opener(), **KW)
+    table = pq.read_table(out)
+    meta = {k: v for k, v in table.schema.metadata.items() if k != b"boxes"}
+    pq.write_table(table.replace_schema_metadata(meta), out)
+    assert "boxes" not in snow.read_metadata(out)
+    before = _file_bytes(out)
+    with pytest.raises(ValueError, match="unknown"):
+        snow.fetch_snow([(12004, pd.Timestamp("2000-03-14"))], out, opener=Opener(), **KW)
+    assert _file_bytes(out) == before
+
+
+def test_legacy_boxes_repr_is_still_read(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-10"))], out, opener=Opener(), **KW)
+    table = pq.read_table(out)
+    meta = {**table.schema.metadata, b"boxes": b"{12004: [-38.8, -36.2, -71.2, -70.0]}"}
+    pq.write_table(table.replace_schema_metadata(meta), out)
+    assert snow.read_metadata(out)["boxes"] == {12004: BOX_A}
+
+
 def test_flow_snow_fetch_help_lists_options():
     res = CliRunner().invoke(app, ["flow", "snow-fetch", "--help"], env=PLAIN)
     assert res.exit_code == 0

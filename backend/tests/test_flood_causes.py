@@ -363,6 +363,44 @@ def test_cli_causes_report_json_labels_and_statements(tmp_path):
     )
 
 
+def test_cli_causes_prints_the_snih_consultation_date_per_station(tmp_path):
+    flow_dir, gev_dir, catalog, _ = write_world(tmp_path)
+    res, out, report = run_causes(tmp_path, tmp_path / "none.parquet", flow_dir, gev_dir, catalog)
+    assert res.exit_code == 0, res.output
+    by_id = {s["station_id"]: s for s in json.loads(out.read_text())["stations"]}
+    assert all(s["fetched"] == "2026-11-09" for s in by_id.values())
+    assert by_id[12004]["period"].startswith("1985-04-01/")
+    text = report.read_text()
+    assert text.count("última consulta: 2026-11-09") == 2  # one per station
+    assert "Período con datos: 1985-04-01/" in text
+
+
+def test_cli_causes_station_without_an_upstream_box_is_a_clean_error_and_writes_nothing(tmp_path):
+    flow_dir, gev_dir, catalog, _ = write_world(tmp_path)
+    res, out, report = run_causes(
+        tmp_path,
+        tmp_path / "none.parquet",
+        flow_dir,
+        gev_dir,
+        catalog,
+        extra=("--station", "11803"),
+    )
+    assert res.exit_code != 0
+    assert "11803" in res.output and "12004" in res.output and "12010" in res.output
+    assert not out.exists() and not report.exists()
+
+
+def test_cli_snow_fetch_station_without_a_box_is_a_clean_error(tmp_path):
+    flow_dir, _, catalog, _ = write_world(tmp_path)
+    res = CliRunner().invoke(
+        app,
+        ["flow", "snow-fetch", "--flow-dir", str(flow_dir), "--catalog", str(catalog),
+         "--out", str(tmp_path / "s.parquet"), "--station", "11803"],
+    )  # fmt: skip
+    assert res.exit_code != 0 and "11803" in res.output
+    assert not (tmp_path / "s.parquet").exists()
+
+
 def test_cli_causes_missing_catalog_is_a_clean_error(tmp_path):
     flow_dir, gev_dir, _, _ = write_world(tmp_path)
     res, _, _ = run_causes(

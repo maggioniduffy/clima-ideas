@@ -15,6 +15,8 @@ run keeps what was read and a rerun continues.
 
 from __future__ import annotations
 
+import ast
+import json
 import time
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -47,6 +49,7 @@ UPSTREAM_BOXES: dict[int, tuple[float, float, float, float]] = {
 BOX_NOTE = "cuenca aproximada por un rectángulo, sin verificar"
 
 Window = tuple[int, pd.Timestamp]
+Box = tuple[float, float, float, float]
 
 
 def window_days(peak: pd.Timestamp) -> pd.DatetimeIndex:
@@ -90,7 +93,42 @@ def _write(df: pd.DataFrame, path: Path, meta: dict[str, str]) -> None:
     tmp.replace(path)
 
 
-def _meta(df: pd.DataFrame, units: str) -> dict[str, str]:
+def _parse_boxes(text: str) -> dict[int, Box]:
+    """Boxes stored in the file metadata (a dict literal; older files wrote it without quotes)."""
+    raw = ast.literal_eval(text)
+    return {int(k): tuple(float(x) for x in v) for k, v in raw.items()}
+
+
+def stored_boxes(path: Path | str) -> dict[int, Box] | None:
+    """Boxes recorded in the file, or ``None`` if it has none (they are unknown)."""
+    raw = (pq.read_schema(path).metadata or {}).get(b"boxes")
+    if raw is None:
+        return None
+    try:
+        return _parse_boxes(raw.decode())
+    except (ValueError, SyntaxError, TypeError, AttributeError):
+        return None
+
+
+def _check_boxes(
+    path: Path, pending: Iterable[Window], boxes: dict[int, Box], stored: dict[int, Box] | None
+) -> None:
+    """Refuse to append to a file whose box for a station differs from the requested one (or is unknown)."""
+    in_file = {s for s, _ in stored_windows(path)}
+    for sid in sorted({s for s, _ in pending} & in_file):
+        if stored is None or sid not in stored:
+            raise ValueError(
+                f"{path} has no stored box for station {sid} (unknown): it cannot be checked "
+                "against the requested one. Write to a new output file (--out)."
+            )
+        if tuple(stored[sid]) != tuple(boxes[sid]):
+            raise ValueError(
+                f"station {sid}: the box in {path} {list(stored[sid])} differs from the requested "
+                f"{list(boxes[sid])}. Write to a new output file (--out) instead of appending."
+            )
+
+
+def _meta(df: pd.DataFrame, units: str, boxes: dict[int, Box]) -> dict[str, str]:
     return {
         "title": "ERA5 snow water equivalent around flood peaks",
         "source": era5.SOURCE,
@@ -100,7 +138,7 @@ def _meta(df: pd.DataFrame, units: str) -> dict[str, str]:
         "grid": "0.25 degrees",
         "period": f"{df['date'].min():%Y-%m-%d} to {df['date'].max():%Y-%m-%d}",
         "window": f"[peak - {DAYS_BEFORE}, peak + {DAYS_AFTER}] days at 00 UTC",
-        "boxes": str({k: list(v) for k, v in UPSTREAM_BOXES.items()}),
+        "boxes": json.dumps({str(k): list(v) for k, v in sorted(boxes.items())}),
         "note": NOTE,
     }
 
@@ -131,6 +169,9 @@ def fetch_snow(
         raise KeyError(f"no upstream box for station(s) {sorted(unknown)}")
     done = stored_windows(out_path)
     pending = [w for w in wanted if w not in done]
+    stored = stored_boxes(out_path) if out_path.exists() else None
+    if pending and out_path.exists():
+        _check_boxes(out_path, pending, boxes, stored)
     skipped = len(wanted) - len(pending)
     progress(f"{len(wanted)} windows: {skipped} stored, {len(pending)} to read")
     if not pending:
@@ -181,7 +222,9 @@ def fetch_snow(
                 )
         frames.append(pd.concat(rows, ignore_index=True))
         full = pd.concat(frames, ignore_index=True)
-        _write(full, out_path, _meta(full, units))
+        used = {**(stored or {}), **{s: boxes[s] for s, _ in wanted}}
+        in_file = {int(s) for s in full["station_id"].unique()}
+        _write(full, out_path, _meta(full, units, {s: b for s, b in used.items() if s in in_file}))
         frames = [full]
         progress(
             f"{min(i + batch, len(pending))}/{len(pending)} windows, {time.monotonic() - started:.0f}s"
@@ -194,7 +237,12 @@ def read_snow(path: Path | str) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
-def read_metadata(path: Path | str) -> dict[str, str]:
+def read_metadata(path: Path | str) -> dict:
+    """Schema metadata as strings, plus ``boxes`` (``{station_id: box}``) when the file records them."""
     raw = pq.read_schema(path).metadata or {}
     keys = ("source", "license", "variable", "units", "grid", "period", "window", "note")
-    return {k: raw[k.encode()].decode() for k in keys if k.encode() in raw}
+    meta: dict = {k: raw[k.encode()].decode() for k in keys if k.encode() in raw}
+    boxes = stored_boxes(path)
+    if boxes is not None:
+        meta["boxes"] = boxes
+    return meta

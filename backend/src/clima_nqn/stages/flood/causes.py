@@ -118,6 +118,18 @@ def select_floods(
     return maxima[keep].reset_index(drop=True)
 
 
+def validate_stations(stations: Sequence[int] | None) -> list[int]:
+    """The requested stations (default: the natural ones); every one must have an upstream box."""
+    chosen = list(stations or DEFAULT_STATIONS)
+    missing = [s for s in chosen if s not in snow.UPSTREAM_BOXES]
+    if missing:
+        raise ValueError(
+            f"no upstream box for station(s) {missing}; stations with a box: "
+            f"{sorted(snow.UPSTREAM_BOXES)}"
+        )
+    return chosen
+
+
 def _station_meta(flow_dir: Path) -> dict[int, dict]:
     stations = json.loads((flow_dir / "stations.json").read_text(encoding="utf-8"))["stations"]
     return {s["id"]: s for s in stations}
@@ -132,7 +144,7 @@ def collect_floods(
     flow_dir = Path(flow_dir)
     meta = _station_meta(flow_dir)
     out = {}
-    for sid in stations or DEFAULT_STATIONS:
+    for sid in validate_stations(stations):
         df = flow.read_flow(flow_dir / f"{sid}.parquet")
         out[sid] = select_floods(df, meta[sid].get("hydro_year_start_month", 4), period)
     return out
@@ -266,6 +278,7 @@ def station_result(
     start_month = meta.get("hydro_year_start_month", 4)
     floods = select_floods(df, start_month, period)
     maxima, _ = extremes.annual_maxima(df, start_month)
+    valid = df.dropna(subset=["q_m3s"])
     fit, fit_src = _gev_fit(sid, df, meta, gev_dir)
     rows = []
     for f in floods.itertuples(index=False):
@@ -305,6 +318,10 @@ def station_result(
             )
         ),
         "box_note": snow.BOX_NOTE,
+        "source": df.attrs.get("source", flow.SOURCE),
+        "url": df.attrs.get("url", flow.SNIH_URL),
+        "fetched": df.attrs.get("fetched"),
+        "period": f"{valid['date'].min():%Y-%m-%d}/{valid['date'].max():%Y-%m-%d}",
         "n_years_complete": len(maxima),
         "n_floods": len(rows),
         "short_record": len(maxima) < SHORT_RECORD_YEARS,
@@ -392,6 +409,7 @@ def build_report(results: list[dict], meta: dict) -> str:
             f"## {r['station_id']} {r['name']} ({r['river']})",
             "",
             f"- Cuenca: {r['box_note']} ({r['box']['lat_south']} a {r['box']['lat_north']} lat, {r['box']['lon_west']} a {r['box']['lon_east']} lon).",
+            f"- Período con datos: {r['period']}; última consulta: {r['fetched']}.",
             f"- Crecidas dentro del catálogo: {r['n_floods']} (años completos del registro: {r['n_years_complete']}). Período de retorno: GEV {r['gev_source']}.",
         ]
         if r["short_record"]:
@@ -463,12 +481,13 @@ def run(
     seed: int = SEED,
 ) -> dict:
     """Label the floods and write the JSON and the Markdown report."""
+    chosen = validate_stations(stations)  # before any read or write
     flow_dir, gev_dir, snow_path = Path(flow_dir), Path(gev_dir), Path(snow_path)
     events, period = load_catalog(catalog)
     cells = snow.read_snow(snow_path) if snow_path.is_file() else None
     meta_all = _station_meta(flow_dir)
     results = []
-    for sid in stations or DEFAULT_STATIONS:
+    for sid in chosen:
         df = flow.read_flow(flow_dir / f"{sid}.parquet")
         results.append(
             station_result(

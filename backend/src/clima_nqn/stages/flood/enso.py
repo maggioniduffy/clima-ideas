@@ -22,6 +22,9 @@ Decisions fixed before looking at results (odd/tasks/floods.md, S7):
 - Verdict for F6.2: "señal" only if the primary-covariate LRT has BH-adjusted p < 0.05 at one of the
   analysis stations (12004, 12010); otherwise "sin señal". 12012 (short record) is computed but flagged
   as unreliable and does not enter the verdict.
+- Addendum covariate (L12, corrected after review): the single JFM ONI value, the three-month value dated
+  February (months January-March). The first run averaged the January-, February- and March-dated values,
+  which reach April; the gate rule did not change.
 """
 
 from __future__ import annotations
@@ -45,7 +48,9 @@ from clima_nqn.stages.flood import extremes
 
 ALPHA = 0.05
 AMJJAS = (4, 5, 6, 7, 8, 9)
-JFM = (1, 2, 3)
+JFM_MONTH = 2  # the ONI file dates each 3-month value by its central month: JFM is dated February
+MIN_YEARS = 10  # fewest complete years with ONI a station needs for any fit
+SHORT_RECORD_YEARS = 30  # fewer complete years than this -> short record (same threshold as F2.3)
 ANALYSIS_STATIONS = (12004, 12010)
 DEFAULT_STATIONS = extremes.DEFAULT_STATIONS
 N_PERM = 10000
@@ -61,7 +66,25 @@ METRICS = {
     "q_max": "Máximo anual (m³/s)",
     "q_mean_amjjas": "Caudal medio abr–sep (m³/s)",
 }
-UNRELIABLE_NOTE = "registro corto (unos 25 años completos): GEV con covariable poco confiable"
+NOT_IN_VERDICT_NOTE = "no entra en el veredicto (no figura entre las estaciones de análisis)"
+
+
+def unreliable_note(n_complete: int) -> str:
+    return (
+        f"registro corto ({n_complete} años completos, menos de {SHORT_RECORD_YEARS}): "
+        "GEV con covariable poco confiable"
+    )
+
+
+def rule_text(analysis: Sequence[int]) -> str:
+    """The verdict rule naming the analysis stations actually used."""
+    where = " o ".join(str(s) for s in analysis)
+    return (
+        f"señal solo si el LRT de la covariable primaria tiene p BH < 0,05 en {where}; "
+        "si no, sin señal"
+    )
+
+
 _BIG = 1e10  # penalty for parameters outside the GEV support
 
 
@@ -81,16 +104,11 @@ def hydro_covariate(enso: pd.DataFrame, year: int) -> float:
 
 
 def jfm_covariate(enso: pd.DataFrame, year: int) -> float:
-    """Mean monthly ONI of January-March of calendar ``year``: the months right before the hydrological
-    year ``year`` starts (known on 1 April). NaN if a month is missing."""
+    """The single JFM ONI value of calendar ``year``: the three-month value dated February (its underlying
+    months are January-March, all before 1 April, when the hydrological year ``year`` starts). NaN if missing."""
     by_month = enso.set_index(enso["date"].dt.to_period("M"))["oni"]
-    vals = []
-    for m in JFM:
-        key = pd.Period(year=year, month=m, freq="M")
-        if key not in by_month.index:
-            return math.nan
-        vals.append(float(by_month[key]))
-    return float(np.mean(vals))
+    key = pd.Period(year=year, month=JFM_MONTH, freq="M")
+    return float(by_month[key]) if key in by_month.index else math.nan
 
 
 def station_table(df: pd.DataFrame, enso: pd.DataFrame, start_month: int = 4) -> pd.DataFrame:
@@ -405,6 +423,22 @@ def f62_gate(lag_perm_p: float, lag_mu1: float, primary_mu1: float) -> bool:
     )
 
 
+def _restricted(sub: pd.DataFrame, lo: int, hi: int) -> dict:
+    """Check (c), restricted period: the primary model refitted on ``sub``; unavailable with too few years."""
+    if len(sub) < MIN_YEARS:
+        return {
+            "years": [lo, hi],
+            "n": len(sub),
+            "available": False,
+            "note": f"no disponible: {len(sub)} años",
+        }
+    return {
+        "years": [lo, hi],
+        "available": True,
+        **compare_gev(sub["q_max"], sub["oni_amjjas"]),
+    }
+
+
 def station_addendum(
     df: pd.DataFrame, meta: dict, enso: pd.DataFrame, n_perm: int = N_PERM, seed: int = SEED
 ) -> dict:
@@ -437,10 +471,7 @@ def station_addendum(
             "corr_with_amjjas": corr,
         },
         "trend": trend_control(y, z, table["hydro_year"].to_numpy(float)),
-        "restricted": {
-            "years": [lo, hi],
-            **compare_gev(sub["q_max"], sub["oni_amjjas"]),
-        },
+        "restricted": _restricted(sub, lo, hi),
     }
 
 
@@ -511,17 +542,22 @@ def station_result(
     df: pd.DataFrame,
     meta: dict,
     enso: pd.DataFrame,
-    reliable: bool = True,
+    in_verdict: bool = True,
     n_perm: int = N_PERM,
     seed: int = SEED,
 ) -> dict:
-    """Phase tests and both GEV comparisons of one station (p-values not yet BH-adjusted)."""
+    """Phase tests and both GEV comparisons of one station (p-values not yet BH-adjusted).
+
+    ``unreliable`` depends only on the number of complete years (short record); ``in_verdict`` says whether
+    the station is among the analysis stations. The two are independent.
+    """
     table = station_table(df, enso, meta.get("hydro_year_start_month", 4))
-    if len(table) < 10:
+    if len(table) < MIN_YEARS:
         raise ValueError(f"station {meta['id']}: only {len(table)} complete years with ONI")
     valid = df.dropna(subset=["q_m3s"])
     n_complete = len(extremes.annual_maxima(df, meta.get("hydro_year_start_month", 4))[0])
     alt = table.dropna(subset=["oni_peak"])
+    short = n_complete < SHORT_RECORD_YEARS
     return {
         "station_id": int(meta["id"]),
         "name": meta.get("name"),
@@ -533,8 +569,10 @@ def station_result(
         "n_years": len(table),
         "n_complete_years": n_complete,
         "years_used": [int(y) for y in table["hydro_year"]],
-        "unreliable": not reliable,
-        "unreliable_note": None if reliable else UNRELIABLE_NOTE,
+        "unreliable": short,
+        "unreliable_note": unreliable_note(n_complete) if short else None,
+        "in_verdict": in_verdict,
+        "verdict_note": None if in_verdict else NOT_IN_VERDICT_NOTE,
         "phase_tests": phase_tests(table, n_perm, seed),
         "primary": compare_gev(table["q_max"], table["oni_amjjas"]),
         "alternate": compare_gev(alt["q_max"], alt["oni_peak"]),
@@ -580,6 +618,10 @@ def _p(x) -> str:
     return "< 0,001" if x < 0.001 else f"{x:.3f}".replace(".", ",")
 
 
+def _join_y(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} y {items[-1]}"
+
+
 def build_report(results: list[dict], meta: dict, addendum: dict | None = None) -> str:
     lines = [
         "# F2.7 — Caudal y ENSO: máximos anuales por fase y GEV con ONI como covariable",
@@ -607,10 +649,19 @@ def build_report(results: list[dict], meta: dict, addendum: dict | None = None) 
             f"- Tests por fase con p BH < 0,05 (12004 y 12010): {n_ph} de {len(tests)}.",
             "",
         ]
+    analysis_where = " o ".join(str(s) for s in meta["analysis_stations"])
+    excluded = [
+        str(r["station_id"]) for r in results if r["station_id"] not in meta["analysis_stations"]
+    ]
+    excluded_sentence = (
+        f" {_join_y(excluded)} {'no entra' if len(excluded) == 1 else 'no entran'} en el veredicto."
+        if excluded
+        else ""
+    )
     lines += [
         (
             'Regla: "señal" solo si el test de razón de verosimilitud de la covariable primaria tiene p ajustado por '
-            'BH < 0,05 en 12004 o 12010; si no, "sin señal". 12012 no entra en el veredicto. La covariable, la '
+            f'BH < 0,05 en {analysis_where}; si no, "sin señal".{excluded_sentence} La covariable, la '
             "alternativa, la familia BH y las estaciones se fijaron en la especificación antes de la corrida; el umbral "
             '"p BH < 0,05 en 12004 o 12010" se fijó en el encargo de la tarea antes de la corrida, sin registro previo '
             "en la especificación ni en un commit."
@@ -668,10 +719,14 @@ def build_report(results: list[dict], meta: dict, addendum: dict | None = None) 
             "",
         ]
         if r["unreliable"]:
-            lines += [
-                f"> **Poco confiable:** {r['unreliable_note']}. Se calcula pero no entra en el veredicto.",
-                "",
-            ]
+            tail = (
+                "Se calcula pero no entra en el veredicto."
+                if not r["in_verdict"]
+                else "Entra en el veredicto por figurar entre las estaciones de análisis; se lee con cautela."
+            )
+            lines += [f"> **Poco confiable:** {r['unreliable_note']}. {tail}", ""]
+        elif not r["in_verdict"]:
+            lines += [f"> Esta estación {r['verdict_note']}.", ""]
         lines += [
             f"- Período con datos: {r['period']}; última consulta: {r['fetched']}.",
             f"- Años completos usados: {r['n_years']} ({r['years_used'][0]}–{r['years_used'][-1]}); con ONI de la estación del pico: {r['alternate_n_years']}."
@@ -761,9 +816,19 @@ def _addendum_lines(ad: dict, meta: dict, results: list[dict]) -> list[str]:
         )
     lines += [
         "",
-        "### (b) Covariable rezagada: ONI de enero–marzo anterior al año hidrológico",
+        "### (b) Covariable rezagada: ONI de enero–marzo (JFM) anterior al año hidrológico",
         "",
-        "Media del ONI mensual de enero a marzo inmediatamente antes de que empiece el año hidrológico (conocida el 1 de abril). LRT contra la GEV estacionaria.",
+        (
+            "Un único valor: el ONI trimestral de enero–marzo (JFM) del año calendario en que empieza el año hidrológico, "
+            "que el archivo del ONI fecha en febrero (sus meses de base son enero a marzo, todos anteriores al 1 de abril). "
+            "LRT contra la GEV estacionaria."
+        ),
+        "",
+        (
+            "Corrección posterior a la revisión: la primera corrida de la adenda promedió los valores fechados en enero, febrero y marzo, "
+            "que abarcan de diciembre a abril y por lo tanto usaban datos de abril; se corrigió a este único valor JFM. "
+            "La regla de la compuerta no cambió."
+        ),
         "",
         "| Estación | n | μ₁ (m³/s por unidad de ONI) | IC 95 % (Wald, aproximado) | ξ estac. | ξ con cov. | LRT χ² | p χ² | p permutación | r con ONI abr–sep |",
         "|---|---|---|---|---|---|---|---|---|---|",
@@ -796,8 +861,12 @@ def _addendum_lines(ad: dict, meta: dict, results: list[dict]) -> list[str]:
             f"| {sid} | con tendencia | {t['n']} | {_n(t['nonstationary']['mu1'], 1)} | {_n(t['nonstationary']['mu2'], 2)} | "
             f"{_n(t['nonstationary']['xi'], 3)} | {_n(t['lrt']['statistic'], 2)} | {_p(t['lrt']['p'])} |"
         )
+        label = f"primario {rs['years'][0]}–{rs['years'][1]}"
+        if not rs["available"]:
+            lines.append(f"| {sid} | {label} | {rs['n']} | {rs['note']} | n/d | n/d | n/d | n/d |")
+            continue
         lines.append(
-            f"| {sid} | primario {rs['years'][0]}–{rs['years'][1]} | {rs['n']} | {_n(rs['nonstationary']['mu1'], 1)} | n/d | "
+            f"| {sid} | {label} | {rs['n']} | {_n(rs['nonstationary']['mu1'], 1)} | n/d | "
             f"{_n(rs['nonstationary']['xi'], 3)} | {_n(rs['lrt']['statistic'], 2)} | {_p(rs['lrt']['p'])} |"
         )
     g = ad["gate"]
@@ -866,7 +935,7 @@ def run(
         df = flow.read_flow(flow_dir / f"{sid}.parquet")
         results.append(
             station_result(
-                df, meta_all[sid], enso, reliable=sid in analysis, n_perm=n_perm, seed=seed
+                df, meta_all[sid], enso, in_verdict=sid in analysis, n_perm=n_perm, seed=seed
             )
         )
     apply_bh(results)
@@ -879,10 +948,7 @@ def run(
         "oni_source": io_enso.SOURCE,
         "oni_url": io_enso.ONI_URL,
         "oni_period": f"{enso['date'].min():%Y-%m}/{enso['date'].max():%Y-%m}",
-        "rule": (
-            "señal solo si el LRT de la covariable primaria tiene p BH < 0,05 en 12004 o 12010; "
-            "si no, sin señal"
-        ),
+        "rule": rule_text(analysis),
     }
     ad = (
         build_addendum(results, enso, flow_dir, meta_all, addendum_n_perm, seed)

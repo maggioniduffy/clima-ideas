@@ -216,13 +216,17 @@ def test_cli_flow_gev_help_unchanged():
 # --- addendum (L12): lagged covariate, permutation p, trend control, gate -----------------------
 
 
-def test_jfm_covariate_is_jan_mar_of_the_same_calendar_year():
-    # ONI = 10 * year-offset + month: Jan-Mar of 2000 -> mean of 1, 2, 3 = 2; other months must not leak in
-    enso = monthly_oni(1999, 2001, lambda d: float(d.month) if d.year == 2000 else 99.0)
-    assert fe.jfm_covariate(enso, 2000) == pytest.approx(2.0)
+def test_jfm_covariate_is_the_single_february_dated_value():
+    # the ONI file dates each 3-month value by its central month: the JFM value is dated February
+    # (underlying Jan-Mar); the January- and March-dated values (DJF, FMA) reach December / April
+    vals = {1: 10.0, 2: 20.0, 3: 60.0}
+    enso = monthly_oni(
+        1999, 2001, lambda d: vals[d.month] if d.year == 2000 and d.month <= 3 else 99.0
+    )
+    assert fe.jfm_covariate(enso, 2000) == pytest.approx(20.0)
     assert math.isnan(fe.jfm_covariate(enso, 2002))
     enso = enso[enso["date"] != pd.Timestamp("2000-02-01")]
-    assert math.isnan(fe.jfm_covariate(enso, 2000))  # a missing month -> NaN
+    assert math.isnan(fe.jfm_covariate(enso, 2000))  # the February-dated value is missing -> NaN
 
 
 def test_permutation_lrt_small_p_for_dependent_and_large_for_unrelated_covariate():
@@ -350,6 +354,7 @@ def test_run_addendum_does_not_change_verdict_or_bh_family(tmp_path):
     assert "no entran en la familia BH" in text
     assert "sin verificar" in text and "F1.8" in text
     assert "sin registro previo" in text
+    assert "Corrección posterior a la revisión" in text and "fecha en febrero" in text
     assert "Adenda de robustez" not in (tmp_path / "a.md").read_text()
 
 
@@ -363,3 +368,134 @@ def test_existing_json_keys_are_pinned(tmp_path):
     s = data["stations"][0]
     assert s["primary"]["lrt"]["df"] == 1 and "p_bh" in s["primary"]["lrt"]
     assert res["meta"]["verdict"] == data["verdict"]
+
+
+# --- review fixes (T7) -----------------------------------------------------------------------------
+
+DEFAULT_RULE = (
+    "señal solo si el LRT de la covariable primaria tiene p BH < 0,05 en 12004 o 12010; "
+    "si no, sin señal"
+)
+DEFAULT_RULE_SENTENCE = (
+    'Regla: "señal" solo si el test de razón de verosimilitud de la covariable primaria tiene p ajustado por '
+    'BH < 0,05 en 12004 o 12010; si no, "sin señal". 12012 no entra en el veredicto. La covariable, la '
+    "alternativa, la familia BH y las estaciones se fijaron en la especificación antes de la corrida;"
+)
+
+
+def write_world_ids(tmp_path, specs, oni_first=1940, oni_last=2030):
+    """Flow files for ``specs = {station_id: (first_hydro_year, n_years)}`` and an ONI table."""
+    flow_dir = tmp_path / "flow"
+    flow_dir.mkdir()
+    rng = np.random.default_rng(3)
+    oni_by_year = {y: float(rng.normal()) for y in range(oni_first, oni_last + 1)}
+    enso = monthly_oni(oni_first, oni_last, lambda d: oni_by_year[d.year])
+    enso_path = tmp_path / "oni.parquet"
+    enso.to_parquet(enso_path, index=False)
+    stations = []
+    for sid, (first, n) in specs.items():
+        parts = []
+        for k in range(n):
+            y = first + k
+            peak = 100 + 30 * oni_by_year[y] + rng.gumbel(0, 10)
+            parts.append(
+                daily(f"{y}-04-01", f"{y + 1}-03-31", peaks=[(f"{y}-07-15", max(peak, 11.0))])
+            )
+        df = pd.concat(parts, ignore_index=True)
+        df.attrs.update({"source": flow.SOURCE, "url": flow.SNIH_URL, "fetched": "2026-11-09"})
+        flow.write_flow(df, flow_dir / f"{sid}.parquet")
+        stations.append({"id": sid, "name": f"S{sid}", "river": "R", "area_km2": None,
+                         "hydro_year_start_month": 4})  # fmt: skip
+    (flow_dir / "stations.json").write_text(
+        json.dumps({"fetched": "2026-11-09", "stations": stations})
+    )
+    return flow_dir, enso_path
+
+
+def invoke_enso(tmp_path, flow_dir, enso_path, *extra):
+    out, report = tmp_path / "enso.json", tmp_path / "F2.7.md"
+    res = CliRunner().invoke(
+        app,
+        ["flow", "enso", "--flow-dir", str(flow_dir), "--enso", str(enso_path), "--out", str(out),
+         "--report", str(report), "--n-perm", "50", "--addendum-n-perm", "20", *extra],
+    )  # fmt: skip
+    return res, out, report
+
+
+def test_restricted_period_with_too_few_years_is_unavailable_not_an_error(tmp_path):
+    flow_dir, enso_path = write_world_ids(tmp_path, {12004: (2010, 16), 12010: (2010, 16)})
+    res, out, report = invoke_enso(
+        tmp_path, flow_dir, enso_path, "--station", "12004", "--station", "12010"
+    )
+    assert res.exit_code == 0, res.output
+    rs = json.loads(out.read_text())["addendum"]["stations"]["12010"]["restricted"]
+    assert rs["available"] is False and rs["n"] == 0 and rs["years"] == [1953, 2009]
+    assert rs["note"] == "no disponible: 0 años"
+    assert "no disponible: 0 años" in report.read_text()
+
+
+def test_restricted_period_with_enough_years_keeps_its_fit(tmp_path):
+    flow_dir, enso_path = write_world_ids(tmp_path, {12004: (1953, 30), 12010: (1953, 30)})
+    res, out, _ = invoke_enso(
+        tmp_path, flow_dir, enso_path, "--station", "12004", "--station", "12010"
+    )
+    assert res.exit_code == 0, res.output
+    rs = json.loads(out.read_text())["addendum"]["stations"]["12010"]["restricted"]
+    assert rs["available"] is True and rs["n"] == 30 and "nonstationary" in rs
+
+
+def test_rule_text_names_the_analysis_stations_actually_used(tmp_path):
+    flow_dir, enso_path = write_world_ids(
+        tmp_path, {12004: (1953, 30), 12010: (1953, 30), 12012: (1953, 30)}
+    )
+    kw = ["--no-addendum", "--station", "12004", "--station", "12010", "--station", "12012"]
+    res, out, report = invoke_enso(tmp_path, flow_dir, enso_path, *kw)
+    assert res.exit_code == 0, res.output
+    assert json.loads(out.read_text())["meta"]["rule"] == DEFAULT_RULE
+    assert DEFAULT_RULE_SENTENCE in report.read_text()  # byte-identical with the defaults
+    res, out, report = invoke_enso(
+        tmp_path, flow_dir, enso_path, "--analysis-station", "12010", *kw
+    )
+    assert res.exit_code == 0, res.output
+    rule = json.loads(out.read_text())["meta"]["rule"]
+    assert rule == DEFAULT_RULE.replace("en 12004 o 12010", "en 12010")
+    text = report.read_text()
+    assert "p ajustado por BH < 0,05 en 12010; si no" in text
+    assert "en 12004 o 12010; si no" not in text.split("## Fuente")[0]
+    assert "12004 y 12012 no entran en el veredicto" in text
+
+
+def test_short_record_is_judged_by_complete_years_not_by_the_analysis_list(tmp_path):
+    flow_dir, enso_path = write_world_ids(
+        tmp_path, {12004: (1953, 40), 12010: (1953, 40), 12012: (1990, 25)}
+    )
+    kw = ["--no-addendum", "--station", "12004", "--station", "12010", "--station", "12012"]
+    res, out, report = invoke_enso(tmp_path, flow_dir, enso_path, *kw)
+    assert res.exit_code == 0, res.output
+    by = {s["station_id"]: s for s in json.loads(out.read_text())["stations"]}
+    assert [by[i]["unreliable"] for i in (12004, 12010, 12012)] == [False, False, True]
+    assert (
+        "25 años completos" in by[12012]["unreliable_note"]
+        and "unos 25" not in by[12012]["unreliable_note"]
+    )
+    assert [by[i]["in_verdict"] for i in (12004, 12010, 12012)] == [True, True, False]
+    res, out, report = invoke_enso(
+        tmp_path, flow_dir, enso_path, "--analysis-station", "12010", *kw
+    )
+    assert res.exit_code == 0, res.output
+    by = {s["station_id"]: s for s in json.loads(out.read_text())["stations"]}
+    assert by[12004]["unreliable"] is False and by[12004]["unreliable_note"] is None
+    assert (
+        by[12004]["in_verdict"] is False and "no entra en el veredicto" in by[12004]["verdict_note"]
+    )
+    assert by[12012]["unreliable"] is True
+    text = report.read_text()
+    assert "registro corto" in text and text.count("Poco confiable") == 1
+
+
+def test_run_still_flags_short_records_in_the_analysis_list(tmp_path):
+    flow_dir, enso_path = write_world_ids(tmp_path, {12012: (1990, 25)})
+    res = fe.run(flow_dir, enso_path, tmp_path / "o.json", tmp_path / "o.md",
+                 stations=[12012], analysis=(12012,), n_perm=50, addendum=False)  # fmt: skip
+    s = res["stations"][0]
+    assert s["unreliable"] is True and s["in_verdict"] is True

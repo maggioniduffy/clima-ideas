@@ -168,6 +168,10 @@ def flow_snow_fetch(
     """Download ERA5 snow water equivalent around the flood peaks (ARCO-ERA5, anonymous; F2.3)."""
     if not catalog.is_file():
         raise typer.BadParameter(f"AR catalog not found: {catalog}")
+    try:
+        flood_causes.validate_stations(station)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
     _, period = flood_causes.load_catalog(catalog)
     floods = flood_causes.collect_floods(flow_dir, station, period)
     windows = [(sid, d) for sid, df in floods.items() for d in df["date"]]
@@ -201,6 +205,10 @@ def flow_causes(
     """Label the annual floods by probable cause: AR window, chance baseline and snow (F2.3)."""
     if not catalog.is_file():
         raise typer.BadParameter(f"AR catalog not found: {catalog} (run clima-nqn ar catalog)")
+    try:
+        flood_causes.validate_stations(station)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
     if not snow_path.is_file():
         typer.echo(
             f"warning: no snow file {snow_path}; snow is 'sin dato' (run clima-nqn flow snow-fetch)"

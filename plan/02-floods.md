@@ -13,7 +13,8 @@ Caudal medio diario del SNIH (contiene la BDHI; parámetro 101, año hidrológic
 de actualización). Con datos y aguas arriba de las presas: 12004 Paso de Indios (Neuquén, 1945–2026), 12010 Bajada
 del Agrio (1953–2026), 12012 Los Maitenes (Curi Leuvú, 1989–2021). 11803 Paso Flores (Limay) excluida por regulada;
 12013 Chos Malal y 11804 Paso Limay no devuelven datos. AIC: restringido. Para lluvia sobre nieve (F2.3): isoterma
-de 0 °C de ERA5 (`deg0l`, ya descargada en F1.1) y nieve de ERA5-Land. CAMELS-CL (F2.5): PANGAEA, CC-BY-4.0, solo Chile.
+de 0 °C de ERA5 (`deg0l`, ya descargada en F1.1) y nieve de ERA5 a 0,25° (`snow_depth`, ARCO-ERA5); ERA5-Land queda
+como mejora y pide clave de CDS. CAMELS-CL (F2.5): PANGAEA, CC-BY-4.0, solo Chile.
 
 ## Tareas
 
@@ -41,7 +42,8 @@ de 0 °C de ERA5 (`deg0l`, ya descargada en F1.1) y nieve de ERA5-Land. CAMELS-C
 - F2.7 (2026-11-12): por la regla fijada, «señal», sostenida por un solo test: GEV con ONI abr–sep en 12010,
   μ₁ = 191 m³/s por unidad de ONI, p BH 0,019 (permutación 0,0011); 12004 p BH 0,082; ningún test por fase pasa.
   Se mantiene con control de tendencia y en 1953–2009. Con el ONI de ene–mar (conocido el 1 de abril) no hay
-  señal: 12010 p de permutación 0,559 y μ₁ de signo contrario. La compuerta para F6.2 no pasa: F6.2 corre sin
+  señal: 12010 p de permutación 0,565 y μ₁ de signo contrario (corregido tras la revisión: la primera corrida
+  promediaba tres valores que llegaban a abril; daba 0,559). La compuerta para F6.2 no pasa: F6.2 corre sin
   ENSO o queda en baselines; la decisión es del usuario (`reports/02/F2.7.md`).
 - Advisor (2026-11-12): ¿registrar «señal» tal cual y qué falta antes de abrir F6.2? Recomendó mantener el veredicto
   de la regla, leerlo como señal débil y concurrente, y condicionar F6.2 a un ONI rezagado. Decisión: adoptado.

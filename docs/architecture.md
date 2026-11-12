@@ -91,7 +91,7 @@ cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
 - `flow enso` (`--flow-dir`, `--enso`, `--out`, `--report`, `--station`, `--analysis-station`, `--n-perm`, `--addendum/--no-addendum`, `--addendum-n-perm`) compara máximos anuales y caudal
   abr–sep por fase de ENSO (permutación) y una GEV con ONI como covariable de la ubicación contra la estacionaria (LRT y AIC), con
   valores p ajustados por BH; escribe `data/flow/enso.json` y `reports/02/F2.7.md` con el veredicto para F6.2 y una adenda de robustez posterior al resultado
-  (p de permutación, ONI rezagado ene–mar, control de tendencia y 1953–2009; solo 12004 y 12010) que no cambia el veredicto. Necesita `enso fetch`.
+  (p de permutación, ONI rezagado JFM (un único valor trimestral, fechado en febrero), control de tendencia y 1953–2009; solo 12004 y 12010) que no cambia el veredicto. Necesita `enso fetch`.
 - `flow snow-fetch` (`--flow-dir`, `--catalog`, `--out`, `--station`, `--workers`, `--retries`, `--retry-wait`) baja de ARCO-ERA5 (anónimo)
   el agua equivalente de nieve de ERA5 (`snow_depth`, 0,25°; no es ERA5-Land) a las 00 UTC de `[pico − 8, pico + 1]` de cada crecida
   dentro del período del catálogo, recortada a un rectángulo aproximado aguas arriba (sin verificar); escribe un Parquet

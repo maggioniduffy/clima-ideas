@@ -29,6 +29,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 | T4 F2.7 | S4, S5, S7 | delegated (builder, model-roles override) | done; advisor consult closed (L11) | 10 tests, suite 204 passed, ruff clean; commit 4897562 (L10) |
 | T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | done | 27 tests, suite 231 passed, ruff clean; real run 114 floods; commit 1f58dd1 (L13) |
 | T6 F2.7 addendum | S4, S7, L12 | delegated (builder), after T5 (shared cli.py) | done | 19 tests in file, suite 240 passed, ruff clean; commit 31fe8dc (L14) |
+| T7 review fixes (PR #32) | S4, S7, S8, L12, L15 | delegated (builder; interrupted by a session restart and resumed) | done | suite 254 passed under CI colour settings, ruff clean (L16) |
 
 ## Log
 
@@ -114,3 +115,17 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   JSON keys identical. Not verified: the permutation refits use a lighter optimiser than the main fit (agreement checked on the
   observed statistics and one synthetic case only). Whether F6.2 is dropped, run without ENSO, or kept is the user's decision.
   Next: F2.5 (LSTM) and F2.6. User (2026-11-12): "i'm leaving so don't ask for confirmation, when you are done open the PR".
+- L15 (2026-11-12) Review on PR #32 (CodeRabbit), finding confirmed in the code: the ONI file dates each three-month value by its
+  central month, so the lagged covariate of T6 (mean of the January, February and March values) spans December–April and uses
+  April data that is not known on 1 April. Implementation bug against L12 ("ONI of JFM ... known on 1 April"), not a rule change:
+  the covariate becomes the single JFM value (dated February, months January–March). Check (b) and the gate are re-run with the
+  gate rule of L12 unchanged; the earlier numbers of L14 (b) are superseded and the report says the correction came after a
+  first run. Other accepted findings (T7): snow file must not mix upstream boxes; stations without a box rejected before any
+  output; SNIH consultation date in the F2.3 report; restricted-period check marked unavailable with too few years; rule text and
+  short-record note derived from the stations actually used. Help-text tests were already fixed in 51e455b.
+- L16 (2026-11-12) T7 result. Lagged covariate is now the single JFM value (dated February). Check (b): 12010 mu1 = −15.4,
+  chi-square p 0.592, permutation p 0.565, correlation with the April–September ONI 0.342; 12004 mu1 = −65.9, permutation p 0.382,
+  correlation 0.352. Gate for F6.2: does not pass, as before; verdict unchanged. These supersede L14 (b). Differential check on
+  the real data: verdict, meta, checks (a) and (c) identical; F2.3 labels, shares and p-values identical. Not changed: the fixed
+  "unos 25 años completos" note in the F2.3 report; the lighter optimiser in the permutation refits. The existing snow file does
+  carry its boxes (old format), contrary to the handoff. User (2026-11-12): "merge the PR when it's done".
