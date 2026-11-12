@@ -66,28 +66,72 @@ export interface FloodStationDetail {
 
 const BASE = "/api";
 
+/** Static mode: base URL of the published layers (R2), or "" to use the local API. */
+const dataBase = () => import.meta.env.VITE_DATA_URL || "";
+
+/** `${base}/seg/seg...`: each segment is encoded, `/` inside a segment (nested file names) is kept. */
+export const staticUrl = (base: string, ...segments: string[]) =>
+  [base.replace(/\/+$/, ""), ...segments.map((s) => s.split("/").map(encodeURIComponent).join("/"))].join("/");
+
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
   return (await res.json()) as T;
 }
 
-export const fetchLayers = () => getJson<LayerManifest[]>(`${BASE}/layers`);
-
-export const fetchLayer = (id: string) =>
-  getJson<LayerManifest>(`${BASE}/layers/${encodeURIComponent(id)}`);
-
-export const fetchLayerData = <T = PointFeature[]>(id: string, file?: string) =>
-  getJson<T>(
-    `${BASE}/layers/${encodeURIComponent(id)}/data` +
-      (file ? `?file=${encodeURIComponent(file)}` : ""),
-  );
-
-export async function fetchLayerBinary(id: string, file: string): Promise<ArrayBuffer> {
-  const url = `${BASE}/layers/${encodeURIComponent(id)}/data?file=${encodeURIComponent(file)}`;
+async function getBuffer(url: string): Promise<ArrayBuffer> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
   return res.arrayBuffer();
+}
+
+let layerIndex: Promise<LayerManifest[]> | null = null;
+/** Test hook: forget the cached `layers.json`. */
+export const resetLayerIndexCache = () => {
+  layerIndex = null;
+};
+
+export const fetchLayers = () => {
+  const data = dataBase();
+  if (!data) return getJson<LayerManifest[]>(`${BASE}/layers`);
+  layerIndex ??= getJson<LayerManifest[]>(staticUrl(data, "layers.json")).catch((e) => {
+    layerIndex = null;
+    throw e;
+  });
+  return layerIndex;
+};
+
+export const fetchLayer = (id: string) => {
+  const data = dataBase();
+  return getJson<LayerManifest>(
+    data ? staticUrl(data, id, "manifest.json") : `${BASE}/layers/${encodeURIComponent(id)}`,
+  );
+};
+
+/** Static mode: the file the API serves by default, `files[0]` of the manifest. */
+async function defaultFile(data: string, id: string): Promise<string> {
+  const indexed = (await fetchLayers()).find((l) => l.id === id);
+  const manifest = indexed ?? (await getJson<LayerManifest>(staticUrl(data, id, "manifest.json")));
+  return manifest.files[0];
+}
+
+export const fetchLayerData = async <T = PointFeature[]>(id: string, file?: string) => {
+  const data = dataBase();
+  if (!data) {
+    return getJson<T>(
+      `${BASE}/layers/${encodeURIComponent(id)}/data` + (file ? `?file=${encodeURIComponent(file)}` : ""),
+    );
+  }
+  return getJson<T>(staticUrl(data, id, file ?? (await defaultFile(data, id))));
+};
+
+export async function fetchLayerBinary(id: string, file: string): Promise<ArrayBuffer> {
+  const data = dataBase();
+  return getBuffer(
+    data
+      ? staticUrl(data, id, file)
+      : `${BASE}/layers/${encodeURIComponent(id)}/data?file=${encodeURIComponent(file)}`,
+  );
 }
 
 export interface ArEvent {
@@ -127,10 +171,12 @@ export interface FramesIndex {
 }
 
 export async function fetchFrames(layerId: string, t: string): Promise<ArrayBuffer> {
-  const url = `${BASE}/layers/${encodeURIComponent(layerId)}/frames/${encodeURIComponent(t)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url}: ${res.status}`);
-  return res.arrayBuffer();
+  const data = dataBase();
+  return getBuffer(
+    data
+      ? staticUrl(data, layerId, "frames", `${t}.bin`)
+      : `${BASE}/layers/${encodeURIComponent(layerId)}/frames/${encodeURIComponent(t)}`,
+  );
 }
 
 export type EnsoPhase = "nino" | "neutral" | "nina";

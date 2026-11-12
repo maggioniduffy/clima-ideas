@@ -8,3 +8,8 @@ __pycache__/
 web/test-results/
 web/playwright-report/
 reports/**/*.log
+
+# Local secrets (R2 keys etc.); .env.example stays tracked
+.env
+.env.*
+!.env.example

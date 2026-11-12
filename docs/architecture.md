@@ -124,6 +124,28 @@ cd backend && uv run clima-nqn flow layer
 
 `GET /health` · `GET /layers` · `GET /layers/{id}` · `GET /layers/{id}/data` · `GET /layers/{id}/frames/{t}` (binario Float32 del conjunto de frames `t`; en `ar-events`, `t` es el id del evento y el índice está en `frames/index.json`)
 
+## Publicación estática (F0.11)
+
+En línea no hay API: `clima-nqn publish` sube `data/processed/` a Cloudflare R2 con objetos que imitan las rutas,
+y la web estática los lee cuando el build tiene `VITE_DATA_URL` (sin esa variable usa `/api`, como en local).
+
+| Ruta de la API | Objeto en R2 |
+|---|---|
+| `GET /layers` | `layers.json` (mismo JSON) |
+| `GET /layers/{id}` | `{id}/manifest.json` |
+| `GET /layers/{id}/data?file=f` | `{id}/{f}` (sin `file`: `files[0]`) |
+| `GET /layers/{id}/frames/{t}` | `{id}/frames/{t}.bin` |
+
+Se suben solo los manifiestos válidos, los archivos de `files` y los frames de capas que listan `frames/index.json`
+(la misma regla que la API). Pasos del usuario, una vez:
+
+1. Crear el bucket en R2 y darle acceso público (subdominio `r2.dev` o dominio propio).
+2. CORS del bucket: `GET` y `HEAD` desde el dominio de Vercel (y `http://localhost:5173` para probar).
+3. Crear un token de API de R2 con permiso de escritura solo en ese bucket.
+4. Exportar `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` y `R2_BUCKET`, y correr `make publish`
+   (`make publish-dry` lista lo que sube sin red).
+5. En Vercel, `VITE_DATA_URL` = URL pública del bucket, y volver a desplegar.
+
 ## Tests
 
 - Unit con datos sintéticos de resultado conocido (pytest, vitest).
