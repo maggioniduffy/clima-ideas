@@ -267,6 +267,14 @@ def era5_fetch(
         int, typer.Option(help="Concurrent hour-chunk reads.")
     ] = era5.DEFAULT_WORKERS,
     retries: Annotated[int, typer.Option(help="Attempts per read.")] = 3,
+    variables: Annotated[
+        str,
+        typer.Option(
+            help="Comma-separated ERA5 names or short names to fetch: "
+            + ", ".join(f"{k} ({v})" for k, v in era5.AVAILABLE_VARIABLES.items())
+            + ". Default: the four phase-1 variables."
+        ),
+    ] = ",".join(era5.VARIABLES),
 ) -> None:
     """Fetch one or more years to <out>/<year>.zarr (complete years skipped, incomplete rebuilt)."""
     if (year is None) == (years is None):
@@ -275,12 +283,22 @@ def era5_fetch(
         box = era5.parse_area(area)
         month_list, hour_list = era5.parse_months(months), era5.parse_hours(hours)
         year_list = [year] if year is not None else era5.parse_years(years or "")
+        var_map = era5.resolve_variables(variables)
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     failed: list[int] = []
     for y in year_list:
         try:
-            era5.fetch_year(y, month_list, hour_list, box, out, workers=workers, retries=retries)
+            era5.fetch_year(
+                y,
+                month_list,
+                hour_list,
+                box,
+                out,
+                workers=workers,
+                retries=retries,
+                variables=var_map,
+            )
         except Exception as exc:  # noqa: BLE001 - keep going, report at the end
             typer.echo(f"year {y} failed: {exc}", err=True)
             failed.append(y)

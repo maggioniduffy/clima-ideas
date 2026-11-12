@@ -58,6 +58,8 @@ dibuja todas las celdas de la grilla de frames (37×33) y el relieve cubre el mi
 el marcador de Neuquén van encima como referencia. No hay franja ni recorte a la provincia (se quitó en noviembre de
 2026); el catálogo de ríos atmosféricos sigue usando su polígono de cordillera, que es otra cosa.
 
+ERA5 regional (`clima-nqn era5 fetch`): `--variables` elige variables por nombre ERA5 o corto (`2m_temperature`/`t2m`, además de las cuatro por defecto de la fase 1: `viwve`, `viwvn`, `tp`, `deg0l`); sin la opción baja solo las cuatro. El workflow `era5.yml` expone `variables` y `name` (directorio y artefacto `era5-<name>-<año>`).
+
 Capa `relief` (Copernicus GLO-30), construida en local desde la raíz del repo:
 
 ```
