@@ -14,6 +14,12 @@ from clima_nqn.stages.flood import causes, extremes
 
 PERIOD = (pd.Timestamp("1999-01-01"), pd.Timestamp("2001-12-31"))
 
+PLAIN = {
+    "NO_COLOR": "1",
+    "TERM": "dumb",
+    "COLUMNS": "200",
+}  # plain, unwrapped help on any runner (CI forces colour)
+
 
 def make_events(rows):
     """Catalog frame; ``rows`` = (id, start, end[, deg0l_mean, deg0l_max])."""
@@ -366,13 +372,13 @@ def test_cli_causes_missing_catalog_is_a_clean_error(tmp_path):
 
 
 def test_cli_flow_causes_help_lists_options():
-    res = CliRunner().invoke(app, ["flow", "causes", "--help"])
+    res = CliRunner().invoke(app, ["flow", "causes", "--help"], env=PLAIN)
     assert res.exit_code == 0
     for opt in ("--flow-dir", "--gev-dir", "--catalog", "--snow", "--out", "--report", "--n-perm"):
         assert opt in res.output
 
 
 def test_existing_flow_gev_help_unchanged():
-    res = CliRunner().invoke(app, ["flow", "gev", "--help"])
+    res = CliRunner().invoke(app, ["flow", "gev", "--help"], env=PLAIN)
     assert res.exit_code == 0 and "--flow-dir" in res.output and "--station" in res.output
     assert "--catalog" not in res.output and "--snow" not in res.output

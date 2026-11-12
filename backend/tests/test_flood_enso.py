@@ -12,6 +12,12 @@ from clima_nqn.io import flow
 from clima_nqn.stages.flood import enso as fe
 from clima_nqn.stages.flood import extremes
 
+PLAIN = {
+    "NO_COLOR": "1",
+    "TERM": "dumb",
+    "COLUMNS": "200",
+}  # plain, unwrapped help on any runner (CI forces colour)
+
 
 def monthly_oni(first_year, last_year, fn):
     """Monthly ONI table like ``read_enso``; ``fn(date)`` gives the value."""
@@ -202,7 +208,7 @@ def test_cli_flow_enso_missing_oni_is_a_clean_error(tmp_path):
 
 
 def test_cli_flow_gev_help_unchanged():
-    res = CliRunner().invoke(app, ["flow", "gev", "--help"])
+    res = CliRunner().invoke(app, ["flow", "gev", "--help"], env=PLAIN)
     assert res.exit_code == 0 and "--flow-dir" in res.output and "--station" in res.output
     assert "--analysis-station" not in res.output
 

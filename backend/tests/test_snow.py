@@ -8,6 +8,12 @@ from typer.testing import CliRunner
 from clima_nqn.cli import app
 from clima_nqn.io import snow
 
+PLAIN = {
+    "NO_COLOR": "1",
+    "TERM": "dumb",
+    "COLUMNS": "200",
+}  # plain, unwrapped help on any runner (CI forces colour)
+
 
 def make_store(first="2000-02-20", last="2000-03-20 23:00"):
     """ARCO-like ``snow_depth``: 0..360 longitudes, descending latitudes, hourly.
@@ -130,7 +136,7 @@ def test_unknown_station_has_no_box(tmp_path):
 
 
 def test_flow_snow_fetch_help_lists_options():
-    res = CliRunner().invoke(app, ["flow", "snow-fetch", "--help"])
+    res = CliRunner().invoke(app, ["flow", "snow-fetch", "--help"], env=PLAIN)
     assert res.exit_code == 0
     for opt in ("--flow-dir", "--catalog", "--out", "--station"):
         assert opt in res.output
