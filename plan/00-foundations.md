@@ -1,6 +1,6 @@
 # Fase 0 — Bases
 
-Estado: hecha salvo F0.11 (F0.2: CI verde en el PR #7, 2026-11-07) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
+Estado: hecha salvo F0.11 (capas subidas a R2 el 2026-11-12; falta la web en línea) (F0.2: CI verde en el PR #7, 2026-11-07) · Refs: `docs/architecture.md`, `docs/design.md` (solo F0.3–F0.4), `docs/agents.md`
 
 ## Objetivo
 

@@ -54,7 +54,7 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 
 ## Próximo
 
-1. F0.11: publicar las capas de las fases 1 y 2 (en curso: `odd/tasks/publish.md`).
+1. F0.11: capas subidas a R2 y probadas con la web local; falta la web en línea con `VITE_DATA_URL` (`odd/tasks/publish.md`).
 2. F3.0: comprobar lluvia horaria en NOAA ISD 877150.
 3. F2.5: LSTM de caudal contra GR4J y persistencia (la tarea más larga; habilita F2.6 y la fase 6).
 
