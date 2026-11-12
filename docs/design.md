@@ -1,38 +1,76 @@
-# Diseño (provisorio)
+# Diseño
 
-Referencia visual: el mockup del usuario, https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y. El relieve usa su rampa monocromática pizarra (tokens `--relief-0..3`, con sombreado), no una hipsométrica verde/marrón.
+## Referencia
 
-Base inicial; el usuario lo va a profundizar. Inspiración: `inspiration/README.md`.
+Mockup del usuario: https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y (`project/Mockup.dc.html`). El objetivo son los artboards de "Mockup con datos de ejemplo"; los wireframes no son el objetivo. Tema claro con acento azul, tema oscuro con acento amarillo. El relieve usa su rampa monocromática pizarra (tokens `--relief-0..3`, con sombreado), no una hipsométrica verde/marrón. Inspiración: `inspiration/README.md`.
 
 ## Reglas de UI
 
 - Sin etiquetas, badges ni descripciones secundarias: jerarquía, color y forma explican.
 - Nunca blanco ni negro puros: claros con tono crema, oscuros con tono azul.
-- Mismo layout en ambos temas: barra superior, panel de capas, lienzo, inspector, línea de tiempo.
+- Mismo layout en ambos temas: mismas regiones y mismas cajas; solo cambian los tokens.
 - Acento reservado para lo que importa (evento, anomalía, selección).
-- Paneles redimensionables (escritorio): arrastre o teclado (flechas 16 px, Inicio/Fin) en el borde interno de capas (160–480 px), inspector (220–720 px) y línea de tiempo (80–480 px); el mapa conserva al menos 320 × 200 px. La línea del borde se ve en acento solo al pasar, enfocar o arrastrar; doble clic restablece el tamaño por defecto.
-- Los tamaños se guardan en `localStorage` (`panel-sizes`); los valores inválidos vuelven al defecto. En pantallas angostas (≤ 800 px) los paneles son cajones sin tiradores.
+- Solo lo que funciona: no se muestran navegación de secciones, filtros ni botones sin acción.
 
-## Colores de marca
+## Tokens
 
-| Token | Valor | Uso |
-|---|---|---|
-| `--main` | `#3E505B` | Primario, controles, texto fuerte en claro |
-| `--accent` | `#8EB8E5` | Eventos, anomalías, selección |
-| `--secondary` | `#A4AF69` | Banda "normal", climatología |
+Los valores viven en `web/src/theme/tokens.css` y `tokens.ts`; `tokens.test.ts` verifica que coincidan. El acento es por tema.
 
-## Neutros
+| Token | Claro (crema) | Oscuro (azul) | Uso |
+|---|---|---|---|
+| `--bg` | `#F1EEE6` | `#16212A` | Fondo de página |
+| `--surface` | `#F9F7F2` | `#1F2D37` | Tarjetas y barra superior |
+| `--raised` | `#EFECE4` | `#2A3A46` | Botones neutros, fila seleccionada |
+| `--border` | `#DDD8CD` | `#3E505B` | Trazos finos dentro de gráficos |
+| `--text` | `#2A343B` | `#ECE7DC` | Texto |
+| `--text-muted` | `#5F6468` | `#A3AEB4` | Texto secundario |
+| `--ctrl` | `#3E505B` | `#4D6372` | Control primario (reproducir) |
+| `--on-ctrl` | `#F5F2EA` | `#ECE7DC` | Texto sobre `--ctrl` |
+| `--accent` | `#8EB8E5` | `#FDDA0D` | Eventos, anomalías, selección, foco |
+| `--water` | `#3A6E8F` | `#7FA9C6` | Ríos en el mapa |
+| `--casing` | `#2A343B` | `#16212A` | Contorno de las marcas de acento |
+| `--relief-0` | `#A7AEAF` | `#4E5F6A` | Relieve, bajo |
+| `--relief-1` | `#77848A` | `#7D8D96` | Relieve, medio |
+| `--relief-2` | `#4A5A64` | `#B3BEC4` | Relieve, alto |
+| `--relief-3` | `#2A343B` | `#ECE7DC` | Relieve, cumbres |
 
-| Token | Claro (crema) | Oscuro (azul) |
-|---|---|---|
-| `--bg` | `#F5F2EA` | `#16212A` |
-| `--surface` | `#ECE8DE` | `#1F2D37` |
-| `--raised` | `#E2DDD1` | `#2A3A46` |
-| `--border` | `#D3CDBF` | `#3E505B` |
-| `--text` | `#2A343B` | `#ECE7DC` |
-| `--text-muted` | `#6E7377` | `#A3AEB4` |
+Comunes a ambos temas: `--main #3E505B` (primario, texto fuerte en claro), `--secondary #A4AF69` (banda "normal", climatología), espaciado `--space-1..6` (4, 8, 12, 16, 24, 32 px), radios `--radius-sm/md/lg` (4, 8, 12 px) y la rampa IVT (más abajo). Contraste mínimo WCAG AA.
 
-Valores neutros a ajustar; contraste mínimo WCAG AA.
+## Tipografía
+
+IBM Plex Sans para el cuerpo y los títulos; IBM Plex Mono con numerales tabulares solo para números, fechas y unidades (clase `.num`). Cuerpo 14 px / 1,4. Títulos de tarjeta 14 px / 600; título de página y del inspector 16 px / 600. Se cargan desde Google Fonts en `index.html` (sin CSP que lo bloquee); tokens `--font-sans` y `--font-mono`.
+
+## Superficies
+
+- Sin bordes entre regiones. Fondo de página `--bg`, con 8 px de relleno y 8 px entre regiones.
+- Cada panel es una tarjeta `--surface` con radio 8 px y relleno 16 px.
+- Textura (clase `.tx`, también en la barra superior): en claro, puntos `radial-gradient(rgba(42,52,59,0.09) 0.9px, transparent 1.3px)` a 5 × 5 px más un brillo diagonal `linear-gradient(135deg, rgba(255,255,255,0.45) 0%, transparent 55%)`; en oscuro, ninguno de los dos. Los dos valores salen de las variables `--tex` y `--shine` de cada tema.
+
+## Controles
+
+- Objetivos de 44 px, radio 8 px, sin borde. Botones neutros sobre `--raised`; el primario (reproducir) sobre `--ctrl` con texto `--on-ctrl`.
+- Casillas de 18 px con `accent-color: var(--ctrl)`; filas de 40 px. Fila de lista seleccionada: fondo `--raised` y un punto de 8 px en `--accent`.
+- Foco visible: anillo de 2 px en `--accent` con 2 px de separación (enlaces, botones, campos y separadores).
+- Las marcas de acento en el mapa y los gráficos llevan un contorno `--casing`.
+
+## Layout
+
+- Barra superior (mínimo 56 px, `--surface`, con textura): marca del logo, "Clima Ideas", `h1` de la página y botón de tema de 44 px.
+- Cuerpo: panel de capas (`aside`) de 240 px por defecto; columna principal con la tarjeta del mapa (flex 1, mínimo 400 px de alto), una fila de tarjetas debajo (inspector `1 1 300px`, gráficos de detalle `1,6 1 420px`, lista de eventos `1 1 300px`) y la tira de línea de tiempo.
+- El inspector muestra filas etiqueta a la izquierda y valor mono a la derecha (mínimo 28 px); la fuente y el período se conservan. Sin evento elegido, la ayuda del mapa queda en un desplegable (`details`) para que el inspector no desborde su tarjeta. La tarjeta de detalle aloja los gráficos de la estación y la tabla ENSO cuando corresponden; sin contenido no se muestra. La lista de eventos tiene filas de 48 px (punto, nombre, valor y fecha en mono) y el conteo en el título.
+- Línea de tiempo: botones anterior / reproducir / siguiente de 44 px; pista con línea base de 2 px, marcas en acento y cabezal de 5 px en acento; hora de la reproducción en mono.
+- Mapa en una tarjeta redondeada; leyenda abajo a la izquierda sin borde, con el selector de vista como control segmentado (contenedor `--raised`, botón activo `--ctrl`); mientras hay una reproducción activa, un reloj arriba a la derecha muestra su fecha y hora.
+
+## Tiradores de arrastre
+
+- Hay tiradores para el ancho de capas, el alto de la fila de tarjetas y el alto de la línea de tiempo, ubicados en los huecos de 8 px entre regiones.
+- Arrastrar por debajo del mínimo del panel lo colapsa a 0: el panel queda oculto (`hidden`, fuera del orden de tabulación) y el mapa ocupa el espacio. El tirador permanece en el borde para poder arrastrarlo de vuelta.
+- Teclado: las flechas redimensionan (16 px), Inicio colapsa, Fin maximiza, Enter o doble clic restablece el tamaño por defecto. `aria-valuemin` es 0 y `aria-valuenow` es 0 cuando está colapsado. El mapa conserva al menos 320 × 200 px.
+- Tamaños y estado colapsado se guardan en `localStorage` (`panel-sizes`); las claves inválidas o ausentes vuelven al defecto.
+
+## Pantallas angostas
+
+En pantallas de hasta 800 px el panel de capas es un cajón. Las tarjetas se apilan debajo del mapa y la página se desplaza; no hay tiradores.
 
 ## Rampa IVT (secuencial)
 
@@ -55,8 +93,4 @@ En ambas vistas las celdas ERA5 siguen siendo seleccionables (hover/clic) aunque
 
 ## Panel de crecidas
 
-Gráficos SVG propios, solo con tokens: curva GEV y serie diaria en `--text`, banda IC 95 % y máximos anuales en `--text-muted` (banda translúcida), las 5 mayores crecidas en `--accent` con borde `--text`. Los puntos del mapa son `--main` (acento si está seleccionada) y las estaciones reguladas se dibujan huecas con contorno.
-
-## Tipografía
-
-Monoespaciada para datos e instrumentos; una sans para títulos. IBM Plex Mono (400, 500) para datos y IBM Plex Sans (400, 500, 600) para títulos, cargadas desde Google Fonts en `index.html` (sin CSP que lo bloquee); tokens `--font-mono` y `--font-sans`.
+Gráficos SVG propios, solo con tokens: curva GEV y serie diaria en `--text`, banda IC 95 % y máximos anuales en `--text-muted` (banda translúcida), las 5 mayores crecidas en `--accent` con borde `--casing`. Los puntos y estaciones del mapa son `--ctrl`; el seleccionado va en `--accent` con contorno `--casing`; las reguladas se dibujan huecas con contorno.

@@ -1,8 +1,7 @@
 /* Design tokens from docs/design.md. Keep in sync with tokens.ts (tokens.test.ts enforces it).
-   Never pure white or black. Font choice is pending per design.md: system stacks for now. */
+   Never pure white or black. */
 :root {
   --main: #3E505B;
-  --accent: #8EB8E5;
   --secondary: #A4AF69;
 
   --space-1: 4px;
@@ -22,12 +21,20 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #F5F2EA;
-  --surface: #ECE8DE;
-  --raised: #E2DDD1;
-  --border: #D3CDBF;
+  --bg: #F1EEE6;
+  --surface: #F9F7F2;
+  --raised: #EFECE4;
+  --border: #DDD8CD;
   --text: #2A343B;
-  --text-muted: #6E7377;
+  --text-muted: #5F6468;
+  --ctrl: #3E505B;
+  --on-ctrl: #F5F2EA;
+  --accent: #8EB8E5;
+  --water: #3A6E8F;
+  --casing: #2A343B;
+  /* Card texture (.tx): dots + diagonal highlight in light, none in dark */
+  --tex: radial-gradient(rgba(42, 52, 59, 0.09) 0.9px, transparent 1.3px);
+  --shine: rgba(255, 255, 255, 0.45);
   /* IVT sequential ramp, low to high over [0, IVT_SCALE_MAX]: pale to deep (light), dim to bright (dark) */
   --ivt-0: #DCE6BE;
   --ivt-1: #8CCBB0;
@@ -35,10 +42,10 @@
   --ivt-3: #2B6FB0;
   --ivt-4: #38399A;
   --ivt-5: #5A1A72;
-  --relief-0: #C4CBCC;
-  --relief-1: #8B989E;
+  --relief-0: #A7AEAF;
+  --relief-1: #77848A;
   --relief-2: #4A5A64;
-  --relief-3: #1C262D;
+  --relief-3: #2A343B;
 }
 
 :root[data-theme="dark"] {
@@ -49,16 +56,23 @@
   --border: #3E505B;
   --text: #ECE7DC;
   --text-muted: #A3AEB4;
+  --ctrl: #4D6372;
+  --on-ctrl: #ECE7DC;
+  --accent: #FDDA0D;
+  --water: #7FA9C6;
+  --casing: #16212A;
+  --tex: none;
+  --shine: transparent;
   --ivt-0: #22384A;
   --ivt-1: #2B5F80;
   --ivt-2: #1E9A9C;
   --ivt-3: #6BCB6C;
   --ivt-4: #E3E24A;
   --ivt-5: #F8F5B4;
-  --relief-0: #3A4852;
-  --relief-1: #76878F;
-  --relief-2: #BAC5CB;
-  --relief-3: #F6F1E6;
+  --relief-0: #4E5F6A;
+  --relief-1: #7D8D96;
+  --relief-2: #B3BEC4;
+  --relief-3: #ECE7DC;
 }
 
 html,
@@ -71,9 +85,47 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 h1 {
   font-family: var(--font-sans);
+}
+
+button {
+  font: inherit;
+}
+
+/* Numbers, dates and units: mono with tabular numerals */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card texture: dotted pattern plus a diagonal highlight (both off in dark via --tex / --shine) */
+.tx {
+  position: relative;
+  isolation: isolate;
+  background-image: var(--tex);
+  background-size: 5px 5px;
+}
+
+.tx::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--shine) 0%, transparent 55%);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[role="separator"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

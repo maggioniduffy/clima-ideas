@@ -67,7 +67,7 @@ test("events layer: shows the selected event fields, source/period and the cell 
   expect(screen.getByTestId("cell-value")).toHaveTextContent(es.events.noData);
 });
 
-test("flood-stations layer lists station names and opens the station panel; other layers keep Punto labels", () => {
+test("flood-stations layer lists station names (its charts live in the detail card); other layers keep Punto labels", () => {
   const floodLayer: LayerManifest = { ...layer, id: "flood-stations", title: "Crecidas" };
   const stations = [{ id: "1001", lon: -69, lat: -38, value: 5, name: "Paso Falso", river: "Río Falso" }];
   vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) })));

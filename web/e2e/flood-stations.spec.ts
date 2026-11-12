@@ -20,6 +20,7 @@ test("flood stations: pick a station, see the return-period curve and the top fl
   await page.getByTestId("feature-1001").click();
   const chart = page.getByTestId("return-period-chart");
   await expect(chart).toBeVisible();
+  await expect(page.getByTestId("detail-card").getByTestId("flood-station-panel")).toBeVisible();
   await expect(page.getByTestId("return-period-curve")).toBeVisible();
   await expect(page.getByTestId("return-period-band")).toBeVisible();
   await expect(page.getByTestId("flow-series-chart")).toBeVisible();

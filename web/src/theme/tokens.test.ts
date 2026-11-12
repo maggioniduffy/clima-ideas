@@ -15,6 +15,23 @@ function block(selector: string): Record<string, string> {
 test("brand tokens match tokens.css", () => {
   const root = block(":root");
   for (const [k, v] of Object.entries(tokens.brand)) expect(root[`--${k}`]).toBe(v);
+  expect(root["--accent"]).toBeUndefined(); // the accent is per theme
+});
+
+test("per-theme accent", () => {
+  expect(tokens.light.accent).toBe("#8EB8E5");
+  expect(tokens.dark.accent).toBe("#FDDA0D");
+});
+
+test("mockup neutrals and control tokens", () => {
+  expect(tokens.light).toMatchObject({ bg: "#F1EEE6", surface: "#F9F7F2", raised: "#EFECE4", border: "#DDD8CD", "text-muted": "#5F6468", ctrl: "#3E505B", "on-ctrl": "#F5F2EA", water: "#3A6E8F", casing: "#2A343B" });
+  expect(tokens.dark).toMatchObject({ ctrl: "#4D6372", "on-ctrl": "#ECE7DC", water: "#7FA9C6", casing: "#16212A" });
+});
+
+test.each(["light", "dark"] as const)("%s texture variables", (theme) => {
+  const b = block(`:root[data-theme="${theme}"]`);
+  expect(b["--tex"]).toBe(theme === "light" ? "radial-gradient(rgba(42, 52, 59, 0.09) 0.9px, transparent 1.3px)" : "none");
+  expect(b["--shine"]).toBe(theme === "light" ? "rgba(255, 255, 255, 0.45)" : "transparent");
 });
 
 test.each(["light", "dark"] as const)("%s neutrals match tokens.css", (theme) => {

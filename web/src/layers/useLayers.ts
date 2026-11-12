@@ -94,7 +94,7 @@ export function useLayers() {
           if (reliefs[l.id]) return [buildReliefLayer(l.id, reliefs[l.id]!, theme)];
           if (l.kind === "points" && data[l.id])
             return [
-              buildPointsLayer(l.id, data[l.id]!, selectedId === l.id ? selectedPointId : null, (f) =>
+              buildPointsLayer(l.id, data[l.id]!, selectedId === l.id ? selectedPointId : null, theme, (f) =>
                 pickPoint(l.id, f),
               ),
             ];

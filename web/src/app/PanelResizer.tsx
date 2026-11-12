@@ -6,7 +6,9 @@ interface Props {
   orientation: "vertical" | "horizontal";
   /** +1 when dragging toward the end of the axis (right/down) grows the panel, -1 when it shrinks it. */
   dir: 1 | -1;
+  /** Current size; 0 when the panel is collapsed. */
   value: number;
+  /** Smallest visible size: dragging below it collapses the panel. */
   min: number;
   max: number;
   defaultValue: number;
@@ -15,12 +17,17 @@ interface Props {
   onChange: (value: number) => void;
 }
 
-/** Thin draggable/keyboard separator on a panel's inner edge. */
+/** Draggable/keyboard separator in the gap next to a panel; it can collapse the panel to 0 and bring it back. */
 export function PanelResizer({ className, orientation, dir, value, min, max, defaultValue, label, testId, onChange }: Props) {
   const [dragging, setDragging] = useState(false);
   const start = useRef({ pos: 0, value: 0 });
   const axis = (e: PointerEvent) => (orientation === "vertical" ? e.clientX : e.clientY);
-  const clamp = (v: number) => Math.min(max, Math.max(min, Math.round(v)));
+  /** Pointer-driven size: below the minimum snaps to 0; leaving the collapsed state shows the panel from its minimum upward. */
+  const dragSize = (raw: number) => {
+    const v = Math.round(raw);
+    if (start.current.value === 0) return v > 0 ? Math.min(max, Math.max(min, v)) : 0;
+    return v < min ? 0 : Math.min(max, v);
+  };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -31,7 +38,7 @@ export function PanelResizer({ className, orientation, dir, value, min, max, def
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging) return;
-    onChange(clamp(start.current.value + (axis(e) - start.current.pos) * dir));
+    onChange(dragSize(start.current.value + (axis(e) - start.current.pos) * dir));
   };
   const endDrag = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging) return;
@@ -40,7 +47,7 @@ export function PanelResizer({ className, orientation, dir, value, min, max, def
     document.body.style.userSelect = "";
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const next = stepSize(e.key, orientation, dir, value, min, max);
+    const next = stepSize(e.key, orientation, dir, value, min, max, defaultValue);
     if (next == null) return;
     e.preventDefault();
     onChange(next);
@@ -53,10 +60,11 @@ export function PanelResizer({ className, orientation, dir, value, min, max, def
       className={className}
       data-testid={testId}
       data-dragging={dragging || undefined}
+      data-collapsed={value === 0 || undefined}
       aria-orientation={orientation}
       aria-label={label}
       aria-valuenow={value}
-      aria-valuemin={min}
+      aria-valuemin={0}
       aria-valuemax={max}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

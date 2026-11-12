@@ -14,7 +14,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** Overlay over the map with the F1.8 table: AR counts, IVT and rain share by ENSO phase, per season. */
+/** Content of the detail card with the F1.8 table: AR counts, IVT and rain share by ENSO phase, per season. */
 export function EnsoPanel({ status, stats, source, period, onClose }: Props) {
   const rows = stats?.results.rows ?? [];
   const seasons = [...new Set(rows.map((r) => r.season))];
