@@ -1,4 +1,4 @@
-.PHONY: dev test lint install
+.PHONY: dev test lint install publish publish-dry
 
 install:
 	cd backend && uv sync
@@ -18,3 +18,10 @@ lint:
 	cd backend && uv run ruff check
 	cd web && pnpm lint
 	cd web && pnpm typecheck
+
+# Upload data/processed and layers.json to Cloudflare R2 (needs R2_* env vars, see docs/architecture.md).
+publish:
+	cd backend && uv run clima-nqn publish
+
+publish-dry:
+	cd backend && uv run clima-nqn publish --dry-run

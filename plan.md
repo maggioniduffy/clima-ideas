@@ -54,11 +54,9 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 
 ## Próximo
 
-1. F2.3: etiquetar las crecidas mayores con el catálogo de ríos atmosféricos y lluvia sobre nieve (cierra el hilo principal).
-2. F2.7: ENSO en el caudal; decide si F6.2 se hace.
-3. F0.11: publicar las capas de las fases 1 y 2.
-4. F3.0: comprobar lluvia horaria en NOAA ISD 877150.
-5. F2.5: LSTM de caudal contra GR4J y persistencia (la tarea más larga; habilita F2.6 y la fase 6).
+1. F0.11: publicar las capas de las fases 1 y 2 (en curso: `odd/tasks/publish.md`).
+2. F3.0: comprobar lluvia horaria en NOAA ISD 877150.
+3. F2.5: LSTM de caudal contra GR4J y persistencia (la tarea más larga; habilita F2.6 y la fase 6).
 
 ## Advisor (hasta 2026-11-17)
 
