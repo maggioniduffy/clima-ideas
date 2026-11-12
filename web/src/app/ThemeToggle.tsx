@@ -11,9 +11,9 @@ export function ThemeToggle() {
       aria-label={es.theme.toggle}
       onClick={toggleTheme}
     >
-      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        {theme === "light" ? <path d="M8 2a6 6 0 0 0 0 12z" fill="currentColor" /> : <path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" />}
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+        {theme === "light" ? <path d="M9 2.5 A6.5 6.5 0 0 0 9 15.5 Z" fill="currentColor" /> : <path d="M9 2.5 A6.5 6.5 0 0 1 9 15.5 Z" fill="currentColor" />}
       </svg>
     </button>
   );

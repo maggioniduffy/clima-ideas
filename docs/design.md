@@ -57,9 +57,9 @@ IBM Plex Sans para el cuerpo y los títulos; IBM Plex Mono con numerales tabular
 
 - Barra superior (mínimo 56 px, `--surface`, con textura): marca del logo, "Clima Ideas", `h1` de la página y botón de tema de 44 px.
 - Cuerpo: panel de capas (`aside`) de 240 px por defecto; columna principal con la tarjeta del mapa (flex 1, mínimo 400 px de alto), una fila de tarjetas debajo (inspector `1 1 300px`, gráficos de detalle `1,6 1 420px`, lista de eventos `1 1 300px`) y la tira de línea de tiempo.
-- El inspector muestra filas etiqueta a la izquierda y valor mono a la derecha (mínimo 28 px); la fuente y el período se conservan. La tarjeta de detalle aloja los gráficos de la estación y la tabla ENSO cuando corresponden; sin contenido no se muestra. La lista de eventos tiene filas de 48 px (punto, nombre, valor y fecha en mono) y el conteo en el título.
+- El inspector muestra filas etiqueta a la izquierda y valor mono a la derecha (mínimo 28 px); la fuente y el período se conservan. Sin evento elegido, la ayuda del mapa queda en un desplegable (`details`) para que el inspector no desborde su tarjeta. La tarjeta de detalle aloja los gráficos de la estación y la tabla ENSO cuando corresponden; sin contenido no se muestra. La lista de eventos tiene filas de 48 px (punto, nombre, valor y fecha en mono) y el conteo en el título.
 - Línea de tiempo: botones anterior / reproducir / siguiente de 44 px; pista con línea base de 2 px, marcas en acento y cabezal de 5 px en acento; hora de la reproducción en mono.
-- Mapa en una tarjeta redondeada; leyenda abajo a la izquierda sin borde; mientras hay una reproducción activa, un reloj arriba a la derecha muestra su fecha y hora.
+- Mapa en una tarjeta redondeada; leyenda abajo a la izquierda sin borde, con el selector de vista como control segmentado (contenedor `--raised`, botón activo `--ctrl`); mientras hay una reproducción activa, un reloj arriba a la derecha muestra su fecha y hora.
 
 ## Tiradores de arrastre
 
@@ -93,4 +93,4 @@ En ambas vistas las celdas ERA5 siguen siendo seleccionables (hover/clic) aunque
 
 ## Panel de crecidas
 
-Gráficos SVG propios, solo con tokens: curva GEV y serie diaria en `--text`, banda IC 95 % y máximos anuales en `--text-muted` (banda translúcida), las 5 mayores crecidas en `--accent` con borde `--text`. Los puntos del mapa son `--main` (acento si está seleccionada) y las estaciones reguladas se dibujan huecas con contorno.
+Gráficos SVG propios, solo con tokens: curva GEV y serie diaria en `--text`, banda IC 95 % y máximos anuales en `--text-muted` (banda translúcida), las 5 mayores crecidas en `--accent` con borde `--casing`. Los puntos y estaciones del mapa son `--ctrl`; el seleccionado va en `--accent` con contorno `--casing`; las reguladas se dibujan huecas con contorno.

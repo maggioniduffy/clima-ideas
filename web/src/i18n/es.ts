@@ -1,8 +1,8 @@
 export const es = {
   appTitle: "Neuquén: lluvias extremas",
   theme: { toggle: "Cambiar tema" },
-  resize: { layers: "Ancho del panel de capas", inspector: "Ancho del panel de detalle", timeline: "Alto de la línea de tiempo" },
-  drawers: { layers: "Capas", inspector: "Detalle", close: "Cerrar panel" },
+  resize: { layers: "Ancho del panel de capas", cards: "Alto del panel de detalle", timeline: "Alto de la línea de tiempo" },
+  drawers: { layers: "Capas", close: "Cerrar panel" },
   layers: { empty: "Sin capas", loading: "Cargando capas…", error: "No se pudieron cargar las capas", toggle: "Activar capa" },
   inspector: {
     empty: "Nada seleccionado",
@@ -113,7 +113,7 @@ export const es = {
     hour: "Hora del evento",
     units: { hour: "h", ivt: "kg m-1 s-1", meters: "m", mm: "mm" },
     phase: { nino: "El Niño", nina: "La Niña", neutral: "Neutro" },
-    icons: { back: "\u25C0", play: "\u25B6", pause: "\u275A\u275A", forward: "\u25B6\u25B6" },
+    clockHour: (n: number, total: number) => `Hora ${n} de ${total}`,
     sep: ", ",
     south: "S",
     west: "O",

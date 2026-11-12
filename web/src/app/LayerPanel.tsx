@@ -1,7 +1,6 @@
 import { Fragment } from "react";
-import type { ArEvent, LayerManifest } from "../api/client";
+import type { LayerManifest } from "../api/client";
 import { es } from "../i18n/es";
-import { formatDate } from "./eventFormat";
 
 interface Props {
   layers: LayerManifest[];
@@ -10,13 +9,9 @@ interface Props {
   selectedId: string | null;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
-  /** Event list of the active `events` layer (AR replay). */
+  /** ENSO button of the active `events` layer (the event list itself lives in its own card). */
   events?: {
     layerId: string;
-    status: "idle" | "loading" | "ready" | "error";
-    items: ArEvent[];
-    selectedEventId: string | null;
-    onSelectEvent: (id: string) => void;
     /** ENSO-phase statistics (F1.8): the button shows unless the layer publishes no report ("none"/absent). */
     ensoStatus?: "none" | "loading" | "ready" | "error";
     ensoOpen?: boolean;
@@ -27,6 +22,7 @@ interface Props {
 export function LayerPanel({ layers, status, activeIds, selectedId, onToggle, onSelect, events }: Props) {
   return (
     <aside className="shell-layers" id="layer-panel" data-testid="layer-panel">
+      <h2 className="panel-title">{es.drawers.layers}</h2>
       {status === "loading" && <p className="empty">{es.layers.loading}</p>}
       {status === "error" && <p className="empty">{es.layers.error}</p>}
       {status === "ready" && layers.length === 0 && <p className="empty">{es.layers.empty}</p>}
@@ -53,10 +49,7 @@ export function LayerPanel({ layers, status, activeIds, selectedId, onToggle, on
                 </button>
               </li>
               {active && events?.layerId === l.id && (
-                <li className="event-list-item">
-                  {events.status === "loading" && <p className="empty">{es.events.loading}</p>}
-                  {events.status === "error" && <p className="empty">{es.events.error}</p>}
-                  {events.status === "ready" && events.items.length === 0 && <p className="empty">{es.events.none}</p>}
+                <li className="enso-item">
                   {events.ensoStatus && events.ensoStatus !== "none" && (
                     <button
                       type="button"
@@ -69,21 +62,6 @@ export function LayerPanel({ layers, status, activeIds, selectedId, onToggle, on
                       {es.enso.open}
                     </button>
                   )}
-                  <ul className="event-list" data-testid="event-list" aria-label={es.events.list}>
-                    {events.items.map((e) => (
-                      <li key={e.event_id}>
-                        <button
-                          type="button"
-                          data-testid={`event-${e.event_id}`}
-                          aria-pressed={e.event_id === events.selectedEventId}
-                          onClick={() => events.onSelectEvent(e.event_id)}
-                        >
-                          <span>{formatDate(e.start)}</span>
-                          <span className="event-ivt">{e.ivt_max == null ? es.events.noData : `${es.events.ivtShort} ${Math.round(e.ivt_max)}`}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
                 </li>
               )}
             </Fragment>

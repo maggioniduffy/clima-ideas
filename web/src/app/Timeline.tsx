@@ -14,6 +14,22 @@ interface Props {
   replay?: ArEventsState | null;
 }
 
+/** Control icons of the design (16 px grid): skip-back / play / pause / skip-forward. */
+const ICONS = {
+  prev: "M12 3 V13 L5 8 Z M3 3 V13",
+  play: "M4 2.5 V13.5 L13 8 Z",
+  pause: "M4 3h3v10H4zM9 3h3v10H9z",
+  next: "M4 3 V13 L11 8 Z M13 3 V13",
+};
+
+function Icon({ d, stroke = false }: { d: string; stroke?: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <path d={d} fill="currentColor" stroke={stroke ? "currentColor" : undefined} strokeWidth={stroke ? 1.6 : undefined} />
+    </svg>
+  );
+}
+
 const pct = (f: number) => `${(f * 100).toFixed(3)}%`;
 
 export function Timeline({ events = [], period, selectedEventId = null, onSelectEvent, replay = null }: Props) {
@@ -35,20 +51,33 @@ export function Timeline({ events = [], period, selectedEventId = null, onSelect
     <footer className="shell-timeline" data-testid="timeline">
       {replay && selected && (
         <div className="replay-controls" data-testid="replay-controls" data-frame={replay.frame} data-playing={replay.playing}>
-          <button type="button" data-testid="replay-back" aria-label={es.events.stepBack} onClick={() => replay.step(-1)}>
-            {es.events.icons.back}
+          <button
+            type="button"
+            className="replay-step"
+            data-testid="replay-back"
+            aria-label={es.events.stepBack}
+            onClick={() => replay.step(-1)}
+          >
+            <Icon d={ICONS.prev} stroke />
           </button>
           <button
             type="button"
+            className="replay-play"
             data-testid="replay-play"
             aria-label={replay.playing ? es.events.pause : es.events.play}
             aria-pressed={replay.playing}
             onClick={replay.toggle}
           >
-            {replay.playing ? es.events.icons.pause : es.events.icons.play}
+            <Icon d={replay.playing ? ICONS.pause : ICONS.play} />
           </button>
-          <button type="button" data-testid="replay-forward" aria-label={es.events.stepForward} onClick={() => replay.step(1)}>
-            {es.events.icons.forward}
+          <button
+            type="button"
+            className="replay-step"
+            data-testid="replay-forward"
+            aria-label={es.events.stepForward}
+            onClick={() => replay.step(1)}
+          >
+            <Icon d={ICONS.next} stroke />
           </button>
           <input
             type="range"
@@ -60,7 +89,7 @@ export function Timeline({ events = [], period, selectedEventId = null, onSelect
             disabled={replay.nFrames === 0}
             onChange={(e) => replay.seek(Number(e.target.value))}
           />
-          <span className="replay-time" data-testid="replay-time">
+          <span className="num replay-time" data-testid="replay-time">
             {replay.cursorMs != null && formatUtc(replay.cursorMs)}
           </span>
         </div>

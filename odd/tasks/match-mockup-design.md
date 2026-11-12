@@ -42,8 +42,8 @@ Design source: https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y, artboards unde
 
 - [x] T1 Tokens, base styles, design doc — S1, S2, S3 (utilities), S4 (focus ring), S12 — route: delegated (builder, user model-roles rule) — commit: ac5bb33
 - [x] T2 Shell layout and collapsible handles — S5, S10, S11, S13 — route: delegated — commit:
-- [ ] T3 Cards and controls — S3, S4, S6, S7, S8, S9 (chrome), S13 — route: delegated — commit:
-- [ ] T4 Map colors — S9 (deck.gl) — route: delegated — commit:
+- [x] T3 Cards and controls — S3, S4, S6, S7, S8, S9 (chrome), S13 — route: delegated — commit:
+- [x] T4 Map colors — S9 (deck.gl) — route: delegated — commit:
 - [ ] T5 Verify: e2e and browser comparison against the artboards, light and dark, 1440×900 and phone width — route: inline
 
 ## Log

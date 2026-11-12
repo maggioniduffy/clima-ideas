@@ -160,7 +160,7 @@ test("IVT view toggle: legend control only with the AR layer; isolines add conto
   expect(screen.queryByTestId("ivt-view-drape")).not.toBeInTheDocument();
 });
 
-test("ENSO panel: button only when the layer lists enso.json; opens over the map, closes with Esc and with the layer off", async () => {
+test("ENSO panel: button only when the layer lists enso.json; opens in the detail card, closes with Esc and with the layer off", async () => {
   const enso = {
     meta: { period: "1980-01-01/2025-12-30", source: "ERA5 + ONI" },
     results: {
@@ -190,10 +190,15 @@ test("ENSO panel: button only when the layer lists enso.json; opens over the map
   render(<Shell />);
   await screen.findByTestId("layer-toggle-ar-events");
   expect(screen.queryByTestId("enso-open")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("detail-card")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("event-card")).not.toBeInTheDocument();
   fireEvent.click(screen.getByTestId("layer-toggle-ar-events"));
+  expect(await screen.findByTestId("event-card")).toBeInTheDocument();
+  expect(screen.queryByTestId("map-clock")).not.toBeInTheDocument();
   fireEvent.click(await screen.findByTestId("enso-open"));
   expect(await screen.findByTestId("enso-row-ivt_mean")).toHaveTextContent("527 ± 80 (n=14)");
-  expect(screen.getByTestId("map-canvas")).toContainElement(screen.getByTestId("enso-panel"));
+  expect(screen.getByTestId("detail-card")).toContainElement(screen.getByTestId("enso-panel"));
+  expect(screen.getByTestId("cards-row")).toContainElement(screen.getByTestId("detail-card"));
   fireEvent.keyDown(window, { key: "Escape" });
   expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
   fireEvent.click(screen.getByTestId("enso-open"));

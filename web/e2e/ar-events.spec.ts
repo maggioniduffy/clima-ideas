@@ -34,6 +34,12 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   await expect(page.getByTestId("event-start")).toHaveText("2000-03-10 06:00 UTC");
   await expect(page.getByTestId("event-ivt-max")).toHaveText("350 kg m-1 s-1");
   await expect(page.getByTestId("replay-time")).toHaveText("2000-03-10 06:00 UTC");
+  // clock box over the map while the replay is active
+  await expect(page.getByTestId("map-clock")).toContainText("2000-03-10 06:00 UTC");
+  await expect(page.getByTestId("map-canvas").getByTestId("map-clock")).toBeVisible();
+  // the event list is its own card in the card row, not in the layer panel
+  await expect(page.getByTestId("event-card")).toContainText("Eventos");
+  await expect(page.getByTestId("layer-panel").getByTestId("event-list")).toHaveCount(0);
 
   // replay: the timeline cursor advances hour by hour
   const frame = () => page.getByTestId("replay-controls").getAttribute("data-frame");
@@ -72,6 +78,8 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   await page.getByTestId("layer-toggle-ar-events").uncheck();
   await expect(canvas).toHaveAttribute("data-deck-layers", /^(ref-[a-z-]+(,|$))+$/);
   await expect(page.getByTestId("map-legend")).toHaveCount(0);
+  await expect(page.getByTestId("map-clock")).toHaveCount(0);
+  await expect(page.getByTestId("event-card")).toHaveCount(0);
   await expect(page.getByTestId("timeline")).toContainText("Sin serie temporal");
 
   expect(errors).toEqual([]);
@@ -120,7 +128,7 @@ test("IVT view toggle: drape over the relief by default, isolines add contour la
   expect(errors).toEqual([]);
 });
 
-test("ENSO panel: opens over the map with the F1.8 table, source and caveats, switches season and closes", async ({
+test("ENSO panel: opens in the detail card with the F1.8 table, source and caveats, switches season and closes", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -149,24 +157,25 @@ test("ENSO panel: opens over the map with the F1.8 table, source and caveats, sw
   await expect(page.getByTestId("enso-tab-SON")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("enso-row-ivt_mean")).toContainText("0,0312");
 
-  // the inspector keeps fitting without scrolling and the panel stays inside the map
+  // the inspector keeps fitting without scrolling and the panel sits in the card row under the map
   const inspector = page.getByTestId("inspector");
   expect(await inspector.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+  await expect(page.getByTestId("cards-row").getByTestId("detail-card")).toContainText("Ríos atmosféricos y ENSO");
   const map = (await page.getByTestId("map-canvas").boundingBox())!;
   const box = (await panel.boundingBox())!;
-  expect(box.x).toBeGreaterThanOrEqual(map.x);
+  expect(box.y).toBeGreaterThanOrEqual(map.y + map.height);
   expect(box.x + box.width).toBeLessThanOrEqual(map.x + map.width);
 
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);
 
-  // narrow screen: the panel takes the map width
+  // narrow screen: the detail card takes the map width
   await page.setViewportSize({ width: 600, height: 820 });
   await page.getByTestId("drawer-toggle-layers").click();
   await page.getByTestId("enso-open").click();
   await page.getByTestId("drawer-scrim").click({ position: { x: 560, y: 100 } }); // right of the drawer
   const narrowMap = (await page.getByTestId("map-canvas").boundingBox())!;
-  const narrow = (await page.getByTestId("enso-panel").boundingBox())!;
+  const narrow = (await page.getByTestId("detail-card").boundingBox())!;
   expect(narrow.width).toBeGreaterThan(narrowMap.width - 24);
 
   expect(errors).toEqual([]);
