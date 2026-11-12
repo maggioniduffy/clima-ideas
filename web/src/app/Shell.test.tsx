@@ -34,7 +34,10 @@ beforeEach(() => {
     })),
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
 
 const regions = ["topbar", "layer-panel", "map-canvas", "inspector", "timeline"];
 
@@ -80,21 +83,31 @@ test("province outline, city marker and label are always drawn, with no layer ac
   expect(canvas.getAttribute("data-deck-layers")).not.toContain("points-a");
 });
 
-test("drawer toggles expose aria-expanded/aria-controls and open one panel at a time", () => {
+test("the layers drawer toggle exposes aria-expanded/aria-controls; there is no inspector drawer", () => {
   render(<Shell />);
   const layers = screen.getByTestId("drawer-toggle-layers");
-  const inspector = screen.getByTestId("drawer-toggle-inspector");
   expect(layers).toHaveAttribute("aria-controls", "layer-panel");
-  expect(inspector).toHaveAttribute("aria-controls", "inspector-panel");
+  expect(screen.queryByTestId("drawer-toggle-inspector")).not.toBeInTheDocument();
   expect(layers).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(layers);
   expect(layers).toHaveAttribute("aria-expanded", "true");
   expect(screen.getByTestId("shell")).toHaveAttribute("data-drawer", "layers");
-  fireEvent.click(inspector);
-  expect(layers).toHaveAttribute("aria-expanded", "false");
-  expect(inspector).toHaveAttribute("aria-expanded", "true");
   fireEvent.keyDown(window, { key: "Escape" });
   expect(screen.getByTestId("shell")).not.toHaveAttribute("data-drawer");
+});
+
+test("the inspector is the first card of the card row", () => {
+  render(<Shell />);
+  expect(screen.getByTestId("cards-row")).toContainElement(screen.getByTestId("inspector"));
+  expect(screen.getByTestId("inspector")).toHaveAttribute("id", "inspector-panel");
+});
+
+test("the topbar shows the logo mark and the wordmark next to the page h1", () => {
+  render(<Shell />);
+  const bar = screen.getByTestId("topbar");
+  expect(bar).toHaveTextContent("Clima Ideas");
+  expect(bar.querySelector("svg")).not.toBeNull();
+  expect(screen.getByRole("heading", { name: es.appTitle })).toBeInTheDocument();
 });
 
 test("IVT view toggle: legend control only with the AR layer; isolines add contour layers and cell readings keep working", async () => {
@@ -189,17 +202,45 @@ test("ENSO panel: button only when the layer lists enso.json; opens over the map
   expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
 });
 
-test("three resize separators exist and keyboard resizing updates the grid variable", () => {
+test("three resize separators exist and keyboard resizing updates the grid variables", () => {
   localStorage.clear();
+  vi.stubGlobal("innerHeight", 1200); // jsdom's 768 px leaves no room above the 400 px map minimum
   render(<Shell />);
-  const seps = screen.getAllByRole("separator");
-  expect(seps).toHaveLength(3);
+  expect(screen.getAllByRole("separator")).toHaveLength(3);
   expect(screen.getByTestId("resizer-layers")).toHaveAttribute("aria-orientation", "vertical");
   expect(screen.getByTestId("resizer-timeline")).toHaveAttribute("aria-orientation", "horizontal");
-  const inspector = screen.getByTestId("resizer-inspector");
-  fireEvent.keyDown(inspector, { key: "ArrowLeft" });
-  expect(screen.getByTestId("shell").style.getPropertyValue("--inspector-w")).toBe("276px");
-  expect(JSON.parse(localStorage.getItem("panel-sizes")!).inspector).toBe(276);
-  fireEvent.doubleClick(inspector);
-  expect(screen.getByTestId("shell").style.getPropertyValue("--inspector-w")).toBe("260px");
+  const cards = screen.getByRole("separator", { name: "Alto del panel de detalle" });
+  expect(cards).toBe(screen.getByTestId("resizer-cards"));
+  expect(cards).toHaveAttribute("aria-orientation", "horizontal");
+  fireEvent.keyDown(cards, { key: "ArrowUp" });
+  expect(screen.getByTestId("shell").style.getPropertyValue("--cards-h")).toBe("276px");
+  expect(JSON.parse(localStorage.getItem("panel-sizes")!).cards).toBe(276);
+  fireEvent.doubleClick(cards);
+  expect(screen.getByTestId("shell").style.getPropertyValue("--cards-h")).toBe("260px");
+});
+
+test("Home collapses a panel (hidden, handle stays at 0), Enter restores it, and the state persists", () => {
+  localStorage.clear();
+  render(<Shell />);
+  const layers = screen.getByTestId("resizer-layers");
+  expect(screen.getByTestId("layers-slot")).not.toHaveAttribute("hidden");
+  fireEvent.keyDown(layers, { key: "Home" });
+  expect(screen.getByTestId("layers-slot")).toHaveAttribute("hidden");
+  expect(layers).toHaveAttribute("aria-valuenow", "0");
+  expect(layers).toHaveAttribute("aria-valuemin", "0");
+  expect(JSON.parse(localStorage.getItem("panel-sizes")!).layers).toBe(0);
+  fireEvent.keyDown(layers, { key: "Enter" });
+  expect(screen.getByTestId("layers-slot")).not.toHaveAttribute("hidden");
+  expect(layers).toHaveAttribute("aria-valuenow", "240");
+  for (const [id, slot] of [["cards", "cards-row"], ["timeline", "timeline-slot"]]) {
+    fireEvent.keyDown(screen.getByTestId(`resizer-${id}`), { key: "Home" });
+    expect(screen.getByTestId(slot)).toHaveAttribute("hidden");
+  }
+});
+
+test("a stored collapsed state is applied on load", () => {
+  localStorage.setItem("panel-sizes", JSON.stringify({ layers: 0, cards: 260, timeline: 136 }));
+  render(<Shell />);
+  expect(screen.getByTestId("layers-slot")).toHaveAttribute("hidden");
+  localStorage.clear();
 });

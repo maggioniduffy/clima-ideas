@@ -31,6 +31,15 @@ import { TopBar, type Drawer } from "./TopBar";
 import "./shell.css";
 
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
+/** Same breakpoint as the narrow-screen rules in shell.css: layers is a drawer and there are no handles. */
+const NARROW_MAX_W = 800;
+
+// The card-row label is not in es.ts yet (outside this task's edit surface); layers and timeline reuse es.resize.
+const RESIZE_LABELS: Record<PanelId, string> = {
+  layers: es.resize.layers,
+  cards: "Alto del panel de detalle",
+  timeline: es.resize.timeline,
+};
 
 export function Shell() {
   // panel sizes (desktop only): the stored preference, re-clamped against the window on every render
@@ -42,6 +51,9 @@ export function Shell() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
   const sizes = useMemo(() => clampAll(pref, vp), [pref, vp]);
+  // A size of 0 is a collapsed (hidden) panel; narrow screens ignore it because they have no handles to bring it back.
+  const narrow = vp.width <= NARROW_MAX_W;
+  const collapsed = (panel: PanelId) => !narrow && sizes[panel] === 0;
   const resize = (panel: PanelId) => (value: number) =>
     setPref((cur) => {
       const next = { ...cur, [panel]: clampSize(panel, value, clampAll(cur, vp), vp) };
@@ -55,7 +67,7 @@ export function Shell() {
       min,
       max,
       defaultValue: PANEL_LIMITS[panel].def,
-      label: es.resize[panel],
+      label: RESIZE_LABELS[panel],
       testId: `resizer-${panel}`,
       onChange: resize(panel),
     };
@@ -125,61 +137,79 @@ export function Shell() {
       style={
         {
           "--layers-w": `${sizes.layers}px`,
-          "--inspector-w": `${sizes.inspector}px`,
+          "--cards-h": `${sizes.cards}px`,
           "--timeline-h": `${sizes.timeline}px`,
         } as CSSProperties
       }
     >
       <TopBar drawer={drawer} onToggleDrawer={toggleDrawer} />
-      <LayerPanel
-        layers={s.layers}
-        status={s.status}
-        activeIds={s.activeIds}
-        selectedId={s.selectedId}
-        onToggle={s.toggle}
-        onSelect={s.select}
-        events={
-          eventsLayer && {
-            layerId: eventsLayer.id,
-            status: ar.status,
-            items: ar.events,
-            selectedEventId: ar.selectedEventId,
-            onSelectEvent: selectEvent,
-            ensoStatus: enso.status,
-            ensoOpen: showEnso,
-            onToggleEnso: () => setEnsoOpen((o) => !o),
-          }
-        }
-      />
-      <MapCanvas
-        layers={[
-          ...mapLayers.filter((l) => !isFlood(l)),
-          ...ar.deckLayers,
-          ...mapLayers.filter(isFlood),
-          ...refLayers,
-        ]}
-      >
-        {showEnso && eventsLayer && enso.status !== "none" && (
-          <EnsoPanel
-            status={enso.status}
-            stats={enso.data}
-            source={eventsLayer.source}
-            period={eventsLayer.period}
-            onClose={() => setEnsoOpen(false)}
+      <div className="shell-body">
+        <div className="layers-slot card tx" data-testid="layers-slot" hidden={collapsed("layers")}>
+          <LayerPanel
+            layers={s.layers}
+            status={s.status}
+            activeIds={s.activeIds}
+            selectedId={s.selectedId}
+            onToggle={s.toggle}
+            onSelect={s.select}
+            events={
+              eventsLayer && {
+                layerId: eventsLayer.id,
+                status: ar.status,
+                items: ar.events,
+                selectedEventId: ar.selectedEventId,
+                onSelectEvent: selectEvent,
+                ensoStatus: enso.status,
+                ensoOpen: showEnso,
+                onToggleEnso: () => setEnsoOpen((o) => !o),
+              }
+            }
           />
-        )}
-        {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} />}
-      </MapCanvas>
-      <Inspector
-        layer={s.selectedLayer}
-        features={s.selectedFeatures}
-        selectedPointId={s.selectedPointId}
-        onSelectPoint={s.selectPoint}
-        event={{ selected: ar.selectedEvent, loadingFrames: ar.loadingFrames, reading: ar.reading }}
-      />
-      <PanelResizer className="panel-resizer panel-resizer-layers" orientation="vertical" dir={1} {...resizer("layers")} />
-      <PanelResizer className="panel-resizer panel-resizer-inspector" orientation="vertical" dir={-1} {...resizer("inspector")} />
-      <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
+        </div>
+        <PanelResizer className="panel-resizer panel-resizer-layers" orientation="vertical" dir={1} {...resizer("layers")} />
+        <div className="shell-main">
+          <MapCanvas
+            layers={[
+              ...mapLayers.filter((l) => !isFlood(l)),
+              ...ar.deckLayers,
+              ...mapLayers.filter(isFlood),
+              ...refLayers,
+            ]}
+          >
+            {showEnso && eventsLayer && enso.status !== "none" && (
+              <EnsoPanel
+                status={enso.status}
+                stats={enso.data}
+                source={eventsLayer.source}
+                period={eventsLayer.period}
+                onClose={() => setEnsoOpen(false)}
+              />
+            )}
+            {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} />}
+          </MapCanvas>
+          <PanelResizer className="panel-resizer panel-resizer-cards" orientation="horizontal" dir={-1} {...resizer("cards")} />
+          {/* Card row: the inspector first; the detail-charts card and the event-list card go after it. */}
+          <div className="cards-row" data-testid="cards-row" hidden={collapsed("cards")}>
+          <Inspector
+            layer={s.selectedLayer}
+            features={s.selectedFeatures}
+            selectedPointId={s.selectedPointId}
+            onSelectPoint={s.selectPoint}
+            event={{ selected: ar.selectedEvent, loadingFrames: ar.loadingFrames, reading: ar.reading }}
+          />
+          </div>
+          <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
+          <div className="timeline-slot card tx" data-testid="timeline-slot" hidden={collapsed("timeline")}>
+            <Timeline
+              events={eventsActive ? ar.events : []}
+              period={eventsLayer?.period}
+              selectedEventId={ar.selectedEventId}
+              onSelectEvent={selectEvent}
+              replay={ar.selectedEvent ? ar : null}
+            />
+          </div>
+        </div>
+      </div>
       <button
         type="button"
         className="drawer-scrim"
@@ -187,13 +217,6 @@ export function Shell() {
         aria-label={es.drawers.close}
         tabIndex={-1}
         onClick={() => setDrawer(null)}
-      />
-      <Timeline
-        events={eventsActive ? ar.events : []}
-        period={eventsLayer?.period}
-        selectedEventId={ar.selectedEventId}
-        onSelectEvent={selectEvent}
-        replay={ar.selectedEvent ? ar : null}
       />
     </div>
   );

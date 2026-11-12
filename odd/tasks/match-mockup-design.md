@@ -40,8 +40,8 @@ Design source: https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y, artboards unde
 
 ## Tasks
 
-- [x] T1 Tokens, base styles, design doc — S1, S2, S3 (utilities), S4 (focus ring), S12 — route: delegated (builder, user model-roles rule) — commit:
-- [ ] T2 Shell layout and collapsible handles — S5, S10, S11, S13 — route: delegated — commit:
+- [x] T1 Tokens, base styles, design doc — S1, S2, S3 (utilities), S4 (focus ring), S12 — route: delegated (builder, user model-roles rule) — commit: ac5bb33
+- [x] T2 Shell layout and collapsible handles — S5, S10, S11, S13 — route: delegated — commit:
 - [ ] T3 Cards and controls — S3, S4, S6, S7, S8, S9 (chrome), S13 — route: delegated — commit:
 - [ ] T4 Map colors — S9 (deck.gl) — route: delegated — commit:
 - [ ] T5 Verify: e2e and browser comparison against the artboards, light and dark, 1440×900 and phone width — route: inline
@@ -53,3 +53,4 @@ Design source: https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y, artboards unde
 - L3 (2026-11-12) User chose "Full mockup layout" and "Only what works".
 - L4 (2026-11-12) User, on the plan's drag handles: "Keep them, and make them able to hide completely what they drag". On docs/design.md: "Update it to this design".
 - L5 (2026-11-12) Forecast is above 400 changed lines; tasks are sequential because they share `shell.css`.
+- L6 (2026-11-12) T2 done: unit 148 pass, shell e2e 4 pass. Open for T3: `e2e/ar-events.spec.ts:154` (inspector must not overflow its card in the row), card-row label still local in `Shell.tsx` (move to `i18n/es.ts`).

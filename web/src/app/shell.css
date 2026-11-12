@@ -1,71 +1,62 @@
-/* Fixed layout, identical in both themes: only color tokens change. */
+/* Regions are borderless --surface cards on a --bg page with 8 px padding and gaps; identical in both themes. */
 .shell {
-  display: grid;
-  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* fills the window; the page scrolls when the map card cannot keep its 400 px */
   position: relative;
-  grid-template-columns: var(--layers-w, 200px) minmax(0, 1fr) var(--inspector-w, 260px);
-  grid-template-rows: 48px minmax(0, 1fr) var(--timeline-h, 136px);
-  grid-template-areas:
-    "top top top"
-    "layers canvas inspector"
-    "time time time";
   background: var(--bg);
   color: var(--text);
 }
+.shell [hidden] { display: none !important; }
 
-/* Drag handles on the inner edge of each panel (desktop only); the line shows in accent on interaction */
-.panel-resizer { position: absolute; z-index: 3; touch-action: none; outline: none; }
-.panel-resizer::after { content: ""; position: absolute; background: transparent; }
-.panel-resizer:hover::after, .panel-resizer:focus-visible::after, .panel-resizer[data-dragging]::after { background: var(--accent); }
-.panel-resizer-layers, .panel-resizer-inspector { top: 48px; bottom: var(--timeline-h, 136px); width: 6px; cursor: col-resize; }
-.panel-resizer-layers::after, .panel-resizer-inspector::after { top: 0; bottom: 0; left: 2px; width: 2px; }
-.panel-resizer-layers { left: calc(var(--layers-w, 200px) - 3px); }
-.panel-resizer-inspector { right: calc(var(--inspector-w, 260px) - 3px); }
-.panel-resizer-timeline { left: 0; right: 0; bottom: calc(var(--timeline-h, 136px) - 3px); height: 6px; cursor: row-resize; }
-.panel-resizer-timeline::after { left: 0; right: 0; top: 2px; height: 2px; }
+.card { box-sizing: border-box; background-color: var(--surface); border-radius: var(--radius-md); padding: var(--space-4); }
 
 .shell-topbar {
-  grid-area: top;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-4);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-2) var(--space-5);
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 6px var(--space-4);
+  background-color: var(--surface);
 }
+.topbar-brand { display: flex; align-items: center; gap: 10px; }
+.topbar-wordmark { font-weight: 600; }
+.topbar-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.shell-topbar h1 { margin: 0; font-size: 16px; font-weight: 600; }
 
-.topbar-actions { display: flex; align-items: center; gap: var(--space-2); }
+.shell-body { flex: 1; display: flex; padding: var(--space-2); }
+.layers-slot {
+  flex: none; width: var(--layers-w, 240px); contain: size; /* height follows the main column, never its content */
+  display: flex; flex-direction: column;
+}
+.shell-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.shell-canvas {
+  position: relative; flex: 1 1 auto; min-height: 400px; min-width: 0;
+  overflow: hidden; background: var(--surface); border-radius: var(--radius-md);
+}
+.cards-row { flex: none; display: flex; gap: var(--space-2); height: var(--cards-h, 260px); min-height: 0; }
+.timeline-slot { flex: none; height: var(--timeline-h, 136px); display: flex; flex-direction: column; }
+.shell-layers, .shell-timeline { flex: 1; min-height: 0; overflow: auto; }
+.shell-inspector { flex: 1 1 300px; min-width: 0; overflow: auto; }
+
+/* Drag handles sit in the 8 px gaps between regions; the line shows in accent on interaction and a faint one marks a collapsed panel */
+.panel-resizer { position: relative; flex: none; touch-action: none; outline: none; }
+.panel-resizer::after { content: ""; position: absolute; background: transparent; }
+.panel-resizer[data-collapsed]::after { background: var(--border); }
+.panel-resizer:hover::after, .panel-resizer:focus-visible::after, .panel-resizer[data-dragging]::after { background: var(--accent); }
+.panel-resizer-layers { width: var(--space-2); cursor: col-resize; }
+.panel-resizer-layers::after { top: 0; bottom: 0; left: 3px; width: 2px; }
+.panel-resizer-cards, .panel-resizer-timeline { height: var(--space-2); cursor: row-resize; }
+.panel-resizer-cards::after, .panel-resizer-timeline::after { left: 0; right: 0; top: 3px; height: 2px; }
+
 .drawer-toggle, .drawer-scrim { display: none; }
 .drawer-toggle {
-  height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--border);
+  height: 44px; padding: 0 var(--space-3); border-radius: var(--radius-md); border: 0;
   background: var(--raised); color: var(--text); cursor: pointer; font: inherit; font-size: 12px;
 }
-.drawer-toggle[aria-expanded="true"] { border-color: var(--accent); font-weight: 600; }
-
-.shell-topbar h1 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.shell-layers,
-.shell-inspector,
-.shell-timeline {
-  background: var(--surface);
-  padding: var(--space-4);
-  overflow: auto;
-}
-
-.shell-layers { grid-area: layers; border-right: 1px solid var(--border); }
-.shell-inspector { grid-area: inspector; border-left: 1px solid var(--border); }
-.shell-timeline { grid-area: time; border-top: 1px solid var(--border); }
-
-.shell-canvas {
-  grid-area: canvas;
-  position: relative;
-  overflow: hidden;
-  background: var(--bg);
-}
+.drawer-toggle[aria-expanded="true"] { font-weight: 600; }
 
 .events-help { display: flex; flex-direction: column; gap: var(--space-2); }
 .events-help h3 { margin: 0; font-size: 12px; color: var(--text); }
@@ -79,10 +70,10 @@
 }
 
 .theme-toggle {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--border);
+  border: 0;
   background: var(--raised);
   color: var(--text);
   cursor: pointer;
@@ -210,28 +201,26 @@
 .enso-foot p { margin: 0 0 var(--space-2); }
 .enso-caveats { margin: 0; padding-left: var(--space-4); }
 
-/* Narrow screens (<= 800 px): the map takes the full width; layer panel and inspector become drawers over it. */
+/* Narrow screens (<= 800 px): the layers panel becomes a drawer over the map; the cards stack under it and the page scrolls. */
 @media (max-width: 800px) {
-  .shell {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 48px minmax(0, 1fr) 136px;
-    grid-template-areas: "top" "canvas" "time";
-    position: relative;
-  }
-  .shell-topbar { gap: var(--space-2); padding: 0 var(--space-3); }
+  .shell-topbar { gap: var(--space-2); padding: 6px var(--space-3); flex-wrap: nowrap; }
   .shell-topbar h1 { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-actions { margin-left: 0; }
   .drawer-toggle { display: inline-block; }
   .panel-resizer { display: none; }
-  .shell-layers, .shell-inspector {
-    position: fixed; top: 48px; bottom: 136px; z-index: 5; width: min(320px, 86vw); box-sizing: border-box;
-    visibility: hidden; transition: transform 0.18s ease, visibility 0.18s;
+  .shell-main { gap: var(--space-2); }
+  .shell-canvas { flex: none; height: 60vh; min-height: 400px; }
+  .cards-row { flex-direction: column; height: auto; }
+  .shell-inspector { flex: none; }
+  .timeline-slot { height: auto; }
+  .shell .layers-slot {
+    position: fixed; top: 56px; bottom: 0; left: 0; z-index: 5; width: min(320px, 86vw); contain: none;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    visibility: hidden; transform: translateX(-100%); transition: transform 0.18s ease, visibility 0.18s;
   }
-  .shell-layers { left: 0; transform: translateX(-100%); border-right: 1px solid var(--border); }
-  .shell-inspector { right: 0; transform: translateX(100%); border-left: 1px solid var(--border); }
-  .shell[data-drawer="layers"] .shell-layers,
-  .shell[data-drawer="inspector"] .shell-inspector { visibility: visible; transform: none; }
+  .shell[data-drawer="layers"] .layers-slot { visibility: visible; transform: none; }
   .shell[data-drawer] .drawer-scrim {
-    display: block; position: fixed; inset: 48px 0 136px; z-index: 4; border: 0; padding: 0;
+    display: block; position: fixed; inset: 56px 0 0; z-index: 4; border: 0; padding: 0;
     background: var(--bg); opacity: 0.55; cursor: default;
   }
   .replay-time { min-width: 0; font-size: 11px; }
@@ -240,7 +229,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shell-layers, .shell-inspector { transition: none; }
+  .shell .layers-slot { transition: none; }
 }
 
 /* Flood station panel (docs/design.md): tokens only, readable in both themes */

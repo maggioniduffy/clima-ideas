@@ -20,7 +20,7 @@ export function Inspector({ layer, features, selectedPointId, onSelectPoint, eve
   const isFlood = layer?.id === FLOOD_LAYER_ID;
   const flood = useFloodStation(isFlood ? FLOOD_LAYER_ID : null, isFlood ? (point?.id ?? null) : null);
   return (
-    <aside className="shell-inspector" id="inspector-panel" data-testid="inspector">
+    <aside className="shell-inspector card tx" id="inspector-panel" data-testid="inspector">
       {!layer ? (
         <p className="empty">{es.inspector.empty}</p>
       ) : (
