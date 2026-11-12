@@ -205,3 +205,155 @@ def test_cli_flow_gev_help_unchanged():
     res = CliRunner().invoke(app, ["flow", "gev", "--help"])
     assert res.exit_code == 0 and "--flow-dir" in res.output and "--station" in res.output
     assert "--analysis-station" not in res.output
+
+
+# --- addendum (L12): lagged covariate, permutation p, trend control, gate -----------------------
+
+
+def test_jfm_covariate_is_jan_mar_of_the_same_calendar_year():
+    # ONI = 10 * year-offset + month: Jan-Mar of 2000 -> mean of 1, 2, 3 = 2; other months must not leak in
+    enso = monthly_oni(1999, 2001, lambda d: float(d.month) if d.year == 2000 else 99.0)
+    assert fe.jfm_covariate(enso, 2000) == pytest.approx(2.0)
+    assert math.isnan(fe.jfm_covariate(enso, 2002))
+    enso = enso[enso["date"] != pd.Timestamp("2000-02-01")]
+    assert math.isnan(fe.jfm_covariate(enso, 2000))  # a missing month -> NaN
+
+
+def test_permutation_lrt_small_p_for_dependent_and_large_for_unrelated_covariate():
+    y, z = draw(mu1=20.0, n=60)
+    dep = fe.permutation_lrt(y, z, n_perm=99, seed=1)
+    assert dep["p"] == pytest.approx(1 / 100)  # (0 + 1) / (99 + 1): no permutation reaches it
+    assert dep["n_perm"] == 99 and dep["stat"] > 10
+    y, z = draw(mu1=0.0, n=60)
+    assert fe.permutation_lrt(y, z, n_perm=99, seed=1)["p"] > 0.05
+
+
+def test_permutation_lrt_is_reproducible_and_matches_compare_gev_statistic():
+    y, z = draw(mu1=10.0, n=60)
+    a, b = fe.permutation_lrt(y, z, 30, seed=5), fe.permutation_lrt(y, z, 30, seed=5)
+    assert a == b
+    assert a["stat"] == pytest.approx(fe.compare_gev(y, z)["lrt"]["statistic"], rel=1e-3, abs=1e-3)
+
+
+def draw_trend(mu1, slope, n=200, seed=7):
+    year = np.arange(n, dtype=float)
+    z = np.random.default_rng(11).normal(0, 1, n)  # unrelated to the year
+    y = genextreme.rvs(
+        -0.1, loc=100 + mu1 * z + slope * (year - n / 2), scale=15, size=n, random_state=seed
+    )
+    return y, z, year
+
+
+def test_trend_control_pure_trend_does_not_reject_mu1():
+    y, z, year = draw_trend(mu1=0.0, slope=0.8)
+    assert fe.compare_gev(y, year)["lrt"]["p"] < 0.001  # sanity: the trend is real
+    r = fe.trend_control(y, z, year)
+    assert r["lrt"]["p"] > 0.05
+    assert r["nonstationary"]["mu2"] == pytest.approx(0.8, abs=0.2)
+
+
+def test_trend_control_recovers_mu1_with_oni_effect_plus_trend():
+    y, z, year = draw_trend(mu1=20.0, slope=0.8)
+    r = fe.trend_control(y, z, year)
+    assert r["nonstationary"]["mu1"] == pytest.approx(20.0, abs=5.0)
+    assert r["lrt"]["p"] < 0.001
+    assert r["year_scaling"] == "centered and scaled for fitting; mu2 reported per year"
+
+
+def test_f62_gate_needs_permutation_p_below_alpha_and_same_sign():
+    assert fe.f62_gate(0.01, 120.0, 191.0) is True
+    assert fe.f62_gate(0.01, -120.0, 191.0) is False  # opposite sign, even with small p
+    assert fe.f62_gate(0.05, 120.0, 191.0) is False  # p must be strictly < 0.05
+    assert fe.f62_gate(0.30, 120.0, 191.0) is False
+    assert fe.f62_gate(math.nan, 120.0, 191.0) is False
+
+
+def _res(sid, p_bh, pt_bh=(0.5, 0.5)):
+    lrt = {"p_bh": p_bh}
+    return {
+        "station_id": sid,
+        "primary": {"lrt": lrt},
+        "phase_tests": {"q_max": {"p_bh": pt_bh[0]}, "q_mean_amjjas": {"p_bh": pt_bh[1]}},
+    }
+
+
+def test_reading_line_only_when_signal_and_exactly_one_analysis_station_passes():
+    one = [_res(12004, 0.08), _res(12010, 0.02), _res(12012, 0.01)]
+    assert fe.reading_line(one, "señal", (12004, 12010)) == fe.READING
+    both = [_res(12004, 0.01), _res(12010, 0.02)]
+    assert fe.reading_line(both, "señal", (12004, 12010)) is None
+    none = [_res(12004, 0.08), _res(12010, 0.09)]
+    assert fe.reading_line(none, "sin señal", (12004, 12010)) is None
+    assert fe.reading_line(one, "sin señal", (12004, 12010)) is None  # verdict not "señal"
+    assert fe.READING == "Lectura: señal débil, concurrente, sostenida por una estación"
+
+
+def write_world_12k(tmp_path):
+    """Like write_world but with the real analysis station ids so the addendum runs."""
+    flow_dir = tmp_path / "flow"
+    flow_dir.mkdir()
+    rng = np.random.default_rng(3)
+    oni_by_year = {y: float(rng.normal()) for y in range(1950, 1990)}
+    enso = monthly_oni(1950, 1989, lambda d: oni_by_year[d.year])
+    enso.attrs.update({"source": "NOAA CPC ONI", "url": "https://example.test/oni"})
+    enso_path = tmp_path / "oni.parquet"
+    enso.to_parquet(enso_path, index=False)
+    stations = []
+    for sid in (12004, 12010):
+        parts = []
+        for k in range(30):
+            y = 1953 + k
+            peak = 100 + 30 * oni_by_year[y] + rng.gumbel(0, 10)
+            parts.append(
+                daily(f"{y}-04-01", f"{y + 1}-03-31", peaks=[(f"{y}-07-15", max(peak, 11.0))])
+            )
+        df = pd.concat(parts, ignore_index=True)
+        df.attrs.update({"source": flow.SOURCE, "url": flow.SNIH_URL, "fetched": "2026-11-09"})
+        flow.write_flow(df, flow_dir / f"{sid}.parquet")
+        stations.append({"id": sid, "name": f"S{sid}", "river": "R", "area_km2": None,
+                         "hydro_year_start_month": 4})  # fmt: skip
+    (flow_dir / "stations.json").write_text(
+        json.dumps({"fetched": "2026-11-09", "stations": stations})
+    )
+    return flow_dir, enso_path
+
+
+def test_run_addendum_does_not_change_verdict_or_bh_family(tmp_path):
+    flow_dir, enso_path = write_world_12k(tmp_path)
+    kw = {"flow_dir": flow_dir, "enso_path": enso_path, "stations": [12004, 12010], "n_perm": 100}
+    base = fe.run(out=tmp_path / "a.json", report=tmp_path / "a.md", addendum=False, **kw)
+    full = fe.run(out=tmp_path / "b.json", report=tmp_path / "b.md", addendum=True,
+                  addendum_n_perm=20, **kw)  # fmt: skip
+    assert full["meta"]["verdict"] == base["meta"]["verdict"]
+    assert (
+        full["meta"] == base["meta"] and full["meta"]["n_tests"] == 8
+    )  # 2 stations x 4 tests: family untouched
+    assert full["stations"] == base["stations"]  # pre-existing numbers identical, BH p included
+    a = json.loads((tmp_path / "b.json").read_text())["addendum"]
+    assert set(a["stations"]) == {"12004", "12010"}
+    st = a["stations"]["12010"]
+    assert {"permutation_primary", "lagged", "trend", "restricted"} <= set(st)
+    assert {"mu1", "lrt_p", "permutation_p", "corr_with_amjjas"} <= set(st["lagged"])
+    assert a["gate"]["outcome"] in ("pasa", "no pasa")
+    assert "addendum" not in json.loads((tmp_path / "a.json").read_text())
+    text = (tmp_path / "b.md").read_text()
+    assert "Veredicto F6.2: " + full["meta"]["verdict"] in text
+    assert "Adenda de robustez (posterior al resultado, no cambia el veredicto)" in text
+    assert "Compuerta para F6.2" in text and "sin verificar" in text
+    assert "(tests por fase y los dos LRT" in text  # BH family text kept, addendum p raw
+    assert "no entran en la familia BH" in text
+    assert "sin verificar" in text and "F1.8" in text
+    assert "sin registro previo" in text
+    assert "Adenda de robustez" not in (tmp_path / "a.md").read_text()
+
+
+def test_existing_json_keys_are_pinned(tmp_path):
+    flow_dir, enso_path = write_world(tmp_path)
+    res = fe.run(flow_dir, enso_path, tmp_path / "o.json", tmp_path / "o.md",
+                 stations=[1001], analysis=(1001,), n_perm=50)  # fmt: skip
+    data = json.loads((tmp_path / "o.json").read_text())
+    assert list(data) == ["verdict", "meta", "stations"]  # no addendum for non-12004/12010 stations
+    assert data["meta"]["n_tests"] == 4 and data["meta"]["analysis_stations"] == [1001]
+    s = data["stations"][0]
+    assert s["primary"]["lrt"]["df"] == 1 and "p_bh" in s["primary"]["lrt"]
+    assert res["meta"]["verdict"] == data["verdict"]

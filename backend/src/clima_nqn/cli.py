@@ -130,6 +130,12 @@ def flow_enso(
         ),
     ] = None,
     n_perm: Annotated[int, typer.Option(help="Permutations per phase test.")] = flood_enso.N_PERM,
+    addendum: Annotated[
+        bool, typer.Option(help="Run the post-hoc robustness addendum (12004, 12010).")
+    ] = True,
+    addendum_n_perm: Annotated[
+        int, typer.Option(help="Permutations per addendum permutation test.")
+    ] = flood_enso.N_PERM,
 ) -> None:
     """Flow by ENSO phase and GEV with ONI covariate vs. stationary, BH-adjusted (F2.7)."""
     if not enso.exists():
@@ -137,8 +143,11 @@ def flow_enso(
     res = flood_enso.run(
         flow_dir, enso, out, report, stations=station,
         analysis=tuple(analysis_station or flood_enso.ANALYSIS_STATIONS), n_perm=n_perm,
+        addendum=addendum, addendum_n_perm=addendum_n_perm,
     )  # fmt: skip
     typer.echo(f"{len(res['stations'])} stations; verdict F6.2: {res['meta']['verdict']}")
+    if "addendum" in res:
+        typer.echo(f"gate F6.2 (addendum): {res['addendum']['gate']['outcome']}")
     typer.echo(f"-> {out}, {report}")
 
 
