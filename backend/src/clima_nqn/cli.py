@@ -1,12 +1,20 @@
 import json
+import os
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from clima_nqn.api.app import DEFAULT_DATA_ROOT
 from clima_nqn.io import dem, era5, flow, snow
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.layers import flood_stations
+from clima_nqn.publish import (
+    make_client,
+    plan_uploads,
+    publish_layers,
+    resolve_credentials,
+)
 from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.ar import enso as ar_enso
 from clima_nqn.stages.ar import extremes as ar_extremes
@@ -410,3 +418,33 @@ def ar_layer_cmd(
     )
     frames = sum(e["n_frames"] for e in index["events"].values())
     typer.echo(f"{len(index['events'])} events with frames, {frames} hourly frames -> {layer_dir}")
+
+
+@app.command("publish")
+def publish_cmd(
+    root: Annotated[
+        Path | None,
+        typer.Option(help="Processed data root (default: $CLIMA_NQN_DATA or data/processed)."),
+    ] = None,
+    prefix: Annotated[str, typer.Option(help="Key prefix inside the bucket.")] = "",
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="List the objects to upload; no env vars, no network.")
+    ] = False,
+) -> None:
+    """Upload layers and the layers.json index to Cloudflare R2 (reads R2_* env vars)."""
+    data_root = Path(root or os.environ.get("CLIMA_NQN_DATA") or DEFAULT_DATA_ROOT)
+    if dry_run:
+        uploads = plan_uploads(data_root, prefix)
+        for u in uploads:
+            typer.echo(f"{u.key}  {u.size} B  {u.content_type}")
+        total = sum(u.size for u in uploads)
+        typer.echo(f"{len(uploads)} objects, {total / 1e6:.2f} MB (dry run)")
+        return
+    try:
+        cfg = resolve_credentials(os.environ)
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+    client = make_client(cfg["R2_ACCOUNT_ID"], cfg["R2_ACCESS_KEY_ID"], cfg["R2_SECRET_ACCESS_KEY"])
+    count, total = publish_layers(data_root, client, cfg["R2_BUCKET"], prefix)
+    typer.echo(f"{count} objects, {total / 1e6:.2f} MB -> bucket {cfg['R2_BUCKET']}")
