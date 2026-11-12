@@ -32,7 +32,7 @@ const hex = (h: string): [number, number, number] => [
 
 /** Hourly |IVT| as one rectangle per ERA5 grid cell (≈1.2 k polygons), colored unless `showFill` is false; always pickable. */
 export function buildIvtRasterLayer(p: Props) {
-  const outline = hex(tokens[p.theme].text);
+  const outline = hex(tokens[p.theme].accent);
   const isPicked = (c: Cell) => p.picked?.row === c.row && p.picked.col === c.col;
   return new PolygonLayer<Cell>({
     id: `ivt-${p.layerId}`,

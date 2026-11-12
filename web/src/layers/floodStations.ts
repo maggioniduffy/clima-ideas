@@ -30,9 +30,11 @@ export function buildFloodStationsLayer(
   onPick: (feature: FloodStationFeature) => void,
 ) {
   const max = Math.max(0, ...data.map((d) => d.value));
-  const main = hex(tokens.brand.main);
-  const accent = hex(tokens[theme].accent);
-  const outline = hex(theme === "dark" ? tokens.dark.text : tokens.brand.main);
+  const t = tokens[theme];
+  const ctrl = hex(t.ctrl);
+  const accent = hex(t.accent);
+  const casing = hex(t.casing);
+  const outline = hex(theme === "dark" ? t.text : t.ctrl);
   return new ScatterplotLayer<FloodStationFeature>({
     id: `points-${FLOOD_LAYER_ID}`,
     data,
@@ -41,16 +43,16 @@ export function buildFloodStationsLayer(
     radiusUnits: "pixels",
     getRadius: (d) => stationRadius(d.value, max),
     getFillColor: (d) => {
-      const c = d.id === selectedId ? accent : main;
+      const c = d.id === selectedId ? accent : ctrl;
       return d.regulated ? [c[0], c[1], c[2], HOLLOW_ALPHA] : c;
     },
     stroked: true,
-    getLineColor: (d) => (d.id === selectedId ? accent : outline),
+    getLineColor: (d) => (d.id === selectedId ? casing : outline),
     getLineWidth: (d) => (d.regulated || d.id === selectedId ? 2 : 1),
     lineWidthUnits: "pixels",
     // Flat at z = 0: without this the 3D relief hides the stations (same as the reference layers).
     parameters: { depthCompare: "always" },
-    updateTriggers: { getFillColor: [selectedId], getLineColor: [selectedId, theme], getLineWidth: [selectedId] },
+    updateTriggers: { getFillColor: [selectedId, theme], getLineColor: [selectedId, theme], getLineWidth: [selectedId] },
     onClick: ({ object }) => {
       if (object) onPick(object);
     },

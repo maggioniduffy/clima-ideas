@@ -16,7 +16,10 @@ export function buildPointsLayer(
   theme: Theme,
   onPick: (feature: PointFeature) => void,
 ) {
-  const accent = hex(tokens[theme].accent);
+  const { accent, casing, ctrl } = tokens[theme];
+  const accentRgb = hex(accent);
+  const casingRgb = hex(casing);
+  const ctrlRgb = hex(ctrl);
   return new ScatterplotLayer<PointFeature>({
     id: `points-${layerId}`,
     data,
@@ -24,11 +27,12 @@ export function buildPointsLayer(
     getPosition: (d) => [d.lon, d.lat],
     getRadius: 8000,
     radiusMinPixels: 6,
-    getFillColor: (d) => (d.id === selectedId ? accent : hex(tokens.brand.main)),
-    getLineColor: accent,
+    getFillColor: (d) => (d.id === selectedId ? accentRgb : ctrlRgb),
+    getLineColor: (d) => (d.id === selectedId ? casingRgb : ctrlRgb),
+    getLineWidth: (d) => (d.id === selectedId ? 2 : 1),
+    lineWidthUnits: "pixels",
     stroked: true,
-    lineWidthMinPixels: 1,
-    updateTriggers: { getFillColor: [selectedId, theme], getLineColor: [theme] },
+    updateTriggers: { getFillColor: [selectedId, theme], getLineColor: [selectedId, theme], getLineWidth: [selectedId] },
     onClick: ({ object }) => {
       if (object) onPick(object);
     },
