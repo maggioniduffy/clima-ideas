@@ -268,3 +268,34 @@ test("AR events: count map and legend with no event, footprint and peak marker o
   await expect(canvas).not.toHaveAttribute("data-deck-layers", /ivt-contours-ar-events-core/);
   await expect(canvas).toHaveAttribute("data-deck-layers", /ar-peak-ar-events/);
 });
+
+test("AR events: event AR-2000-002 shows the caudal chart per station, regulated label and freezing level", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-ar-events").check();
+  await page.getByTestId("timeline-event-AR-2000-002").click();
+  const section = page.getByTestId("ar-response");
+  await expect(section).toContainText("Caudal en las estaciones");
+  await expect(page.getByTestId("ar-response-chart-1001")).toBeVisible();
+  await expect(page.getByTestId("ar-response-chart-1002")).toBeVisible();
+  await expect(page.getByTestId("ar-response-regulated-1002")).toContainText(/regulada/i);
+  await expect(page.getByTestId("ar-response-regulated-1001")).toHaveCount(0);
+  await expect(page.getByTestId("ar-response-shade-1002")).toBeVisible();
+  await expect(page.getByTestId("ar-response-deg0l")).toContainText("sin dato"); // AR-2000-002 has no freezing level
+  await expect(page.getByTestId("ar-response-note")).toContainText("no prueba");
+  await expect(page.getByTestId("ar-response-source")).toContainText("2000-01-01/2000-12-31");
+
+  // an event without flow data has no caudal section
+  // (the timeline zooms to the selected event, so pick it from the list)
+  await page.getByTestId("year-expand-2000").click();
+  await page.getByTestId("month-expand-2000-03").click();
+  await page.getByTestId("event-AR-2000-001").click();
+  await expect(page.getByTestId("inspector-event")).toContainText("2000-03-10");
+  await expect(page.getByTestId("ar-response")).toHaveCount(0);
+
+  // the response sort key is offered because responses.json is loaded
+  await expect(page.getByTestId("sort-select").locator("option")).toContainText([
+    "IVT máx.", "Lluvia acumulada", "Duración", "Mayor respuesta de caudal",
+  ]);
+});
