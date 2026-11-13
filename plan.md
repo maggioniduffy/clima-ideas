@@ -9,7 +9,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 | # | Fase | Archivo | Depende de | Estado |
 |---|---|---|---|---|
 | 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | hecha, salvo F0.11 (publicar en línea) |
-| 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | hecha (F1.7 solo 2023; 3 estudios de F1.5 sin verificar) |
+| 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | hecha (F1.7 solo 2023; 3 estudios de F1.5 sin verificar; F1.9: ENSO sin diferencia sostenida en extremos) |
 | 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | tareas hechas (F2.5: el LSTM empata o gana a GR4J y gana a la persistencia desde 2 días; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa); cierra al publicar la capa |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | pendiente (lluvia horaria de estación sin verificar: F3.0) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | pendiente |
@@ -27,6 +27,7 @@ Siete ajustes, que salen de los resultados y de `docs/research/data-access.md`:
 1. **ENSO pesa más que su evidencia.** En F1.8 ninguna de 16 pruebas sostiene p BH < 0,05 y el resultado cambia
    con el polígono. Queda una comprobación barata por fase; el modelo estacional (F6.2) depende de que F2.7
    encuentre señal en el caudal y usa primero nieve, humedad de suelo y caudal reciente, con ENSO como una entrada más.
+   ENSO se informa como contexto de extremos, no como predictor (F1.9: días de lluvia extrema por fase).
 2. **La segunda mitad de la fase 4 es la apuesta más débil.** Pide HEC-RAS 2D en Linux (sin probar), cientos de
    simulaciones y un evento con mancha conocida (ninguno verificado). El núcleo es F4.1–F4.3; F4.4–F4.6 son
    extensión y se abren solo si F4.4a da bien.

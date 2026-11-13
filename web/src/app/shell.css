@@ -267,3 +267,27 @@
 .flood-top li { display: grid; min-height: 28px; align-items: center; grid-template-columns: auto 1fr auto; column-gap: var(--space-2); padding: 2px 0; border-bottom: 1px solid var(--border); }
 .flood-top li span:nth-child(2) { text-align: right; }
 .flood-top li span:last-child { text-align: right; white-space: nowrap; color: var(--text-muted); }
+
+/* ENSO panel rework: verdict, strip chart, F1.9 block, "ver detalle" */
+.enso-verdict { margin: 0 0 var(--space-3); font-size: 14px; line-height: 1.4; }
+.enso-metrics { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
+.enso-metrics button {
+  min-height: 44px; padding: 0 var(--space-3); font: inherit; font-size: 13px; cursor: pointer;
+  background: var(--raised); color: var(--text); border: 0; border-radius: var(--radius-md);
+}
+.enso-metrics button[aria-pressed="true"] { background: var(--ctrl); color: var(--on-ctrl); }
+.enso-chart { display: block; width: 100%; max-width: 480px; height: auto; }
+.enso-grid { stroke: var(--border); stroke-width: 1; }
+.enso-tick { font-family: var(--font-mono); font-size: 12px; fill: var(--text-muted); }
+.enso-axis { font-size: 13px; fill: var(--text); }
+.enso-mean { stroke: var(--text); stroke-width: 2.5; }
+.enso-dot { stroke: var(--casing); stroke-width: 1; fill-opacity: 0.9; }
+.enso-dot-nino { fill: var(--accent); }
+.enso-dot-neutral { fill: var(--secondary); }
+.enso-dot-nina { fill: var(--water); }
+.enso-note { margin: var(--space-1) 0 var(--space-2); font-size: 13px; color: var(--text-muted); }
+.enso-extremes { margin: var(--space-3) 0; padding-top: var(--space-2); border-top: 1px solid var(--border); }
+.enso-extremes h3 { margin: 0 0 var(--space-2); font-size: 14px; font-weight: 600; }
+.enso-extremes p { margin: 0 0 var(--space-2); }
+.enso-detail { margin: var(--space-2) 0; }
+.enso-detail summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 13px; }

@@ -1,6 +1,6 @@
 {
   "id": "ar-events",
-  "title": "R\u00edos atmosf\u00e9ricos",
+  "title": "Ríos atmosféricos",
   "kind": "events",
   "source": "Eventos falsos de prueba",
   "period": "2000-01-01/2000-12-31",
@@ -9,6 +9,7 @@
   "files": [
     "events.json",
     "frames/index.json",
-    "enso.json"
+    "enso.json",
+    "enso-extremes.json"
   ]
 }

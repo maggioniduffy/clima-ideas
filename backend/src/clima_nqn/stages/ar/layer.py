@@ -8,6 +8,8 @@ Output in ``<out>/ar-events/``:
   strings, NaN as null.
 - ``enso.json``      optional: the F1.8 ENSO-phase report numbers (``F1.8.json``) copied as is, listed in
   the manifest only when the report is given.
+- ``enso-extremes.json`` optional: the F1.9 extreme-rain-days-by-ENSO numbers (``F1.9.json``) copied as is,
+  listed in the manifest only when the report is given.
 - ``frames/index.json`` grid, units and, per event, ``start``/``n_frames``/``vmin``/``vmax``.
 - ``frames/<event_id>.bin`` hourly |IVT| over the regional grid for [start, end): little-endian
   Float32 ``[n_frames, ny, nx]``, row 0 = southernmost latitude, column 0 = westernmost longitude,
@@ -40,6 +42,7 @@ DEFAULT_OUT = Path("data/processed")
 FRAMES_DIR = "frames"
 INDEX_NAME = f"{FRAMES_DIR}/index.json"
 ENSO_NAME = "enso.json"
+ENSO_EXTREMES_NAME = "enso-extremes.json"
 DATETIME_COLUMNS = ("start", "end", "ivt_max_time")
 
 
@@ -149,10 +152,12 @@ def build_layer(
     era5_dir: Path,
     out_root: Path = DEFAULT_OUT,
     enso_report: Path | None = None,
+    extremes_report: Path | None = None,
 ) -> tuple[Path, dict]:
     """Publish ``<out_root>/ar-events/``; returns (layer dir, frames index).
 
     ``enso_report`` (F1.8 JSON from ``clima-nqn ar enso``), when given, is copied as ``enso.json``.
+    ``extremes_report`` (F1.9 JSON from ``clima-nqn ar enso-extremes``) is copied as ``enso-extremes.json``.
     """
     events_path = Path(events_path)
     df = pd.read_parquet(events_path)
@@ -171,6 +176,9 @@ def build_layer(
     if enso_report is not None:
         shutil.copyfile(enso_report, out_dir / ENSO_NAME)
         files.append(ENSO_NAME)
+    if extremes_report is not None:
+        shutil.copyfile(extremes_report, out_dir / ENSO_EXTREMES_NAME)
+        files.append(ENSO_EXTREMES_NAME)
     manifest = LayerManifest(
         id=LAYER_ID,
         title=TITLE,

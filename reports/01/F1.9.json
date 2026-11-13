@@ -1,0 +1,4887 @@
+{
+  "meta": {
+    "period": "1980-01-01/2025-12-30",
+    "season_years_period": "1980-2025",
+    "source": "ERA5 via ARCO-ERA5 (CC-BY 4.0), lluvia diaria (días UTC) promediada sobre la región; ONI de NOAA CPC ONI",
+    "n_perm": 10000,
+    "seed": 0,
+    "alpha": 0.05
+  },
+  "variants": {
+    "main": {
+      "label": "p99, polígono",
+      "quantile": 0.99,
+      "region": "polygon",
+      "threshold_mm": 29.204322935336016,
+      "n_extreme_days_total": 169,
+      "rows": [
+        {
+          "season": "DJF",
+          "phase_years": {
+            "nino": 15,
+            "neutral": 14,
+            "nina": 16
+          },
+          "groups": {
+            "nino": {
+              "n": 15,
+              "years_with_extreme": 0,
+              "total_days": 0,
+              "mean_days": 0.0
+            },
+            "neutral": {
+              "n": 14,
+              "years_with_extreme": 1,
+              "total_days": 1,
+              "mean_days": 0.07142857142857142
+            },
+            "nina": {
+              "n": 16,
+              "years_with_extreme": 0,
+              "total_days": 0,
+              "mean_days": 0.0
+            }
+          },
+          "diff_nino_nina": 0.0,
+          "p": 1.0,
+          "p_3group": 0.3087691230876912,
+          "spearman_rho": 0.034824130803766985,
+          "p_oni": 0.8937106289371063,
+          "p_bh": 1.0,
+          "p_3group_bh": 0.4116921641169216,
+          "p_oni_bh": 0.8937106289371063,
+          "sustained_bh": false
+        },
+        {
+          "season": "MAM",
+          "phase_years": {
+            "nino": 9,
+            "neutral": 29,
+            "nina": 8
+          },
+          "groups": {
+            "nino": {
+              "n": 9,
+              "years_with_extreme": 4,
+              "total_days": 7,
+              "mean_days": 0.7777777777777778
+            },
+            "neutral": {
+              "n": 29,
+              "years_with_extreme": 16,
+              "total_days": 28,
+              "mean_days": 0.9655172413793104
+            },
+            "nina": {
+              "n": 8,
+              "years_with_extreme": 4,
+              "total_days": 8,
+              "mean_days": 1.0
+            }
+          },
+          "diff_nino_nina": -0.2222222222222222,
+          "p": 0.8138186181381862,
+          "p_3group": 0.9342065793420657,
+          "spearman_rho": -0.06467952297987196,
+          "p_oni": 0.6639336066393361,
+          "p_bh": 1.0,
+          "p_3group_bh": 0.9342065793420657,
+          "p_oni_bh": 0.8937106289371063,
+          "sustained_bh": false
+        },
+        {
+          "season": "JJA",
+          "phase_years": {
+            "nino": 7,
+            "neutral": 32,
+            "nina": 7
+          },
+          "groups": {
+            "nino": {
+              "n": 7,
+              "years_with_extreme": 7,
+              "total_days": 18,
+              "mean_days": 2.5714285714285716
+            },
+            "neutral": {
+              "n": 32,
+              "years_with_extreme": 30,
+              "total_days": 70,
+              "mean_days": 2.1875
+            },
+            "nina": {
+              "n": 7,
+              "years_with_extreme": 7,
+              "total_days": 23,
+              "mean_days": 3.2857142857142856
+            }
+          },
+          "diff_nino_nina": -0.714285714285714,
+          "p": 0.5740425957404259,
+          "p_3group": 0.264973502649735,
+          "spearman_rho": 0.05760334468275815,
+          "p_oni": 0.6958304169583042,
+          "p_bh": 1.0,
+          "p_3group_bh": 0.4116921641169216,
+          "p_oni_bh": 0.8937106289371063,
+          "sustained_bh": false
+        },
+        {
+          "season": "SON",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.6428571428571429
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 4,
+              "total_days": 4,
+              "mean_days": 0.2222222222222222
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 1,
+              "total_days": 1,
+              "mean_days": 0.07142857142857142
+            }
+          },
+          "diff_nino_nina": 0.5714285714285715,
+          "p": 0.04689531046895311,
+          "p_3group": 0.021397860213978603,
+          "spearman_rho": 0.37915349626782113,
+          "p_oni": 0.010798920107989201,
+          "p_bh": 0.18758124187581243,
+          "p_3group_bh": 0.08559144085591441,
+          "p_oni_bh": 0.043195680431956804,
+          "sustained_bh": false
+        }
+      ],
+      "season_years": [
+        {
+          "season": "DJF",
+          "year": 1981,
+          "oni_mean": -0.24666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1982,
+          "oni_mean": -0.05666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1983,
+          "oni_mean": 2.0566666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1984,
+          "oni_mean": -0.6766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1985,
+          "oni_mean": -0.9766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1986,
+          "oni_mean": -0.38000000000000006,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1987,
+          "oni_mean": 1.1733333333333331,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1988,
+          "oni_mean": 0.6666666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1989,
+          "oni_mean": -1.6233333333333333,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1990,
+          "oni_mean": 0.10999999999999999,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1991,
+          "oni_mean": 0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1992,
+          "oni_mean": 1.49,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1993,
+          "oni_mean": 0.13,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1994,
+          "oni_mean": 0.08666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 1995,
+          "oni_mean": 0.8333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1996,
+          "oni_mean": -0.8633333333333333,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1997,
+          "oni_mean": -0.36000000000000004,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1998,
+          "oni_mean": 2.1666666666666665,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1999,
+          "oni_mean": -1.4100000000000001,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2000,
+          "oni_mean": -1.42,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2001,
+          "oni_mean": -0.6933333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2002,
+          "oni_mean": -0.13333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2003,
+          "oni_mean": 0.8566666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2004,
+          "oni_mean": 0.3,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2005,
+          "oni_mean": 0.6266666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2006,
+          "oni_mean": -0.8266666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2007,
+          "oni_mean": 0.5633333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2008,
+          "oni_mean": -1.6966666666666665,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2009,
+          "oni_mean": -0.84,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2010,
+          "oni_mean": 1.3933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2011,
+          "oni_mean": -1.2766666666666666,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2012,
+          "oni_mean": -0.73,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2013,
+          "oni_mean": -0.18333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2014,
+          "oni_mean": -0.18666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2015,
+          "oni_mean": 0.7266666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2016,
+          "oni_mean": 2.433333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2017,
+          "oni_mean": -0.12333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2018,
+          "oni_mean": -0.7133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2019,
+          "oni_mean": 0.9933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2020,
+          "oni_mean": 0.7066666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2021,
+          "oni_mean": -0.9666666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2022,
+          "oni_mean": -0.7566666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2023,
+          "oni_mean": -0.5266666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2024,
+          "oni_mean": 1.7866666666666668,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2025,
+          "oni_mean": -0.37000000000000005,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1980,
+          "oni_mean": 0.37999999999999995,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1981,
+          "oni_mean": -0.32,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1982,
+          "oni_mean": 0.35333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1983,
+          "oni_mean": 1.2333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1984,
+          "oni_mean": -0.4666666666666666,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1985,
+          "oni_mean": -0.8133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1986,
+          "oni_mean": -0.17,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1987,
+          "oni_mean": 0.9700000000000001,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1988,
+          "oni_mean": -0.49,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1989,
+          "oni_mean": -0.85,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1990,
+          "oni_mean": 0.2733333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1991,
+          "oni_mean": 0.33666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1992,
+          "oni_mean": 1.26,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1993,
+          "oni_mean": 0.6633333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1994,
+          "oni_mean": 0.15333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1995,
+          "oni_mean": 0.22666666666666668,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1996,
+          "oni_mean": -0.37666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1997,
+          "oni_mean": 0.32666666666666666,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1998,
+          "oni_mean": 0.9433333333333332,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1999,
+          "oni_mean": -0.84,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2000,
+          "oni_mean": -0.82,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2001,
+          "oni_mean": -0.3033333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2002,
+          "oni_mean": 0.18666666666666668,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2003,
+          "oni_mean": 0.06333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2004,
+          "oni_mean": 0.1366666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2005,
+          "oni_mean": 0.3466666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2006,
+          "oni_mean": -0.42333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2007,
+          "oni_mean": -0.26,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2008,
+          "oni_mean": -1.09,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2009,
+          "oni_mean": -0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2010,
+          "oni_mean": 0.3666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2011,
+          "oni_mean": -0.6766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2012,
+          "oni_mean": -0.3233333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2013,
+          "oni_mean": -0.24333333333333332,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2014,
+          "oni_mean": 0.19333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2015,
+          "oni_mean": 0.8733333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2016,
+          "oni_mean": 1.1233333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2017,
+          "oni_mean": 0.31333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2018,
+          "oni_mean": -0.3233333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2019,
+          "oni_mean": 0.7999999999999999,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2020,
+          "oni_mean": 0.3133333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2021,
+          "oni_mean": -0.5666666666666668,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2022,
+          "oni_mean": -0.82,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2023,
+          "oni_mean": 0.18000000000000002,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2024,
+          "oni_mean": 0.7933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2025,
+          "oni_mean": -0.03333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1980,
+          "oni_mean": 0.17333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1981,
+          "oni_mean": -0.26,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "JJA",
+          "year": 1982,
+          "oni_mean": 0.8333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1983,
+          "oni_mean": 0.27,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1984,
+          "oni_mean": -0.3766666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1985,
+          "oni_mean": -0.4566666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1986,
+          "oni_mean": 0.24,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1987,
+          "oni_mean": 1.29,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1988,
+          "oni_mean": -1.2466666666666668,
+          "phase": "nina",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1989,
+          "oni_mean": -0.37666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1990,
+          "oni_mean": 0.27666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1991,
+          "oni_mean": 0.69,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1992,
+          "oni_mean": 0.3833333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1993,
+          "oni_mean": 0.35333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1994,
+          "oni_mean": 0.27666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1995,
+          "oni_mean": -0.32,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1996,
+          "oni_mean": -0.24333333333333332,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1997,
+          "oni_mean": 1.4666666666666668,
+          "phase": "nino",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1998,
+          "oni_mean": -0.5133333333333333,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1999,
+          "oni_mean": -0.8933333333333332,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2000,
+          "oni_mean": -0.5,
+          "phase": "nina",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2001,
+          "oni_mean": -0.08666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2002,
+          "oni_mean": 0.5499999999999999,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2003,
+          "oni_mean": 0.03333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2004,
+          "oni_mean": 0.3833333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2005,
+          "oni_mean": -0.03000000000000001,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2006,
+          "oni_mean": 0.13333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2007,
+          "oni_mean": -0.5566666666666666,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2008,
+          "oni_mean": -0.36333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2009,
+          "oni_mean": 0.46666666666666673,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2010,
+          "oni_mean": -0.96,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2011,
+          "oni_mean": -0.4033333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2012,
+          "oni_mean": 0.23333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2013,
+          "oni_mean": -0.39000000000000007,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2014,
+          "oni_mean": 0.12000000000000001,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2015,
+          "oni_mean": 1.4533333333333331,
+          "phase": "nino",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2016,
+          "oni_mean": -0.1466666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "JJA",
+          "year": 2017,
+          "oni_mean": 0.13,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2018,
+          "oni_mean": 0.21,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2019,
+          "oni_mean": 0.38999999999999996,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2020,
+          "oni_mean": -0.3,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2021,
+          "oni_mean": -0.3733333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2022,
+          "oni_mean": -0.7366666666666667,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2023,
+          "oni_mean": 0.9933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2024,
+          "oni_mean": 0.06666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2025,
+          "oni_mean": -0.13,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1980,
+          "oni_mean": -0.053333333333333344,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1981,
+          "oni_mean": -0.14333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1982,
+          "oni_mean": 1.7666666666666666,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1983,
+          "oni_mean": -0.7166666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1984,
+          "oni_mean": -0.63,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1985,
+          "oni_mean": -0.2966666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1986,
+          "oni_mean": 0.8533333333333334,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1987,
+          "oni_mean": 1.3666666666666665,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1988,
+          "oni_mean": -1.54,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1989,
+          "oni_mean": -0.23333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1990,
+          "oni_mean": 0.2966666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1991,
+          "oni_mean": 0.9099999999999998,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1992,
+          "oni_mean": -0.20333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1993,
+          "oni_mean": 0.20000000000000004,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1994,
+          "oni_mean": 0.6866666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1995,
+          "oni_mean": -0.9433333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1996,
+          "oni_mean": -0.34,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1997,
+          "oni_mean": 2.2066666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1998,
+          "oni_mean": -1.1500000000000001,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1999,
+          "oni_mean": -1.16,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2000,
+          "oni_mean": -0.5733333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2001,
+          "oni_mean": -0.24666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2002,
+          "oni_mean": 0.9866666666666667,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2003,
+          "oni_mean": 0.25,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2004,
+          "oni_mean": 0.61,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2005,
+          "oni_mean": -0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2006,
+          "oni_mean": 0.71,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2007,
+          "oni_mean": -1.3333333333333333,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2008,
+          "oni_mean": -0.3933333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2009,
+          "oni_mean": 0.9633333333333334,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2010,
+          "oni_mean": -1.5133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2011,
+          "oni_mean": -0.9066666666666666,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2012,
+          "oni_mean": 0.26,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2013,
+          "oni_mean": -0.19333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2014,
+          "oni_mean": 0.48333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2015,
+          "oni_mean": 2.25,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2016,
+          "oni_mean": -0.47333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2017,
+          "oni_mean": -0.4266666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2018,
+          "oni_mean": 0.7933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2019,
+          "oni_mean": 0.5133333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2020,
+          "oni_mean": -0.96,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2021,
+          "oni_mean": -0.7733333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2022,
+          "oni_mean": -0.86,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2023,
+          "oni_mean": 1.7133333333333336,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2024,
+          "oni_mean": -0.19999999999999998,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2025,
+          "oni_mean": -0.5366666666666666,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        }
+      ]
+    },
+    "p95": {
+      "label": "p95, polígono",
+      "quantile": 0.95,
+      "region": "polygon",
+      "threshold_mm": 12.982075938700952,
+      "n_extreme_days_total": 841,
+      "rows": [
+        {
+          "season": "DJF",
+          "phase_years": {
+            "nino": 15,
+            "neutral": 14,
+            "nina": 16
+          },
+          "groups": {
+            "nino": {
+              "n": 15,
+              "years_with_extreme": 3,
+              "total_days": 6,
+              "mean_days": 0.4
+            },
+            "neutral": {
+              "n": 14,
+              "years_with_extreme": 9,
+              "total_days": 18,
+              "mean_days": 1.2857142857142858
+            },
+            "nina": {
+              "n": 16,
+              "years_with_extreme": 7,
+              "total_days": 14,
+              "mean_days": 0.875
+            }
+          },
+          "diff_nino_nina": -0.475,
+          "p": 0.2692730726927307,
+          "p_3group": 0.11128887111288871,
+          "spearman_rho": -0.2254679464159593,
+          "p_oni": 0.13358664133586642,
+          "p_bh": 0.5385461453854614,
+          "p_3group_bh": 0.22257774222577742,
+          "p_oni_bh": 0.26717328267173285,
+          "sustained_bh": false
+        },
+        {
+          "season": "MAM",
+          "phase_years": {
+            "nino": 9,
+            "neutral": 29,
+            "nina": 8
+          },
+          "groups": {
+            "nino": {
+              "n": 9,
+              "years_with_extreme": 6,
+              "total_days": 29,
+              "mean_days": 3.2222222222222223
+            },
+            "neutral": {
+              "n": 29,
+              "years_with_extreme": 26,
+              "total_days": 128,
+              "mean_days": 4.413793103448276
+            },
+            "nina": {
+              "n": 8,
+              "years_with_extreme": 7,
+              "total_days": 30,
+              "mean_days": 3.75
+            }
+          },
+          "diff_nino_nina": -0.5277777777777777,
+          "p": 0.7263273672632736,
+          "p_3group": 0.6275372462753724,
+          "spearman_rho": -0.04811579990798623,
+          "p_oni": 0.7445255474452555,
+          "p_bh": 0.7263273672632736,
+          "p_3group_bh": 0.632936706329367,
+          "p_oni_bh": 0.7445255474452555,
+          "sustained_bh": false
+        },
+        {
+          "season": "JJA",
+          "phase_years": {
+            "nino": 7,
+            "neutral": 32,
+            "nina": 7
+          },
+          "groups": {
+            "nino": {
+              "n": 7,
+              "years_with_extreme": 7,
+              "total_days": 86,
+              "mean_days": 12.285714285714286
+            },
+            "neutral": {
+              "n": 32,
+              "years_with_extreme": 32,
+              "total_days": 340,
+              "mean_days": 10.625
+            },
+            "nina": {
+              "n": 7,
+              "years_with_extreme": 7,
+              "total_days": 72,
+              "mean_days": 10.285714285714286
+            }
+          },
+          "diff_nino_nina": 2.0,
+          "p": 0.46935306469353066,
+          "p_3group": 0.632936706329367,
+          "spearman_rho": 0.17251271315688563,
+          "p_oni": 0.25147485251474855,
+          "p_bh": 0.6258040862580408,
+          "p_3group_bh": 0.632936706329367,
+          "p_oni_bh": 0.3352998033529981,
+          "sustained_bh": false
+        },
+        {
+          "season": "SON",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 12,
+              "total_days": 50,
+              "mean_days": 3.5714285714285716
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 15,
+              "total_days": 44,
+              "mean_days": 2.4444444444444446
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 11,
+              "total_days": 22,
+              "mean_days": 1.5714285714285714
+            }
+          },
+          "diff_nino_nina": 2.0,
+          "p": 0.014998500149985002,
+          "p_3group": 0.0326967303269673,
+          "spearman_rho": 0.36152650066526293,
+          "p_oni": 0.0136986301369863,
+          "p_bh": 0.059994000599940006,
+          "p_3group_bh": 0.1307869213078692,
+          "p_oni_bh": 0.0547945205479452,
+          "sustained_bh": false
+        }
+      ],
+      "season_years": [
+        {
+          "season": "DJF",
+          "year": 1981,
+          "oni_mean": -0.24666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 1982,
+          "oni_mean": -0.05666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 1983,
+          "oni_mean": 2.0566666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1984,
+          "oni_mean": -0.6766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1985,
+          "oni_mean": -0.9766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1986,
+          "oni_mean": -0.38000000000000006,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 1987,
+          "oni_mean": 1.1733333333333331,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1988,
+          "oni_mean": 0.6666666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1989,
+          "oni_mean": -1.6233333333333333,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1990,
+          "oni_mean": 0.10999999999999999,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 1991,
+          "oni_mean": 0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1992,
+          "oni_mean": 1.49,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1993,
+          "oni_mean": 0.13,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1994,
+          "oni_mean": 0.08666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 1995,
+          "oni_mean": 0.8333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 1996,
+          "oni_mean": -0.8633333333333333,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1997,
+          "oni_mean": -0.36000000000000004,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 1998,
+          "oni_mean": 2.1666666666666665,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1999,
+          "oni_mean": -1.4100000000000001,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2000,
+          "oni_mean": -1.42,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2001,
+          "oni_mean": -0.6933333333333334,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2002,
+          "oni_mean": -0.13333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2003,
+          "oni_mean": 0.8566666666666666,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2004,
+          "oni_mean": 0.3,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2005,
+          "oni_mean": 0.6266666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2006,
+          "oni_mean": -0.8266666666666667,
+          "phase": "nina",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2007,
+          "oni_mean": 0.5633333333333334,
+          "phase": "nino",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2008,
+          "oni_mean": -1.6966666666666665,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2009,
+          "oni_mean": -0.84,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2010,
+          "oni_mean": 1.3933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2011,
+          "oni_mean": -1.2766666666666666,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2012,
+          "oni_mean": -0.73,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2013,
+          "oni_mean": -0.18333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2014,
+          "oni_mean": -0.18666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2015,
+          "oni_mean": 0.7266666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2016,
+          "oni_mean": 2.433333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2017,
+          "oni_mean": -0.12333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2018,
+          "oni_mean": -0.7133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2019,
+          "oni_mean": 0.9933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2020,
+          "oni_mean": 0.7066666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2021,
+          "oni_mean": -0.9666666666666667,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2022,
+          "oni_mean": -0.7566666666666667,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2023,
+          "oni_mean": -0.5266666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2024,
+          "oni_mean": 1.7866666666666668,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2025,
+          "oni_mean": -0.37000000000000005,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1980,
+          "oni_mean": 0.37999999999999995,
+          "phase": "neutral",
+          "n_extreme_days": 15,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1981,
+          "oni_mean": -0.32,
+          "phase": "neutral",
+          "n_extreme_days": 11,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1982,
+          "oni_mean": 0.35333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1983,
+          "oni_mean": 1.2333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1984,
+          "oni_mean": -0.4666666666666666,
+          "phase": "neutral",
+          "n_extreme_days": 10,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1985,
+          "oni_mean": -0.8133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 8,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1986,
+          "oni_mean": -0.17,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1987,
+          "oni_mean": 0.9700000000000001,
+          "phase": "nino",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1988,
+          "oni_mean": -0.49,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1989,
+          "oni_mean": -0.85,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1990,
+          "oni_mean": 0.2733333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1991,
+          "oni_mean": 0.33666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 9,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1992,
+          "oni_mean": 1.26,
+          "phase": "nino",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1993,
+          "oni_mean": 0.6633333333333333,
+          "phase": "nino",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1994,
+          "oni_mean": 0.15333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1995,
+          "oni_mean": 0.22666666666666668,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1996,
+          "oni_mean": -0.37666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1997,
+          "oni_mean": 0.32666666666666666,
+          "phase": "neutral",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1998,
+          "oni_mean": 0.9433333333333332,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1999,
+          "oni_mean": -0.84,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2000,
+          "oni_mean": -0.82,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2001,
+          "oni_mean": -0.3033333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2002,
+          "oni_mean": 0.18666666666666668,
+          "phase": "neutral",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2003,
+          "oni_mean": 0.06333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2004,
+          "oni_mean": 0.1366666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2005,
+          "oni_mean": 0.3466666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 9,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2006,
+          "oni_mean": -0.42333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2007,
+          "oni_mean": -0.26,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2008,
+          "oni_mean": -1.09,
+          "phase": "nina",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2009,
+          "oni_mean": -0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2010,
+          "oni_mean": 0.3666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2011,
+          "oni_mean": -0.6766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2012,
+          "oni_mean": -0.3233333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2013,
+          "oni_mean": -0.24333333333333332,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2014,
+          "oni_mean": 0.19333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2015,
+          "oni_mean": 0.8733333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2016,
+          "oni_mean": 1.1233333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2017,
+          "oni_mean": 0.31333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2018,
+          "oni_mean": -0.3233333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2019,
+          "oni_mean": 0.7999999999999999,
+          "phase": "nino",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2020,
+          "oni_mean": 0.3133333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2021,
+          "oni_mean": -0.5666666666666668,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2022,
+          "oni_mean": -0.82,
+          "phase": "nina",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2023,
+          "oni_mean": 0.18000000000000002,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2024,
+          "oni_mean": 0.7933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2025,
+          "oni_mean": -0.03333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1980,
+          "oni_mean": 0.17333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 10,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1981,
+          "oni_mean": -0.26,
+          "phase": "neutral",
+          "n_extreme_days": 9,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1982,
+          "oni_mean": 0.8333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 20,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1983,
+          "oni_mean": 0.27,
+          "phase": "neutral",
+          "n_extreme_days": 15,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1984,
+          "oni_mean": -0.3766666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 9,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1985,
+          "oni_mean": -0.4566666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1986,
+          "oni_mean": 0.24,
+          "phase": "neutral",
+          "n_extreme_days": 9,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1987,
+          "oni_mean": 1.29,
+          "phase": "nino",
+          "n_extreme_days": 11,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1988,
+          "oni_mean": -1.2466666666666668,
+          "phase": "nina",
+          "n_extreme_days": 9,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1989,
+          "oni_mean": -0.37666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 11,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1990,
+          "oni_mean": 0.27666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1991,
+          "oni_mean": 0.69,
+          "phase": "nino",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1992,
+          "oni_mean": 0.3833333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1993,
+          "oni_mean": 0.35333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 18,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1994,
+          "oni_mean": 0.27666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 10,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1995,
+          "oni_mean": -0.32,
+          "phase": "neutral",
+          "n_extreme_days": 20,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1996,
+          "oni_mean": -0.24333333333333332,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1997,
+          "oni_mean": 1.4666666666666668,
+          "phase": "nino",
+          "n_extreme_days": 12,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1998,
+          "oni_mean": -0.5133333333333333,
+          "phase": "nina",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1999,
+          "oni_mean": -0.8933333333333332,
+          "phase": "nina",
+          "n_extreme_days": 11,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2000,
+          "oni_mean": -0.5,
+          "phase": "nina",
+          "n_extreme_days": 13,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2001,
+          "oni_mean": -0.08666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 21,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2002,
+          "oni_mean": 0.5499999999999999,
+          "phase": "nino",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2003,
+          "oni_mean": 0.03333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 11,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2004,
+          "oni_mean": 0.3833333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 13,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2005,
+          "oni_mean": -0.03000000000000001,
+          "phase": "neutral",
+          "n_extreme_days": 17,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2006,
+          "oni_mean": 0.13333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 16,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2007,
+          "oni_mean": -0.5566666666666666,
+          "phase": "nina",
+          "n_extreme_days": 9,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2008,
+          "oni_mean": -0.36333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 10,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2009,
+          "oni_mean": 0.46666666666666673,
+          "phase": "neutral",
+          "n_extreme_days": 11,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2010,
+          "oni_mean": -0.96,
+          "phase": "nina",
+          "n_extreme_days": 12,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2011,
+          "oni_mean": -0.4033333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 10,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2012,
+          "oni_mean": 0.23333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2013,
+          "oni_mean": -0.39000000000000007,
+          "phase": "neutral",
+          "n_extreme_days": 10,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2014,
+          "oni_mean": 0.12000000000000001,
+          "phase": "neutral",
+          "n_extreme_days": 14,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2015,
+          "oni_mean": 1.4533333333333331,
+          "phase": "nino",
+          "n_extreme_days": 16,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2016,
+          "oni_mean": -0.1466666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2017,
+          "oni_mean": 0.13,
+          "phase": "neutral",
+          "n_extreme_days": 10,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2018,
+          "oni_mean": 0.21,
+          "phase": "neutral",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2019,
+          "oni_mean": 0.38999999999999996,
+          "phase": "neutral",
+          "n_extreme_days": 10,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2020,
+          "oni_mean": -0.3,
+          "phase": "neutral",
+          "n_extreme_days": 13,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2021,
+          "oni_mean": -0.3733333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2022,
+          "oni_mean": -0.7366666666666667,
+          "phase": "nina",
+          "n_extreme_days": 14,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2023,
+          "oni_mean": 0.9933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 16,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2024,
+          "oni_mean": 0.06666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 11,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2025,
+          "oni_mean": -0.13,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1980,
+          "oni_mean": -0.053333333333333344,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1981,
+          "oni_mean": -0.14333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1982,
+          "oni_mean": 1.7666666666666666,
+          "phase": "nino",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1983,
+          "oni_mean": -0.7166666666666667,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1984,
+          "oni_mean": -0.63,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1985,
+          "oni_mean": -0.2966666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1986,
+          "oni_mean": 0.8533333333333334,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1987,
+          "oni_mean": 1.3666666666666665,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1988,
+          "oni_mean": -1.54,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1989,
+          "oni_mean": -0.23333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1990,
+          "oni_mean": 0.2966666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1991,
+          "oni_mean": 0.9099999999999998,
+          "phase": "nino",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1992,
+          "oni_mean": -0.20333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1993,
+          "oni_mean": 0.20000000000000004,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1994,
+          "oni_mean": 0.6866666666666666,
+          "phase": "nino",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1995,
+          "oni_mean": -0.9433333333333334,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1996,
+          "oni_mean": -0.34,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1997,
+          "oni_mean": 2.2066666666666666,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1998,
+          "oni_mean": -1.1500000000000001,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1999,
+          "oni_mean": -1.16,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2000,
+          "oni_mean": -0.5733333333333334,
+          "phase": "nina",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2001,
+          "oni_mean": -0.24666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2002,
+          "oni_mean": 0.9866666666666667,
+          "phase": "nino",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2003,
+          "oni_mean": 0.25,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2004,
+          "oni_mean": 0.61,
+          "phase": "nino",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2005,
+          "oni_mean": -0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2006,
+          "oni_mean": 0.71,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2007,
+          "oni_mean": -1.3333333333333333,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2008,
+          "oni_mean": -0.3933333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2009,
+          "oni_mean": 0.9633333333333334,
+          "phase": "nino",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2010,
+          "oni_mean": -1.5133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2011,
+          "oni_mean": -0.9066666666666666,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2012,
+          "oni_mean": 0.26,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2013,
+          "oni_mean": -0.19333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2014,
+          "oni_mean": 0.48333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2015,
+          "oni_mean": 2.25,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2016,
+          "oni_mean": -0.47333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2017,
+          "oni_mean": -0.4266666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2018,
+          "oni_mean": 0.7933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2019,
+          "oni_mean": 0.5133333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2020,
+          "oni_mean": -0.96,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2021,
+          "oni_mean": -0.7733333333333334,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2022,
+          "oni_mean": -0.86,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2023,
+          "oni_mean": 1.7133333333333336,
+          "phase": "nino",
+          "n_extreme_days": 9,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2024,
+          "oni_mean": -0.19999999999999998,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2025,
+          "oni_mean": -0.5366666666666666,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        }
+      ]
+    },
+    "rectangle": {
+      "label": "p99, rectángulo",
+      "quantile": 0.99,
+      "region": "rectangle",
+      "threshold_mm": 35.542393582207815,
+      "n_extreme_days_total": 169,
+      "rows": [
+        {
+          "season": "DJF",
+          "phase_years": {
+            "nino": 15,
+            "neutral": 14,
+            "nina": 16
+          },
+          "groups": {
+            "nino": {
+              "n": 15,
+              "years_with_extreme": 0,
+              "total_days": 0,
+              "mean_days": 0.0
+            },
+            "neutral": {
+              "n": 14,
+              "years_with_extreme": 0,
+              "total_days": 0,
+              "mean_days": 0.0
+            },
+            "nina": {
+              "n": 16,
+              "years_with_extreme": 1,
+              "total_days": 1,
+              "mean_days": 0.0625
+            }
+          },
+          "diff_nino_nina": -0.0625,
+          "p": 1.0,
+          "p_3group": 1.0,
+          "spearman_rho": -0.23216087202511324,
+          "p_oni": 0.1326867313268673,
+          "p_bh": 1.0,
+          "p_3group_bh": 1.0,
+          "p_oni_bh": 0.2653734626537346,
+          "sustained_bh": false
+        },
+        {
+          "season": "MAM",
+          "phase_years": {
+            "nino": 9,
+            "neutral": 29,
+            "nina": 8
+          },
+          "groups": {
+            "nino": {
+              "n": 9,
+              "years_with_extreme": 5,
+              "total_days": 9,
+              "mean_days": 1.0
+            },
+            "neutral": {
+              "n": 29,
+              "years_with_extreme": 15,
+              "total_days": 32,
+              "mean_days": 1.103448275862069
+            },
+            "nina": {
+              "n": 8,
+              "years_with_extreme": 4,
+              "total_days": 8,
+              "mean_days": 1.0
+            }
+          },
+          "diff_nino_nina": 0.0,
+          "p": 1.0,
+          "p_3group": 0.9638036196380362,
+          "spearman_rho": -0.037238131126121135,
+          "p_oni": 0.8024197580241976,
+          "p_bh": 1.0,
+          "p_3group_bh": 1.0,
+          "p_oni_bh": 0.8024197580241976,
+          "sustained_bh": false
+        },
+        {
+          "season": "JJA",
+          "phase_years": {
+            "nino": 7,
+            "neutral": 32,
+            "nina": 7
+          },
+          "groups": {
+            "nino": {
+              "n": 7,
+              "years_with_extreme": 7,
+              "total_days": 18,
+              "mean_days": 2.5714285714285716
+            },
+            "neutral": {
+              "n": 32,
+              "years_with_extreme": 30,
+              "total_days": 69,
+              "mean_days": 2.15625
+            },
+            "nina": {
+              "n": 7,
+              "years_with_extreme": 7,
+              "total_days": 18,
+              "mean_days": 2.5714285714285716
+            }
+          },
+          "diff_nino_nina": 0.0,
+          "p": 1.0,
+          "p_3group": 0.7050294970502949,
+          "spearman_rho": 0.11215948315322156,
+          "p_oni": 0.45415458454154584,
+          "p_bh": 1.0,
+          "p_3group_bh": 1.0,
+          "p_oni_bh": 0.6055394460553944,
+          "sustained_bh": false
+        },
+        {
+          "season": "SON",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 6,
+              "total_days": 10,
+              "mean_days": 0.7142857142857143
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 2,
+              "total_days": 2,
+              "mean_days": 0.1111111111111111
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 1,
+              "total_days": 1,
+              "mean_days": 0.07142857142857142
+            }
+          },
+          "diff_nino_nina": 0.6428571428571429,
+          "p": 0.04689531046895311,
+          "p_3group": 0.010498950104989501,
+          "spearman_rho": 0.3609985186676169,
+          "p_oni": 0.014898510148985102,
+          "p_bh": 0.18758124187581243,
+          "p_3group_bh": 0.041995800419958006,
+          "p_oni_bh": 0.05959404059594041,
+          "sustained_bh": false
+        }
+      ],
+      "season_years": [
+        {
+          "season": "DJF",
+          "year": 1981,
+          "oni_mean": -0.24666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1982,
+          "oni_mean": -0.05666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1983,
+          "oni_mean": 2.0566666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1984,
+          "oni_mean": -0.6766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1985,
+          "oni_mean": -0.9766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1986,
+          "oni_mean": -0.38000000000000006,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1987,
+          "oni_mean": 1.1733333333333331,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1988,
+          "oni_mean": 0.6666666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1989,
+          "oni_mean": -1.6233333333333333,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1990,
+          "oni_mean": 0.10999999999999999,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1991,
+          "oni_mean": 0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1992,
+          "oni_mean": 1.49,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1993,
+          "oni_mean": 0.13,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1994,
+          "oni_mean": 0.08666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1995,
+          "oni_mean": 0.8333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1996,
+          "oni_mean": -0.8633333333333333,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1997,
+          "oni_mean": -0.36000000000000004,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1998,
+          "oni_mean": 2.1666666666666665,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 1999,
+          "oni_mean": -1.4100000000000001,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2000,
+          "oni_mean": -1.42,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "DJF",
+          "year": 2001,
+          "oni_mean": -0.6933333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2002,
+          "oni_mean": -0.13333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2003,
+          "oni_mean": 0.8566666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2004,
+          "oni_mean": 0.3,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2005,
+          "oni_mean": 0.6266666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2006,
+          "oni_mean": -0.8266666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2007,
+          "oni_mean": 0.5633333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2008,
+          "oni_mean": -1.6966666666666665,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2009,
+          "oni_mean": -0.84,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2010,
+          "oni_mean": 1.3933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2011,
+          "oni_mean": -1.2766666666666666,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2012,
+          "oni_mean": -0.73,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2013,
+          "oni_mean": -0.18333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2014,
+          "oni_mean": -0.18666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2015,
+          "oni_mean": 0.7266666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2016,
+          "oni_mean": 2.433333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2017,
+          "oni_mean": -0.12333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2018,
+          "oni_mean": -0.7133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2019,
+          "oni_mean": 0.9933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2020,
+          "oni_mean": 0.7066666666666667,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2021,
+          "oni_mean": -0.9666666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2022,
+          "oni_mean": -0.7566666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2023,
+          "oni_mean": -0.5266666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2024,
+          "oni_mean": 1.7866666666666668,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "DJF",
+          "year": 2025,
+          "oni_mean": -0.37000000000000005,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1980,
+          "oni_mean": 0.37999999999999995,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1981,
+          "oni_mean": -0.32,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1982,
+          "oni_mean": 0.35333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1983,
+          "oni_mean": 1.2333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1984,
+          "oni_mean": -0.4666666666666666,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1985,
+          "oni_mean": -0.8133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1986,
+          "oni_mean": -0.17,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1987,
+          "oni_mean": 0.9700000000000001,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1988,
+          "oni_mean": -0.49,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1989,
+          "oni_mean": -0.85,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1990,
+          "oni_mean": 0.2733333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1991,
+          "oni_mean": 0.33666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1992,
+          "oni_mean": 1.26,
+          "phase": "nino",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1993,
+          "oni_mean": 0.6633333333333333,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1994,
+          "oni_mean": 0.15333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1995,
+          "oni_mean": 0.22666666666666668,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1996,
+          "oni_mean": -0.37666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1997,
+          "oni_mean": 0.32666666666666666,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 1998,
+          "oni_mean": 0.9433333333333332,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 1999,
+          "oni_mean": -0.84,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2000,
+          "oni_mean": -0.82,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2001,
+          "oni_mean": -0.3033333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2002,
+          "oni_mean": 0.18666666666666668,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2003,
+          "oni_mean": 0.06333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2004,
+          "oni_mean": 0.1366666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2005,
+          "oni_mean": 0.3466666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2006,
+          "oni_mean": -0.42333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2007,
+          "oni_mean": -0.26,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2008,
+          "oni_mean": -1.09,
+          "phase": "nina",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2009,
+          "oni_mean": -0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2010,
+          "oni_mean": 0.3666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2011,
+          "oni_mean": -0.6766666666666667,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2012,
+          "oni_mean": -0.3233333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2013,
+          "oni_mean": -0.24333333333333332,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2014,
+          "oni_mean": 0.19333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2015,
+          "oni_mean": 0.8733333333333334,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2016,
+          "oni_mean": 1.1233333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2017,
+          "oni_mean": 0.31333333333333335,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2018,
+          "oni_mean": -0.3233333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2019,
+          "oni_mean": 0.7999999999999999,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2020,
+          "oni_mean": 0.3133333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2021,
+          "oni_mean": -0.5666666666666668,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2022,
+          "oni_mean": -0.82,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2023,
+          "oni_mean": 0.18000000000000002,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "MAM",
+          "year": 2024,
+          "oni_mean": 0.7933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "MAM",
+          "year": 2025,
+          "oni_mean": -0.03333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "JJA",
+          "year": 1980,
+          "oni_mean": 0.17333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1981,
+          "oni_mean": -0.26,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "JJA",
+          "year": 1982,
+          "oni_mean": 0.8333333333333334,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1983,
+          "oni_mean": 0.27,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1984,
+          "oni_mean": -0.3766666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1985,
+          "oni_mean": -0.4566666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1986,
+          "oni_mean": 0.24,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1987,
+          "oni_mean": 1.29,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1988,
+          "oni_mean": -1.2466666666666668,
+          "phase": "nina",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1989,
+          "oni_mean": -0.37666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1990,
+          "oni_mean": 0.27666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1991,
+          "oni_mean": 0.69,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1992,
+          "oni_mean": 0.3833333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1993,
+          "oni_mean": 0.35333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1994,
+          "oni_mean": 0.27666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 5,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1995,
+          "oni_mean": -0.32,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1996,
+          "oni_mean": -0.24333333333333332,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1997,
+          "oni_mean": 1.4666666666666668,
+          "phase": "nino",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1998,
+          "oni_mean": -0.5133333333333333,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 1999,
+          "oni_mean": -0.8933333333333332,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2000,
+          "oni_mean": -0.5,
+          "phase": "nina",
+          "n_extreme_days": 6,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2001,
+          "oni_mean": -0.08666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2002,
+          "oni_mean": 0.5499999999999999,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2003,
+          "oni_mean": 0.03333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 4,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2004,
+          "oni_mean": 0.3833333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2005,
+          "oni_mean": -0.03000000000000001,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2006,
+          "oni_mean": 0.13333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2007,
+          "oni_mean": -0.5566666666666666,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2008,
+          "oni_mean": -0.36333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2009,
+          "oni_mean": 0.46666666666666673,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2010,
+          "oni_mean": -0.96,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2011,
+          "oni_mean": -0.4033333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2012,
+          "oni_mean": 0.23333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2013,
+          "oni_mean": -0.39000000000000007,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2014,
+          "oni_mean": 0.12000000000000001,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2015,
+          "oni_mean": 1.4533333333333331,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2016,
+          "oni_mean": -0.1466666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "JJA",
+          "year": 2017,
+          "oni_mean": 0.13,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2018,
+          "oni_mean": 0.21,
+          "phase": "neutral",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2019,
+          "oni_mean": 0.38999999999999996,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2020,
+          "oni_mean": -0.3,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2021,
+          "oni_mean": -0.3733333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2022,
+          "oni_mean": -0.7366666666666667,
+          "phase": "nina",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2023,
+          "oni_mean": 0.9933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 7,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2024,
+          "oni_mean": 0.06666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "JJA",
+          "year": 2025,
+          "oni_mean": -0.13,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1980,
+          "oni_mean": -0.053333333333333344,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1981,
+          "oni_mean": -0.14333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1982,
+          "oni_mean": 1.7666666666666666,
+          "phase": "nino",
+          "n_extreme_days": 3,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1983,
+          "oni_mean": -0.7166666666666667,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1984,
+          "oni_mean": -0.63,
+          "phase": "nina",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1985,
+          "oni_mean": -0.2966666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1986,
+          "oni_mean": 0.8533333333333334,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1987,
+          "oni_mean": 1.3666666666666665,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1988,
+          "oni_mean": -1.54,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1989,
+          "oni_mean": -0.23333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1990,
+          "oni_mean": 0.2966666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1991,
+          "oni_mean": 0.9099999999999998,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1992,
+          "oni_mean": -0.20333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 1993,
+          "oni_mean": 0.20000000000000004,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1994,
+          "oni_mean": 0.6866666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1995,
+          "oni_mean": -0.9433333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1996,
+          "oni_mean": -0.34,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1997,
+          "oni_mean": 2.2066666666666666,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1998,
+          "oni_mean": -1.1500000000000001,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 1999,
+          "oni_mean": -1.16,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2000,
+          "oni_mean": -0.5733333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2001,
+          "oni_mean": -0.24666666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2002,
+          "oni_mean": 0.9866666666666667,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2003,
+          "oni_mean": 0.25,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2004,
+          "oni_mean": 0.61,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2005,
+          "oni_mean": -0.31666666666666665,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2006,
+          "oni_mean": 0.71,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2007,
+          "oni_mean": -1.3333333333333333,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2008,
+          "oni_mean": -0.3933333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2009,
+          "oni_mean": 0.9633333333333334,
+          "phase": "nino",
+          "n_extreme_days": 1,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2010,
+          "oni_mean": -1.5133333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2011,
+          "oni_mean": -0.9066666666666666,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2012,
+          "oni_mean": 0.26,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2013,
+          "oni_mean": -0.19333333333333336,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2014,
+          "oni_mean": 0.48333333333333334,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2015,
+          "oni_mean": 2.25,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2016,
+          "oni_mean": -0.47333333333333333,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2017,
+          "oni_mean": -0.4266666666666667,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2018,
+          "oni_mean": 0.7933333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2019,
+          "oni_mean": 0.5133333333333333,
+          "phase": "nino",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2020,
+          "oni_mean": -0.96,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2021,
+          "oni_mean": -0.7733333333333334,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2022,
+          "oni_mean": -0.86,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2023,
+          "oni_mean": 1.7133333333333336,
+          "phase": "nino",
+          "n_extreme_days": 2,
+          "any_extreme": true
+        },
+        {
+          "season": "SON",
+          "year": 2024,
+          "oni_mean": -0.19999999999999998,
+          "phase": "neutral",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        },
+        {
+          "season": "SON",
+          "year": 2025,
+          "oni_mean": -0.5366666666666666,
+          "phase": "nina",
+          "n_extreme_days": 0,
+          "any_extreme": false
+        }
+      ]
+    }
+  },
+  "robust": {
+    "DJF": false,
+    "MAM": false,
+    "JJA": false,
+    "SON": true
+  }
+}

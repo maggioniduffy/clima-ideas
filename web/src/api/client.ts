@@ -204,6 +204,21 @@ export interface EnsoRow {
   sustained_bh: boolean;
 }
 
+/** One season-year of `enso.json`: the AR metrics of that season and its ONI phase; NaN arrives as null. */
+export interface EnsoSeasonYear {
+  season: string;
+  year: number;
+  n_events: number | null;
+  ar_days: number | null;
+  ivt_mean: number | null;
+  ivt_max: number | null;
+  ar_precip_mm: number | null;
+  total_precip_mm: number | null;
+  ar_share: number | null;
+  oni_mean: number | null;
+  phase: EnsoPhase | string | null;
+}
+
 /** `enso.json` published with the `ar-events` layer: the F1.8 report numbers. `ar_share` is a fraction (0-1). */
 export interface EnsoStats {
   meta: {
@@ -216,4 +231,65 @@ export interface EnsoStats {
     source?: string;
   };
   results: { rows: EnsoRow[]; n_perm: number; seed: number; alpha: number };
+  /** One entry per season-year (the dots of the chart). */
+  season_years?: EnsoSeasonYear[];
+}
+
+export interface ExtremeGroup {
+  n: number;
+  years_with_extreme: number;
+  total_days: number;
+  mean_days: number | null;
+}
+
+/** One season of an F1.9 variant (backend F1.9 report); NaN arrives as null. */
+export interface ExtremeRow {
+  season: string;
+  phase_years: Record<EnsoPhase, number>;
+  groups: Record<EnsoPhase, ExtremeGroup>;
+  diff_nino_nina: number | null;
+  p: number | null;
+  p_bh: number | null;
+  p_3group: number | null;
+  p_3group_bh: number | null;
+  spearman_rho: number | null;
+  p_oni: number | null;
+  p_oni_bh: number | null;
+  sustained_bh: boolean;
+}
+
+export interface ExtremeSeasonYear {
+  season: string;
+  year: number;
+  oni_mean: number | null;
+  phase: EnsoPhase | string | null;
+  n_extreme_days: number | null;
+  any_extreme: boolean | null;
+}
+
+export interface ExtremeVariant {
+  label: string;
+  quantile: number;
+  region: "polygon" | "rectangle";
+  threshold_mm: number;
+  n_extreme_days_total: number;
+  rows: ExtremeRow[];
+  season_years: ExtremeSeasonYear[];
+}
+
+export type ExtremeVariantId = "main" | "p95" | "rectangle";
+
+/** `enso-extremes.json` published with the `ar-events` layer: F1.9, extreme-rain days by ENSO phase. */
+export interface EnsoExtremes {
+  meta: {
+    period?: string;
+    season_years_period?: string;
+    source?: string;
+    n_perm?: number;
+    seed?: number;
+    alpha?: number;
+  };
+  variants: { main: ExtremeVariant } & Partial<Record<ExtremeVariantId, ExtremeVariant>>;
+  /** Per season: does the main conclusion hold under p95 and the rectangle. */
+  robust: Record<string, boolean>;
 }

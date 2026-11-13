@@ -185,3 +185,44 @@ def test_cli_layer_enso_report_option(tmp_path):
     )
     assert res.exit_code == 0, res.output
     assert not (tmp_path / "b" / "ar-events" / "enso.json").exists()
+
+
+def test_extremes_report_is_copied_and_listed(tmp_path):
+    (tmp_path / "era5").mkdir()
+    make_store(tmp_path / "era5", 2000, "2000-01-01", 72)
+    events = make_catalog(tmp_path)
+    report = tmp_path / "F1.9.json"
+    report.write_text('{"meta": {}, "variants": {}, "robust": {}}', encoding="utf-8")
+    out_dir, _ = layer.build_layer(
+        events, tmp_path / "era5", tmp_path / "processed", extremes_report=report
+    )
+    m = load_manifest(out_dir / "manifest.json")
+    assert m.files == ["events.json", "events.parquet", "frames/index.json", "enso-extremes.json"]
+    assert (out_dir / "enso-extremes.json").read_text(encoding="utf-8") == report.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_layer_without_extremes_report_has_no_extremes_file(published):
+    out_dir, _ = published
+    assert not (out_dir / "enso-extremes.json").exists()
+    assert "enso-extremes.json" not in load_manifest(out_dir / "manifest.json").files
+
+
+def test_cli_layer_extremes_report_option(tmp_path):
+    (tmp_path / "era5").mkdir()
+    make_store(tmp_path / "era5", 2000, "2000-01-01", 72)
+    events = make_catalog(tmp_path)
+    report = tmp_path / "F1.9.json"
+    report.write_text("{}", encoding="utf-8")
+    base = ["ar", "layer", "--events", str(events), "--era5-dir", str(tmp_path / "era5")]
+    res = CliRunner().invoke(
+        app, [*base, "--out", str(tmp_path / "a"), "--extremes-report", str(report)]
+    )
+    assert res.exit_code == 0, res.output
+    assert (tmp_path / "a" / "ar-events" / "enso-extremes.json").is_file()
+    res = CliRunner().invoke(
+        app, [*base, "--out", str(tmp_path / "b"), "--extremes-report", str(tmp_path / "nope.json")]
+    )
+    assert res.exit_code == 0, res.output
+    assert not (tmp_path / "b" / "ar-events" / "enso-extremes.json").exists()

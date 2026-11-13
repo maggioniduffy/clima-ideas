@@ -1,0 +1,492 @@
+{
+  "meta": {
+    "period": "1980-01-01/2025-12-30",
+    "season_years_period": "1980-2025",
+    "source": "Extremos falsos de prueba",
+    "n_perm": 10000,
+    "seed": 0,
+    "alpha": 0.05
+  },
+  "variants": {
+    "main": {
+      "label": "p99 polígono",
+      "quantile": 0.99,
+      "region": "polygon",
+      "threshold_mm": 38.2,
+      "n_extreme_days_total": 120,
+      "rows": [
+        {
+          "season": "DJF",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "MAM",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "JJA",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "SON",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        }
+      ],
+      "season_years": []
+    },
+    "p95": {
+      "label": "p95 polígono",
+      "quantile": 0.95,
+      "region": "polygon",
+      "threshold_mm": 17.5,
+      "n_extreme_days_total": 120,
+      "rows": [
+        {
+          "season": "DJF",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "MAM",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "JJA",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "SON",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        }
+      ],
+      "season_years": []
+    },
+    "rectangle": {
+      "label": "p99 rectángulo",
+      "quantile": 0.99,
+      "region": "rectangle",
+      "threshold_mm": 33.0,
+      "n_extreme_days_total": 120,
+      "rows": [
+        {
+          "season": "DJF",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "MAM",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "JJA",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        },
+        {
+          "season": "SON",
+          "phase_years": {
+            "nino": 14,
+            "neutral": 18,
+            "nina": 14
+          },
+          "groups": {
+            "nino": {
+              "n": 14,
+              "years_with_extreme": 5,
+              "total_days": 8,
+              "mean_days": 0.57
+            },
+            "neutral": {
+              "n": 18,
+              "years_with_extreme": 6,
+              "total_days": 9,
+              "mean_days": 0.5
+            },
+            "nina": {
+              "n": 14,
+              "years_with_extreme": 3,
+              "total_days": 4,
+              "mean_days": 0.29
+            }
+          },
+          "diff_nino_nina": 0.28,
+          "p": 0.34,
+          "p_bh": 0.5,
+          "p_3group": 0.4,
+          "p_3group_bh": 0.6,
+          "spearman_rho": 0.1,
+          "p_oni": 0.5,
+          "p_oni_bh": 0.7,
+          "sustained_bh": false
+        }
+      ],
+      "season_years": []
+    }
+  },
+  "robust": {
+    "DJF": true,
+    "MAM": true,
+    "JJA": false,
+    "SON": true
+  }
+}
