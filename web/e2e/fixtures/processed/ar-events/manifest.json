@@ -9,6 +9,7 @@
   "files": [
     "events.json",
     "frames/index.json",
+    "frames/footprints.bin",
     "enso.json",
     "enso-extremes.json"
   ]

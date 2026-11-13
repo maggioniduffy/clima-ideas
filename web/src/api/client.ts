@@ -168,6 +168,15 @@ export interface FramesIndex {
   step_hours: number;
   grid: FrameGrid;
   events: Record<string, { start: string; n_frames: number; vmin: number; vmax: number }>;
+  /** Per-event maximum |IVT| per cell (`frames/footprints.bin`); absent in layers published before footprints. */
+  footprints?: FootprintsIndex;
+}
+
+/** `footprints` of `frames/index.json`: Float32 `[n_events, ny, nx]` on the frames grid, events in `events` order. */
+export interface FootprintsIndex {
+  file: string;
+  events: string[];
+  shape: [number, number, number];
 }
 
 export async function fetchFrames(layerId: string, t: string): Promise<ArrayBuffer> {

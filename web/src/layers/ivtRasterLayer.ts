@@ -1,8 +1,8 @@
-import { PolygonLayer } from "@deck.gl/layers";
+import { PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { FrameGrid } from "../api/client";
 import type { Theme } from "../theme/themeStore";
 import { tokens } from "../theme/tokens";
-import { frameValue, ivtColor, type Cell } from "./arEvents";
+import { countColor, frameValue, ivtColor, type Cell } from "./arEvents";
 
 export interface CellRef {
   row: number;
@@ -56,5 +56,61 @@ export function buildIvtRasterLayer(p: Props) {
     onClick: ({ object }) => {
       if (object) p.onPick({ row: object.row, col: object.col });
     },
+  });
+}
+
+interface CountProps {
+  layerId: string;
+  grid: FrameGrid;
+  cells: Cell[];
+  /** Events per cell, `[ny * nx]` in cell order. */
+  counts: Uint16Array;
+  max: number;
+  theme: Theme;
+}
+
+/** Count map: one rectangle per cell reached by at least one event, sequential ramp over [0, max]; not pickable. */
+export function buildCountLayer(p: CountProps) {
+  const at = (c: Cell) => p.counts[c.row * p.grid.nx + c.col]!;
+  return new PolygonLayer<Cell>({
+    id: `ar-count-${p.layerId}`,
+    data: p.cells.filter((c) => at(c) > 0),
+    pickable: false,
+    parameters: { depthCompare: "always" },
+    getPolygon: (c) => c.polygon,
+    getFillColor: (c) => countColor(at(c), p.max, p.theme),
+    stroked: false,
+    updateTriggers: { getFillColor: [p.counts, p.max, p.theme] },
+  });
+}
+
+interface PeakProps {
+  layerId: string;
+  lon: number;
+  lat: number;
+  theme: Theme;
+}
+
+interface PeakDatum {
+  position: [number, number];
+}
+
+/** Marker at the cell where the event reached its |IVT| maximum (ring in the theme's text color over the accent). */
+export function buildPeakLayer(p: PeakProps) {
+  const t = tokens[p.theme];
+  return new ScatterplotLayer<PeakDatum>({
+    id: `ar-peak-${p.layerId}`,
+    data: [{ position: [p.lon, p.lat] }],
+    pickable: false,
+    parameters: { depthCompare: "always" },
+    getPosition: (d) => d.position,
+    radiusUnits: "pixels",
+    getRadius: 7,
+    stroked: true,
+    lineWidthUnits: "pixels",
+    getLineWidth: 2.5,
+    getFillColor: [...hex(t.accent), 255],
+    getLineColor: [...hex(t.casing), 255],
+    updateTriggers: { getFillColor: [p.theme], getLineColor: [p.theme] },
   });
 }

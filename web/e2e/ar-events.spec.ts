@@ -235,3 +235,36 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
 
   expect(errors).toEqual([]);
 });
+
+test("AR events: count map and legend with no event, footprint and peak marker once an event is picked (not run)", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-ar-events").check();
+  const canvas = page.getByTestId("map-canvas");
+  // no event picked: the count map of the events that are toggled on, and its legend
+  await expect(canvas).toHaveAttribute("data-deck-layers", /ar-count-ar-events/);
+  const legend = page.getByTestId("map-legend");
+  await expect(legend).toContainText("Eventos por celda");
+  await expect(legend).toContainText("IVT ≥ 250");
+  await expect(legend).toContainText("2 eventos en la selección");
+  await expect(legend).toContainText("Período: 2000-03-10 a 2000-07-21");
+  await expect(legend).toContainText("ERA5");
+
+  // turning the year off empties the selection; the count map follows
+  await page.getByTestId("year-toggle-2000").uncheck();
+  await expect(legend).toContainText("0 eventos en la selección");
+  await page.getByTestId("year-toggle-2000").check();
+
+  // picking an event: footprint, core outline at the highest isoline level reached, and the peak cell
+  await page.getByTestId("timeline-event-AR-2000-002").click();
+  await expect(canvas).not.toHaveAttribute("data-deck-layers", /ar-count-ar-events/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /ivt-contours-ar-events-core/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /ar-peak-ar-events/);
+  await expect(page.getByTestId("event-core-note")).toContainText("no donde más llueve");
+
+  // playing the replay shows the hourly frames: the core outline goes, the peak marker stays
+  await page.getByTestId("replay-play").click();
+  await expect(canvas).not.toHaveAttribute("data-deck-layers", /ivt-contours-ar-events-core/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /ar-peak-ar-events/);
+});

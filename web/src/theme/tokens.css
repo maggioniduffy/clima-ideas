@@ -42,6 +42,12 @@
   --ivt-3: #2B6FB0;
   --ivt-4: #38399A;
   --ivt-5: #5A1A72;
+  /* AR count map ramp (events per cell), low to high */
+  --count-0: #EFE8DA;
+  --count-1: #D9C7A4;
+  --count-2: #B79C70;
+  --count-3: #8A6F46;
+  --count-4: #55402A;
   --relief-0: #A7AEAF;
   --relief-1: #77848A;
   --relief-2: #4A5A64;
@@ -69,6 +75,11 @@
   --ivt-3: #6BCB6C;
   --ivt-4: #E3E24A;
   --ivt-5: #F8F5B4;
+  --count-0: #2A2F3C;
+  --count-1: #4A4468;
+  --count-2: #76588A;
+  --count-3: #A77FA6;
+  --count-4: #DDB9C6;
   --relief-0: #4E5F6A;
   --relief-1: #7D8D96;
   --relief-2: #B3BEC4;

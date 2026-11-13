@@ -14,6 +14,11 @@ Output in ``<out>/ar-events/``:
 - ``frames/<event_id>.bin`` hourly |IVT| over the regional grid for [start, end): little-endian
   Float32 ``[n_frames, ny, nx]``, row 0 = southernmost latitude, column 0 = westernmost longitude,
   NaN where ERA5 has no hour. Frame ``i`` is valid at ``start + i`` hours.
+- ``frames/footprints.bin`` per event, the maximum |IVT| each cell reached during the event: little-endian
+  Float32 ``[n_events, ny, nx]`` on the same grid (NaN where the cell has no hour at all). Events come in
+  the order of ``footprints.events`` in ``frames/index.json`` (which also holds ``file`` and ``shape``);
+  only events that have frames are included. Listed in the manifest so ``GET /layers/ar-events/data?file=``
+  serves it.
 
 ``GET /layers/ar-events/frames/<event_id>`` serves the ``.bin`` (see ``clima_nqn.api.app``).
 """
@@ -41,6 +46,7 @@ UNITS = "kg m-1 s-1"
 DEFAULT_OUT = Path("data/processed")
 FRAMES_DIR = "frames"
 INDEX_NAME = f"{FRAMES_DIR}/index.json"
+FOOTPRINTS_NAME = f"{FRAMES_DIR}/footprints.bin"
 ENSO_NAME = "enso.json"
 ENSO_EXTREMES_NAME = "enso-extremes.json"
 DATETIME_COLUMNS = ("start", "end", "ivt_max_time")
@@ -56,6 +62,11 @@ def event_frames(ivt: xr.DataArray, start, end) -> np.ndarray:
     stamps = pd.date_range(pd.Timestamp(start), pd.Timestamp(end), freq="h", inclusive="left")
     frames = ivt.reindex(time=stamps).values.astype("<f4")
     return np.ascontiguousarray(frames)
+
+
+def event_footprint(frames: np.ndarray) -> np.ndarray:
+    """Per-cell maximum over the frames ``[n, ny, nx]`` -> ``[ny, nx]`` float32; NaN only where every hour is NaN."""
+    return np.fmax.reduce(frames, axis=0).astype("<f4")
 
 
 def _load_ivt(era5_by_year: dict[int, Path], years: list[int], lo, hi) -> xr.DataArray | None:
@@ -99,6 +110,7 @@ def write_frames(events: pd.DataFrame, era5_paths: Sequence[Path], out_dir: Path
     frames_dir.mkdir(parents=True)
     era5_by_year = {catalog._year_of(Path(p)): Path(p) for p in era5_paths}
     entries: dict[str, dict] = {}
+    footprints: list[np.ndarray] = []
     grid: dict | None = None
     for year, group in events.groupby(events["start"].dt.year):
         last = group["end"].max().year
@@ -128,6 +140,7 @@ def write_frames(events: pd.DataFrame, era5_paths: Sequence[Path], out_dir: Path
             if frames.shape[0] == 0 or np.isnan(frames).all():
                 continue
             (frames_dir / f"{ev.event_id}.bin").write_bytes(frames.tobytes())
+            footprints.append(event_footprint(frames))
             entries[ev.event_id] = {
                 "start": pd.Timestamp(ev.start).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "n_frames": int(frames.shape[0]),
@@ -143,6 +156,15 @@ def write_frames(events: pd.DataFrame, era5_paths: Sequence[Path], out_dir: Path
         "grid": grid,
         "events": entries,
     }
+    if footprints:
+        (out_dir / FOOTPRINTS_NAME).write_bytes(np.stack(footprints).astype("<f4").tobytes())
+        index["footprints"] = {
+            "file": FOOTPRINTS_NAME,
+            "dtype": "float32-le",
+            "layout": "[n_events, ny, nx], same grid as the frames; events in the order of `events`",
+            "events": list(entries),
+            "shape": [len(footprints), grid["ny"], grid["nx"]],
+        }
     (out_dir / INDEX_NAME).write_text(json.dumps(index), encoding="utf-8")
     return index
 
@@ -173,6 +195,8 @@ def build_layer(
     shutil.copyfile(events_path, out_dir / "events.parquet")
     (out_dir / "events.json").write_text(json.dumps(events_records(df)), encoding="utf-8")
     files = ["events.json", "events.parquet", INDEX_NAME]
+    if "footprints" in index:
+        files.append(FOOTPRINTS_NAME)
     if enso_report is not None:
         shutil.copyfile(enso_report, out_dir / ENSO_NAME)
         files.append(ENSO_NAME)
