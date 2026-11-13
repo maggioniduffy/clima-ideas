@@ -108,15 +108,18 @@ Tras ver la capa completa (433 eventos) en el visor, costaba leer qué muestra. 
 Los ríos atmosféricos quedaban perdidos: mapa vacío hasta elegir uno de 433 eventos de una lista plana, y sin
 relación visible con los caudales. Detalle y registro en `odd/tasks/ar-viewer-rework.md`.
 
-- [ ] V5 Lista por año con interruptores, y dentro de cada año sus meses; sin grilla (decisión del usuario).
-- [ ] V6 Picos: orden por IVT máximo, lluvia total o duración, e interruptor "top N"; marcas más grandes en la
+- [x] V5 Lista por año con interruptores, y dentro de cada año sus meses; sin grilla (decisión del usuario).
+- [x] V6 Picos: orden por IVT máximo, lluvia total o duración, e interruptor "top N"; marcas más grandes en la
   línea de tiempo. Por ranking, sin categorías.
-- [ ] V7 Mapa: sin evento elegido, cantidad de eventos que alcanzaron IVT ≥ 250 en cada celda para los años y
+- [x] V7 Mapa: sin evento elegido, cantidad de eventos que alcanzaron IVT ≥ 250 en cada celda para los años y
   meses activos; con evento, su huella (IVT máximo por celda), el núcleo y la celda del pico. El núcleo de IVT
   es por donde pasa la humedad, no donde más llueve; no hay lluvia por celda.
-- [ ] V8 Relación con caudales: las crecidas que coinciden con un río atmosférico (F2.3) llevan al evento; el
+- [x] V8 Relación con caudales: las crecidas que coinciden con un río atmosférico (F2.3) llevan al evento; el
   evento muestra el caudal diario de las estaciones alrededor de su ventana. Tabla por evento y estación
   (caudal previo, pico en [inicio, fin + 10 días], demora). "Coincide con", nunca "causó".
+- V5–V8 hechas (2026-11-13; commits 147c33c, 8fec2af, e8a2071, 19bd6b0, 7bcc9b9): verificadas con vitest, pytest y
+  Playwright sobre datos de prueba. Sin verificar con datos reales: falta regenerar la capa (`clima-nqn ar layer`,
+  `clima-nqn ar response`, `clima-nqn flow causes` y `flow layer`) y publicarla. La ventana de 10 días es un supuesto.
 
 ## Abierto
 

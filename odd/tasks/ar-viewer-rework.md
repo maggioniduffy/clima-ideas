@@ -33,8 +33,8 @@ every modelled datum shows source and period; no alert levels, highlighted thres
 
 - [x] T1 — S1, S2, S3 — year → month toggles and ranked peaks (web only) — route: delegated (builder) — commit: 147c33c (vitest 214 passed, tsc and eslint clean; Playwright scenario written, not yet run)
 - [x] T2 — S4 — footprints in the AR layer, count map, footprint, core and peak cell — route: delegated (builder) — commit: 8fec2af (backend pytest 371 passed, vitest 230 passed, tsc and eslint clean; Playwright scenario written, not run; real layer not regenerated)
-- [ ] T3 — S5 — AR response table, AR ids on top floods, flood → AR tag, caudal chart in the event view — route: delegated (builder, Sonnet) — commits: e8a2071 backend (`clima-nqn ar response`, `responses.json`, `ar_events` on top floods; focused pytest 45 passed, ruff clean), 1c44aae fixtures (station 1002 flood moved to 2000-07-25 inside AR-2000-002; response ratio 4.14, lag 4 d); web part in progress
-- [ ] T4 — S6 — plan documents (V5–V8 in phase 1, proposed tasks in phases 5 and 6, `plan.md` status) — route: inline — commit:
+- [x] T3 — S5 — AR response table, AR ids on top floods, flood → AR tag, caudal chart in the event view — route: delegated (builder, Sonnet) — commits: e8a2071 backend (`clima-nqn ar response`, `responses.json`, `ar_events` on top floods; focused pytest 45 passed, ruff clean), 1c44aae fixtures (station 1002 flood moved to 2000-07-25 inside AR-2000-002; response ratio 4.14, lag 4 d); 19bd6b0 web (caudal chart per station in the event view, "Coincide con" tags on top floods, sort by largest caudal response; vitest 250, tsc and eslint clean); 7bcc9b9 fix + e2e (AR layer drew the count map after being switched off, a T2 bug found by Playwright; favicon 404)
+- [x] T4 — S6 — plan documents (V5–V8 in phase 1, proposed tasks in phases 5 and 6, `plan.md` status) — route: inline — commits: 83e891d (proposals), this commit (V5–V8 ticked, `plan.md` status)
 
 Route evidence: user's "Model roles" rule (Opus orchestrates, Sonnet implements). Tasks run one after another:
 T2 and T3 build on T1's filter state in `Shell.tsx`.
@@ -53,3 +53,11 @@ T2 and T3 build on T1's filter state in `Shell.tsx`.
 - **L4** (2026-11-13): session moved to the cloud. Playwright 1.64.1 expects a browser build that is not installed
   there; e2e runs with a scratchpad config pointing at the preinstalled Chromium (not committed). Pre-existing
   `ruff format` failure in `backend/src/clima_nqn/stages/ar/geo/__init__.py` (trailing blank line), left alone.
+- **L5** (2026-11-13): full suites once. Backend pytest passed (exit 0); web vitest 250 passed, tsc and eslint clean;
+  Playwright 17/17 on fixtures (T1 and T2 scenarios run for the first time; their layer-id expectations updated to the
+  count map, core outline and peak marker). Browser check on fixtures: flood tag opens AR-2000-002, caudal chart with
+  shaded window, peak and regulated label, no console errors.
+- **Risk**: everything is verified on fixtures only; real layer data not regenerated (stays local: `clima-nqn ar layer`,
+  `ar response`, `flow causes`, `flow layer`). `responses.json` size on the real catalog is unmeasured (estimate a few
+  hundred KB). The 10-day response window and ranking by peak/previous-day ratio are assumptions; a low base flow
+  inflates the ratio. No PR opened (user decision, branch is over 400 changed lines).
