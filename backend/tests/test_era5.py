@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from typer.testing import CliRunner
 
+from clima_nqn import cli
 from clima_nqn.io import era5
 
 RAW_NAMES = list(era5.VARIABLES)
@@ -231,3 +233,91 @@ def test_live_one_day_two_hours(tmp_path):
     assert set(ds.data_vars) == set(era5.VARIABLES.values())
     assert float(ds["viwve"].isnull().sum()) == 0
     assert float(ds["lat"].min()) == -43.0
+
+
+T2M = {"2m_temperature": "t2m"}
+
+
+def test_default_variables_unchanged():
+    assert era5.VARIABLES == {
+        "vertical_integral_of_eastward_water_vapour_flux": "viwve",
+        "vertical_integral_of_northward_water_vapour_flux": "viwvn",
+        "total_precipitation": "tp",
+        "zero_degree_level": "deg0l",
+    }
+    assert era5.AVAILABLE_VARIABLES == {**era5.VARIABLES, "2m_temperature": "t2m"}
+
+
+def test_resolve_variables_accepts_long_and_short_names():
+    assert era5.resolve_variables("2m_temperature") == T2M
+    assert era5.resolve_variables("t2m, tp") == {
+        "2m_temperature": "t2m",
+        "total_precipitation": "tp",
+    }
+    with pytest.raises(ValueError, match="t2m"):
+        era5.resolve_variables("foo")
+
+
+def test_fetch_year_subset_t2m_only(tmp_path):
+    store = FakeStore()
+    store.ds["2m_temperature"] = store.ds["total_precipitation"].copy()
+    kw = {
+        "months": [1],
+        "hours": [0, 12],
+        "area": (6.0, -65.0, -6.0, 65.0),
+        "out_dir": tmp_path,
+        "opener": store.open,
+        "retry_wait": 0,
+        "workers": 2,
+    }
+    path = era5.fetch_year(2023, variables=T2M, **kw)
+    out = xr.open_zarr(path, consolidated=False)
+    assert list(out.data_vars) == ["t2m"]
+    assert out["t2m"].attrs["arco_name"] == "2m_temperature"
+    assert "note" not in out["t2m"].attrs
+    assert era5.is_complete(path, 2023, [1], [0, 12], variables=T2M) is True
+    assert era5.is_complete(path, 2023, [1], [0, 12]) is False  # default four are absent
+    calls = store.calls
+    era5.fetch_year(2023, variables=T2M, **kw)
+    assert store.calls == calls  # complete for the subset, skipped
+
+
+def test_combine_t2m_only(tmp_path):
+    store = FakeStore()
+    store.ds["2m_temperature"] = store.ds["total_precipitation"].copy()
+    era5.fetch_year(
+        2023,
+        months=[1],
+        hours=[0],
+        area=(6.0, -65.0, -6.0, 65.0),
+        out_dir=tmp_path,
+        opener=store.open,
+        retry_wait=0,
+        variables=T2M,
+    )
+    out = era5.combine(tmp_path, tmp_path / "all.zarr")
+    assert list(xr.open_zarr(out, consolidated=False).data_vars) == ["t2m"]
+
+
+def test_cli_fetch_variables_option():
+    runner = CliRunner()
+    assert "--variables" in runner.invoke(cli.app, ["era5", "fetch", "--help"]).output
+    bad = runner.invoke(cli.app, ["era5", "fetch", "--year", "2023", "--variables", "foo"])
+    assert bad.exit_code != 0
+    assert "t2m" in bad.output and "total_precipitation" in bad.output
+
+
+def test_cli_fetch_passes_variables(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_fetch_year(year, *args, **kwargs):
+        seen["variables"] = kwargs.get("variables")
+        return tmp_path
+
+    monkeypatch.setattr(era5, "fetch_year", fake_fetch_year)
+    args = ["era5", "fetch", "--year", "2023", "--out", str(tmp_path)]
+    r = CliRunner().invoke(cli.app, [*args, "--variables", "2m_temperature"])
+    assert r.exit_code == 0, r.output
+    assert seen["variables"] == T2M
+    r = CliRunner().invoke(cli.app, args)
+    assert r.exit_code == 0 and seen["variables"] == era5.VARIABLES

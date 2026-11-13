@@ -9,6 +9,7 @@
   "files": [
     "stations.json",
     "stations/1001.json",
-    "stations/1002.json"
+    "stations/1002.json",
+    "events/1001.json"
   ]
 }

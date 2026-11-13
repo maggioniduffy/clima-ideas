@@ -1,4 +1,5 @@
 /** Pure chart math for the flood panel: scales, ticks, downsampling and SVG path building. */
+import type { FloodEvent, FloodEventIssue } from "../layers/useFloodStation";
 
 export interface Pt {
   x: number;
@@ -11,6 +12,19 @@ export const RETURN_TICKS = [2, 5, 10, 25, 50, 100, 200] as const;
 export const MAX_SERIES_POINTS = 2000;
 
 const DAY_MS = 86_400_000;
+
+/** Plot-area margins in CSS px (the charts draw in a viewBox of the measured width, so text never scales). */
+export const CHART_MARGIN = { l: 48, r: 18, t: 24, b: 30 } as const;
+/** Width of one glyph of the 12 px mono tick font, for fitting labels. */
+export const TICK_CHAR_PX = 7.3;
+
+/** Anchor of a tick label at `x` so the whole label stays inside [0, width]: centred unless it would clip. */
+export function tickAnchor(x: number, width: number, label: string): "start" | "middle" | "end" {
+  const half = (label.length * TICK_CHAR_PX) / 2;
+  if (x - half < 1) return "start";
+  if (x + half > width - 1) return "end";
+  return "middle";
+}
 
 export const linearScale =
   (d0: number, d1: number, r0: number, r1: number) =>
@@ -102,4 +116,55 @@ export function yearTicks(start: string, end: string, n = 4): { year: number; is
     if (iso >= start && iso <= end) out.push({ year: y, iso });
   }
   return out;
+}
+
+export interface ForecastPoint {
+  /** Days from the start of the observed series. */
+  day: number;
+  median: number | null;
+  lo: number | null;
+  hi: number | null;
+}
+
+/** Forecast of one issue day as points on the event's day axis: lead k falls k days after the issue day. */
+export function forecastPoints(obsStart: string, issue: FloodEventIssue): ForecastPoint[] {
+  const base = dayOffset(obsStart, issue.issue_date);
+  return issue.median.map((m, k) => ({
+    day: base + k + 1,
+    median: m,
+    lo: issue.lo[k] ?? null,
+    hi: issue.hi[k] ?? null,
+  }));
+}
+
+/** Persistence forecast: the flow observed on the issue day, held for every lead (empty when it is a gap). */
+export function persistencePoints(obsStart: string, issue: FloodEventIssue): Pt[] {
+  if (issue.persistence == null) return [];
+  const base = dayOffset(obsStart, issue.issue_date);
+  return [{ x: base, y: issue.persistence }, ...issue.median.map((_, k) => ({ x: base + k + 1, y: issue.persistence! }))];
+}
+
+/** Largest flow the event's chart can show (observed, every issue's band), so the y axis stays put between issue days. */
+export function eventYMax(event: FloodEvent): number {
+  const vals = [
+    ...event.obs.q,
+    ...event.issues.flatMap((i) => [...i.hi, ...i.median, i.persistence]),
+  ].filter((v): v is number => v != null);
+  return niceMax(Math.max(0, ...vals));
+}
+
+/** "Emitido N días antes del pico" label of an issue day. */
+export function issueLabel(daysBeforePeak: number): string {
+  if (daysBeforePeak <= 0) return "Emitido el día del pico";
+  return `Emitido ${daysBeforePeak} ${daysBeforePeak === 1 ? "día" : "días"} antes del pico`;
+}
+
+/** Band polygon of the forecast: only leads where both edges exist, joined in order. */
+export function forecastBandPath(points: readonly ForecastPoint[], x: (d: number) => number, y: (v: number) => number): string {
+  const ok = points.filter((p) => p.lo != null && p.hi != null);
+  if (ok.length < 2) return "";
+  return bandPath(
+    ok.map((p): Pt => ({ x: x(p.day), y: y(p.hi!) })),
+    ok.map((p): Pt => ({ x: x(p.day), y: y(p.lo!) })),
+  );
 }
