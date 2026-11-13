@@ -1,0 +1,40 @@
+Learning resources: streamflow models of F2.5 (GR4J + CemaNeige, LSTM, metrics, data)
+
+1. Rainfall-runoff modelling (the background for everything)
+
+Keith Beven, Rainfall-Runoff Modelling: The Primer (Wiley). It explains what conceptual models like GR4J do, calibration, equifinality, and why "good NSE" can mislead.
+
+2. GR4J and CemaNeige (the baseline)
+
+Perrin, Michel & Andréassian (2003), J. Hydrol. 279: the GR4J paper, short and readable.
+Valéry, Andréassian & Perrin (2014), J. Hydrol. 517: CemaNeige, the snow module.
+The airGR R package (INRAE) and its vignettes: the reference implementation, with diagrams of the stores. It's the best way to see the model "move".
+
+3. LSTMs in general
+
+Christopher Olah, Understanding LSTM Networks (colah's blog, 2015): the classic intuitive explanation with diagrams.
+Dive into Deep Learning (d2l.ai), the RNN and LSTM chapters: free, with runnable code.
+
+4. LSTMs for streamflow (what we're doing)
+
+Kratzert et al. (2018), HESS, "Rainfall–runoff modelling using Long Short-Term Memory networks": the founding paper.
+Kratzert et al. (2019), HESS, "Towards learning universal, regional, and local hydrological behaviors…": training on many basins, static attributes and the NSE* loss we use. This is the most directly relevant one.
+Nearing et al. (2021), Water Resources Research, "What role does hydrological science play in the age of machine learning?": the debate, ML vs. conceptual models.
+NeuralHydrology (Python library and its documentation/tutorials): the reference implementation of these papers. It's well worth comparing against our lstm.py.
+
+5. Metrics
+
+Nash & Sutcliffe (1970), J. Hydrol. 10: NSE.
+Gupta et al. (2009), J. Hydrol. 377: KGE and its decomposition.
+Knoben et al. (2019), HESS, technical note "Inherent benchmark or not? Comparing NSE and KGE": why the two aren't comparable on the same scale. It explains why our results disagree between NSE and KGE.
+
+6. Data
+
+Addor et al. (2017), HESS: CAMELS, the idea of large-sample datasets.
+Alvarez-Garreton et al. (2018), HESS 22: CAMELS-CL, the one we pretrain on.
+Kratzert et al. (2023), Scientific Data: Caravan.
+Oudin et al. (2005), J. Hydrol.: the PET formula we use.
+
+Suggested route: Olah's post, then Kratzert 2018, then Kratzert 2019, then the NeuralHydrology tutorials. For the hydrology side: the Perrin 2003 paper, then airGR, then Beven's book.
+
+In this repo: backend/src/clima_nqn/stages/flood/hydro_models.py and lstm.py; their opening docstrings explain each choice and cite these sources.
