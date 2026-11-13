@@ -168,7 +168,8 @@ Se suben solo los manifiestos válidos, los archivos de `files` y los frames de 
 1. Crear el bucket en R2 y darle acceso público (subdominio `r2.dev` o dominio propio).
 2. CORS del bucket: `GET` y `HEAD` desde el dominio de Vercel (y `http://localhost:5173` para probar).
 3. Crear un token de API de R2 con permiso de escritura solo en ese bucket.
-4. Exportar `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` y `R2_BUCKET`, y correr `make publish`
+4. Exportar `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` y `R2_BUCKET` (o ponerlas en `.env` en la
+   raíz; `make` lo lee si existe), y correr `make publish`
    (`make publish-dry` lista lo que sube sin red).
 5. En Vercel, `VITE_DATA_URL` = URL pública del bucket, y volver a desplegar.
 
