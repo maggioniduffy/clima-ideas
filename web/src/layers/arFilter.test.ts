@@ -7,6 +7,8 @@ import {
   isMonthOn,
   isYearOn,
   rankEvents,
+  responseRatios,
+  revealEvent,
   toggleMonth,
   toggleYear,
   visibleEvents,
@@ -82,4 +84,47 @@ test("top N takes the N highest of the filtered set by the chosen key, ranked", 
 test("top N ignores events that are toggled off, even if they rank first", () => {
   const v = visibleEvents(events, toggleMonth(DEFAULT_TOGGLES, 2000, 7), "tp_sum_mm", true, 1);
   expect(v.events.map((e) => e.event_id)).toEqual(["a"]);
+});
+
+const responses = (events: Record<string, (number | null)[]>) =>
+  ({
+    source: "S", period: "P", window_days_after: 10, context_days_before: 3, note: "n", stations: [],
+    events: Object.fromEntries(
+      Object.entries(events).map(([id, ratios]) => [
+        id,
+        ratios.map((ratio, i) => ({
+          station_id: String(i), q_before: 1, q_peak: 2, peak_date: "2000-01-01", lag_days: 0, ratio,
+          daily: { start: "2000-01-01", q: [] },
+        })),
+      ]),
+    ),
+  }) as import("../api/client").ArResponses; // fmt: skip
+
+test("responseRatios takes the largest ratio per event and skips events without one", () => {
+  const r = responseRatios(responses({ a: [1.2, 4.5], b: [null], c: [] }));
+  expect([...r]).toEqual([["a", 4.5]]);
+  expect(responseRatios(null).size).toBe(0);
+});
+
+test("q_response ranks by the largest ratio and puts events without a response last", () => {
+  const ratios = responseRatios(responses({ d: [2], c: [9] }));
+  expect(rankEvents(events, "q_response", ratios).map((e) => e.event_id)).toEqual(["c", "d", "a", "b"]);
+  // without ratios nothing has a response: the order is unchanged
+  expect(rankEvents(events, "q_response").map((e) => e.event_id)).toEqual(["c", "a", "b", "d"]);
+});
+
+test("visibleEvents ranks the top N by response when given the ratios", () => {
+  const ratios = responseRatios(responses({ d: [2], a: [7] }));
+  const v = visibleEvents(events, DEFAULT_TOGGLES, "q_response", true, 2, ratios);
+  expect(v.events.map((e) => e.event_id)).toEqual(["a", "d"]);
+  expect([...v.peakIds].sort()).toEqual(["a", "d"]);
+});
+
+test("revealEvent switches the event's year and month back on and leaves the rest", () => {
+  const off = toggleMonth(toggleMonth(toggleYear(DEFAULT_TOGGLES, 2000), 2000, 3), 2000, 7);
+  const t = revealEvent(off, events[1]!); // a: 2000-03
+  expect(isYearOn(t, 2000)).toBe(true);
+  expect(isMonthOn(t, 2000, 3)).toBe(true);
+  expect(isMonthOn(t, 2000, 7)).toBe(false);
+  expect(revealEvent(DEFAULT_TOGGLES, events[1]!)).toBe(DEFAULT_TOGGLES);
 });

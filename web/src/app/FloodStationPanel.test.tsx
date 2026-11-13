@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { FloodStationDetail } from "../api/client";
 import { es } from "../i18n/es";
 import { FloodStationPanel } from "./FloodStationPanel";
@@ -111,4 +111,23 @@ test("the flood card only appears (and fetches) when the station has events", as
   rerender(<FloodStationPanel state={{ status: "ready", detail: { ...base, has_events: true } as FloodStationDetail }} />);
   await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
   vi.unstubAllGlobals();
+});
+
+test("a top flood with AR events gets a 'Coincide con' tag that opens the event; no tag without the callback", () => {
+  const withAr = {
+    ...base,
+    top_floods: [{ ...maxima[0]!, ar_events: ["AR-2023-001", "AR-2023-002"] }, maxima[1]!],
+  };
+  const onOpenArEvent = vi.fn();
+  const { rerender } = render(
+    <FloodStationPanel state={{ status: "ready", detail: withAr }} onOpenArEvent={onOpenArEvent} />,
+  );
+  expect(screen.getAllByTestId(/^flood-ar-tag-/)).toHaveLength(2);
+  const tag = screen.getByTestId("flood-ar-tag-AR-2023-001");
+  expect(tag).toHaveTextContent("Coincide con AR-2023-001");
+  expect(tag.textContent).not.toMatch(/caus|provoc/i);
+  fireEvent.click(tag);
+  expect(onOpenArEvent).toHaveBeenCalledWith("AR-2023-001");
+  rerender(<FloodStationPanel state={{ status: "ready", detail: withAr }} />);
+  expect(screen.queryByTestId("flood-ar-tag-AR-2023-001")).toBeNull();
 });
