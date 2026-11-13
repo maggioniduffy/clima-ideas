@@ -47,5 +47,8 @@ Fable, como subagente `advisor` (`.claude/agents/advisor.md`). Plantilla de cons
 - Código, nombres de archivo y commits en inglés. UI en español primero.
 - Nada inventado: lo no verificado se marca "sin verificar"; todo dato modelado muestra fuente y período.
 - ML solo con un baseline simple al lado.
-- No es un sistema de alerta. Todo es retrospectivo salvo la fase 6: predicciones experimentales, siempre con
-  incertidumbre, baseline y registro de aciertos, sin uso operativo.
+- No es un sistema de alerta oficial. Desde el 2026-11-12 el proyecto puede mostrar una perspectiva de riesgo a
+  1–10 días para usuarios técnicos, solo en el visor, si pasa la compuerta de evidencia de `plan/06-forecast.md`.
+  Nunca niveles, colores, umbrales destacados ni consejos de acción. Siempre con incertidumbre, baseline, historial
+  de aciertos y enlace a los avisos oficiales (SMN, AIC, Defensa Civil). Lo que no pasa la compuerta se muestra
+  como "Experimental"; el resto del proyecto es retrospectivo.

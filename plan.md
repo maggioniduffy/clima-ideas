@@ -19,9 +19,10 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 ## Rumbo (revisión del 2026-11-11)
 
 El rumbo se mantiene: solo Neuquén, de la atmósfera al suelo, cada modelo de ML junto a un baseline, nada sin
-verificar dado por cierto, sin alertas. Hilo principal hasta ahora: el 58 % de los días de lluvia ≥ p99 coincide
+verificar dado por cierto, sin alertas oficiales (desde el 2026-11-12: perspectiva de riesgo tras una
+compuerta de evidencia, ajuste 7). Hilo principal hasta ahora: el 58 % de los días de lluvia ≥ p99 coincide
 con un río atmosférico y la crecida de junio de 2023 en Paso de Indios tiene un período de retorno de ≈ 134 años.
-Seis ajustes, que salen de los resultados y de `docs/research/data-access.md`:
+Siete ajustes, que salen de los resultados y de `docs/research/data-access.md`:
 
 1. **ENSO pesa más que su evidencia.** En F1.8 ninguna de 16 pruebas sostiene p BH < 0,05 y el resultado cambia
    con el polígono. Queda una comprobación barata por fase; el modelo estacional (F6.2) depende de que F2.7
@@ -39,6 +40,12 @@ Seis ajustes, que salen de los resultados y de `docs/research/data-access.md`:
    empezar; si falla, la pregunta se reformula.
 6. **Nada está publicado.** La web estática con capas en R2 se decidió el 2026-11-05 y no estaba en el plan: es
    F0.11. Desde ahí, una fase cierra cuando su capa está en línea.
+7. **De analizar a prevenir (2026-11-12, decisión del usuario).** El objetivo suma ayudar a prevenir impactos de
+   lluvias y tormentas extremas. La salida es una perspectiva de riesgo a 1–10 días para usuarios técnicos, solo en
+   el visor y siempre remitiendo a SMN, AIC y Defensa Civil; no hay niveles de alerta ni avisos por mensaje. Una
+   variable y anticipación se muestra como perspectiva solo si pasa la compuerta de `plan/06-forecast.md` (hindcast
+   F5.8, prueba de crecidas F6.7, temporada prospectiva F6.8); si no, queda "Experimental". La fase 5 es la
+   evidencia y la 6 la entrega. Plan: `odd/tasks/risk-outlook-rule.md`.
 
 Regla para tareas de análisis: la cifra principal lleva una comprobación de sensibilidad (otro umbral, polígono
 o período) antes de darse por hecha.
