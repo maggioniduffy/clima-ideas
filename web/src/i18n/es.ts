@@ -146,6 +146,7 @@ export const es = {
       sortIvt: "IVT máx.",
       sortRain: "Lluvia acumulada",
       sortDuration: "Duración",
+      sortHint: (n: number) => `Ordena los ${n} mayores; activá «Los ${n} mayores» para usarlo`,
       top: (n: number) => `Los ${n} mayores`,
       topList: "Eventos mayores, de más a menos",
       noneShown: "Ningún año o mes activado",
