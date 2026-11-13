@@ -282,3 +282,13 @@ test("the reading in the footprint state is the event maximum of the cell", asyn
   act(() => result.current.seek(1));
   expect(result.current.reading).toMatchObject({ value: 210, kind: "hour" });
 });
+
+test("turning the layer off empties deckLayers even though events, index and footprints stay loaded", async () => {
+  stubFootprintFetch();
+  const { result, rerender } = renderHook(({ active }) => useArEvents(fpLayer, active), { initialProps: { active: true } });
+  await waitFor(() => expect(ids(result)).toEqual(["ar-count-ar-events"]));
+  rerender({ active: false });
+  expect(result.current.deckLayers).toEqual([]);
+  rerender({ active: true });
+  expect(ids(result)).toEqual(["ar-count-ar-events"]);
+});

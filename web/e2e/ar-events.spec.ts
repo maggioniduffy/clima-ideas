@@ -143,7 +143,7 @@ test("IVT view toggle: drape over the relief by default, isolines add contour la
   const canvas = page.getByTestId("map-canvas");
   const drape = page.getByTestId("ivt-view-drape");
   const lines = page.getByTestId("ivt-view-isolines");
-  await expect(canvas).toHaveAttribute("data-deck-layers", /^relief-relief,ivt-ar-events,ref-/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /^relief-relief,ivt-ar-events,ivt-contours-halo-ar-events-core,ivt-contours-ar-events-core,ar-peak-ar-events,ref-/);
   await expect(drape).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("map-legend-bar")).toBeVisible();
 
@@ -159,7 +159,7 @@ test("IVT view toggle: drape over the relief by default, isolines add contour la
   await expect(page.getByTestId("map-legend-levels")).toContainText("1000");
   await expect(canvas).toHaveAttribute(
     "data-deck-layers",
-    /^relief-relief,ivt-ar-events,ivt-contours-halo-ar-events,ivt-contours-ar-events,ref-/,
+    /^relief-relief,ivt-ar-events,ivt-contours-halo-ar-events,ivt-contours-ar-events,ar-peak-ar-events,ref-/,
   );
   await page.getByTestId("replay-slider").fill("2");
   await expect(page.getByTestId("cell-value")).toHaveText("300 kg m-1 s-1");
@@ -236,7 +236,7 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
   expect(errors).toEqual([]);
 });
 
-test("AR events: count map and legend with no event, footprint and peak marker once an event is picked (not run)", async ({
+test("AR events: count map and legend with no event, footprint and peak marker once an event is picked", async ({
   page,
 }) => {
   await page.goto("/");
