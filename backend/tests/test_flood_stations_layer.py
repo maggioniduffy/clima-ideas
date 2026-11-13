@@ -205,3 +205,30 @@ def test_attach_events_flags_detail_and_lists_files_once(world):
     ]
     assert load(world, "stations/1001.json")["has_events"] is True
     assert "has_events" not in load(world, "stations/1002.json")
+
+
+def test_ar_events_tag_floods_from_causes(world, tmp_path):
+    flow_dir, out = tmp_path / "flow", tmp_path / "out2"
+    causes = {
+        "meta": {},
+        "stations": [
+            {
+                "station_id": 1001,
+                "floods": [
+                    {"date": "2001-06-01", "events": ["AR-2001-004"]},
+                    {"date": "2000-06-01", "events": []},
+                ],
+            }
+        ],
+    }
+    (flow_dir / "causes.json").write_text(json.dumps(causes), encoding="utf-8")
+    fs.build_layer(flow_dir, flow_dir / "gev", out)  # default: <flow_dir>/causes.json
+    d = load(out, "stations/1001.json")
+    tagged = {m["date"]: m.get("ar_events") for m in d["annual_maxima"]}
+    assert tagged == {"2000-06-01": None, "2001-06-01": ["AR-2001-004"]}
+    assert [m.get("ar_events") for m in d["top_floods"]] == [["AR-2001-004"], None]
+    assert "ar_events" not in json.dumps(load(out, "stations/1002.json"))
+
+
+def test_no_causes_file_leaves_details_untouched(world):
+    assert "ar_events" not in json.dumps(load(world, "stations/1001.json"))

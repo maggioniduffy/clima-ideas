@@ -41,6 +41,8 @@ export interface FloodMaximum {
   q: number;
   t_empirical: number | null;
   t_gev: number | null;
+  /** Ids of the atmospheric-river events that coincide with this flood (ar-events layer); absent when none. */
+  ar_events?: string[];
 }
 
 /** `flood-stations/stations/<id>.json`. `gev`, `return_levels` and `curve` are absent without a GEV fit. */
@@ -177,6 +179,40 @@ export interface FootprintsIndex {
   file: string;
   events: string[];
   shape: [number, number, number];
+}
+
+/** A station listed in `responses.json`. */
+export interface ArResponseStation {
+  id: string;
+  name: string;
+  river: string;
+  regulated: boolean;
+}
+
+/** Flow at one station around one AR event: the day before the start, the peak in [start, end + window], the lag. */
+export interface ArStationResponse {
+  station_id: string;
+  q_before: number | null;
+  q_peak: number;
+  peak_date: string;
+  /** Days from the first day of the event to the peak day. */
+  lag_days: number;
+  /** q_peak / q_before; null when there is no flow the day before. */
+  ratio: number | null;
+  /** Daily flow (m3/s) from `start` (context days before the event to the end of the window); gaps are null. */
+  daily: { start: string; q: (number | null)[] };
+}
+
+/** `responses.json` published with the `ar-events` layer (optional). Events with no flow data are absent. */
+export interface ArResponses {
+  source: string;
+  period: string;
+  window_days_after: number;
+  context_days_before: number;
+  /** Spanish caveat about the window and regulated stations. */
+  note: string;
+  stations: ArResponseStation[];
+  events: Record<string, ArStationResponse[]>;
 }
 
 export async function fetchFrames(layerId: string, t: string): Promise<ArrayBuffer> {

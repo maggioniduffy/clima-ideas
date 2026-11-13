@@ -265,3 +265,14 @@ def test_cli_layer_extremes_report_option(tmp_path):
     )
     assert res.exit_code == 0, res.output
     assert not (tmp_path / "b" / "ar-events" / "enso-extremes.json").exists()
+
+
+def test_rebuild_keeps_existing_responses_file(tmp_path):
+    (tmp_path / "era5").mkdir()
+    make_store(tmp_path / "era5", 2000, "2000-01-01", 72)
+    events = make_catalog(tmp_path)
+    out_dir, _ = layer.build_layer(events, tmp_path / "era5", tmp_path / "processed")
+    assert "responses.json" not in load_manifest(out_dir / "manifest.json").files
+    (out_dir / "responses.json").write_text("{}", encoding="utf-8")
+    out_dir, _ = layer.build_layer(events, tmp_path / "era5", tmp_path / "processed")
+    assert load_manifest(out_dir / "manifest.json").files == [*FILES, "responses.json"]

@@ -129,3 +129,21 @@ for (const width of [900, 1360]) {
     expect(bad).toEqual([]);
   });
 }
+
+test("flood stations: a top flood tagged 'Coincide con' opens that AR event in the ar-events layer", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-flood-stations").check();
+  await page.getByTestId("feature-1002").click();
+  const tag = page.getByTestId("flood-ar-tag-AR-2000-002");
+  await expect(tag).toHaveText("Coincide con AR-2000-002");
+  await tag.click();
+
+  // the ar-events layer is on, the event selected (and its year not hidden by the filter), its caudal chart shown
+  await expect(page.getByTestId("layer-item-ar-events")).toHaveAttribute("data-active", "true");
+  await expect(page.getByTestId("inspector-event")).toContainText("2000-07-21");
+  await expect(page.getByTestId("ar-response-chart-1002")).toBeVisible();
+  await expect(page.getByTestId("ar-response-regulated-1002")).toContainText(/regulada/i);
+  await expect(page.getByTestId("year-toggle-2000")).toBeChecked();
+});

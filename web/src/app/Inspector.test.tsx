@@ -105,3 +105,22 @@ test("the footprint reading is labelled as the event maximum and shows only the 
   expect(screen.getByTestId("inspector-cell")).toHaveTextContent(es.events.cellMax);
   expect(screen.getByTestId("cell-where")).not.toHaveTextContent("UTC");
 });
+
+test("event view shows the caudal section only when the selected event has responses", () => {
+  const events: LayerManifest = { ...layer, id: "ar-events", kind: "events" };
+  const selected = {
+    event_id: "AR-1", start: "2000-07-21T00:00:00Z", end: "2000-07-21T03:00:00Z", duration_h: 3, deg0l_max: 3100,
+  } as never;
+  const q = [10, 10, 10, 50, 10, 10];
+  const responses = {
+    source: "SNIH", period: "2000/2000", window_days_after: 10, context_days_before: 3, note: "nota",
+    stations: [{ id: "9", name: "Est", river: "R", regulated: true }],
+    events: { "AR-1": [{ station_id: "9", q_before: 10, q_peak: 50, peak_date: "2000-07-21", lag_days: 0, ratio: 5, daily: { start: "2000-07-18", q } }] },
+  };
+  const props = { layer: events, features: [], selectedPointId: null, onSelectPoint: vi.fn() };
+  const { rerender } = render(<Inspector {...props} event={{ selected, loadingFrames: false, reading: null, responses }} />);
+  expect(screen.getByTestId("ar-response")).toBeInTheDocument();
+  expect(screen.getByTestId("ar-response-regulated-9")).toBeInTheDocument();
+  rerender(<Inspector {...props} event={{ selected, loadingFrames: false, reading: null, responses: null }} />);
+  expect(screen.queryByTestId("ar-response")).toBeNull();
+});

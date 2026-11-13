@@ -20,6 +20,7 @@ from clima_nqn.stages.ar import enso as ar_enso
 from clima_nqn.stages.ar import enso_extremes as ar_enso_extremes
 from clima_nqn.stages.ar import extremes as ar_extremes
 from clima_nqn.stages.ar import layer as ar_layer
+from clima_nqn.stages.ar import response as ar_response
 from clima_nqn.stages.flood import causes as flood_causes
 from clima_nqn.stages.flood import enso as flood_enso
 from clima_nqn.stages.flood import extremes as flood_extremes
@@ -433,11 +434,19 @@ def flow_layer(
     out: Annotated[
         Path, typer.Option(help="Layer directory (manifest.json, stations.json, stations/).")
     ] = flood_stations.DEFAULT_OUT,
+    causes: Annotated[
+        Path | None,
+        typer.Option(
+            help="causes.json of F2.3 (default: <flow-dir>/causes.json if it exists); adds AR ids to top floods."
+        ),
+    ] = None,
 ) -> None:
     """Publish the flood-stations viewer layer: stations, daily flow and GEV return periods (F2.4)."""
     if not (flow_dir / "stations.json").is_file():
         raise typer.BadParameter(f"no stations.json in {flow_dir} (run clima-nqn flow ingest)")
-    layer_dir = flood_stations.build_layer(flow_dir, gev_dir, out)
+    if causes is not None and not causes.is_file():
+        raise typer.BadParameter(f"causes file not found: {causes}")
+    layer_dir = flood_stations.build_layer(flow_dir, gev_dir, out, causes)
     stations = json.loads((layer_dir / "stations.json").read_text(encoding="utf-8"))
     typer.echo(f"{len(stations)} stations -> {layer_dir}")
 
@@ -673,6 +682,29 @@ def ar_layer_cmd(
     )
     frames = sum(e["n_frames"] for e in index["events"].values())
     typer.echo(f"{len(index['events'])} events with frames, {frames} hourly frames -> {layer_dir}")
+
+
+@ar_app.command("response")
+def ar_response_cmd(
+    events: Annotated[Path, typer.Option(help="Catalog Parquet (clima-nqn ar catalog).")] = (
+        ar_catalog.DEFAULT_OUT
+    ),
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    out: Annotated[Path, typer.Option(help="ar-events layer directory.")] = (
+        ar_layer.DEFAULT_OUT / ar_layer.LAYER_ID
+    ),
+) -> None:
+    """Write responses.json: flow before and peak flow after each AR event, per station (viewer S5)."""
+    if not events.exists():
+        raise typer.BadParameter(f"catalog not found: {events}")
+    if not (flow_dir / "stations.json").is_file():
+        raise typer.BadParameter(f"no stations.json in {flow_dir} (run clima-nqn flow ingest)")
+    result = ar_response.build(events, flow_dir, out)
+    pairs = sum(len(v) for v in result["events"].values())
+    typer.echo(
+        f"{len(result['events'])} events, {len(result['stations'])} stations, {pairs} pairs -> "
+        f"{out / ar_response.RESPONSES_NAME}"
+    )
 
 
 @app.command("publish")

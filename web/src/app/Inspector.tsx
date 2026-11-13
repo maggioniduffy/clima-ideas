@@ -1,8 +1,9 @@
-import type { ArEvent, FloodStationFeature, LayerManifest, PointFeature } from "../api/client";
+import type { ArEvent, ArResponses, FloodStationFeature, LayerManifest, PointFeature } from "../api/client";
 import { es } from "../i18n/es";
 import { formatUtc } from "../layers/arEvents";
 import type { CellReading } from "../layers/useArEvents";
 import { FLOOD_LAYER_ID } from "../layers/useFloodStation";
+import { ArResponseChart } from "./ArResponseChart";
 import { eventFields, formatLatLon, ivtText } from "./eventFormat";
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
   selectedPointId: string | null;
   onSelectPoint: (id: string) => void;
   /** Selected AR event and the IVT cell under the cursor (kind "events" layers). */
-  event?: { selected: ArEvent | null; loadingFrames: boolean; reading: CellReading | null };
+  event?: { selected: ArEvent | null; loadingFrames: boolean; reading: CellReading | null; responses?: ArResponses | null };
 }
 
 export function Inspector({ layer, features, selectedPointId, onSelectPoint, event }: Props) {
@@ -81,10 +82,12 @@ function EventDetails({
   selected,
   loadingFrames,
   reading,
+  responses = null,
 }: {
   selected: ArEvent | null;
   loadingFrames: boolean;
   reading: CellReading | null;
+  responses?: ArResponses | null;
 }) {
   if (!selected)
     return (
@@ -122,6 +125,7 @@ function EventDetails({
         <dt>{es.events.enso}</dt>
         <dd className="num">{f.enso}</dd>
       </dl>
+      {responses && <ArResponseChart responses={responses} event={selected} />}
       {loadingFrames && <p className="empty">{es.events.loadingFrames}</p>}
       <p className="empty" data-testid="event-core-note">{es.events.coreNote}</p>
       <dl className="inspector-point kv" data-testid="inspector-cell">

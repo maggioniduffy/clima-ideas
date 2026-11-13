@@ -151,3 +151,13 @@ test("loading, error and empty states", () => {
   rerender(<EventListCard {...props} />);
   expect(screen.getByText(es.events.none)).toBeInTheDocument();
 });
+
+test("the response sort key is offered only when responses are loaded and ranks by the given ratios", () => {
+  const { rerender } = render(<EventListCard {...base} onSelectEvent={vi.fn()} />);
+  const opts = () => within(screen.getByTestId("sort-select")).getAllByRole("option").map((o) => o.textContent);
+  expect(opts()).not.toContain(es.events.filter.sortResponse);
+  rerender(<EventListCard {...base} hasResponses onSelectEvent={vi.fn()} />);
+  expect(opts()).toEqual([
+    es.events.filter.sortIvt, es.events.filter.sortRain, es.events.filter.sortDuration, es.events.filter.sortResponse,
+  ]);
+});
