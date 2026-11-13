@@ -47,6 +47,7 @@ VARIANTS = {
     "rectangle": {"label": "p99, rectángulo", "quantile": 0.99, "region": "rectangle"},
 }
 SEASON_NOUN = {"DJF": "veranos", "MAM": "otoños", "JJA": "inviernos", "SON": "primaveras"}
+F14_P99_MM = 29.2  # F1.4 main threshold (mm/day), checked in the report
 PERM_CHUNK = 2000  # permutations per vectorised block
 TABLE_COLUMNS = ["season", "year", "oni_mean", "phase", "n_extreme_days", "any_extreme"]
 
@@ -239,7 +240,7 @@ _num = ar_enso._num
 
 
 def count_sentence(row: dict) -> str:
-    """"5 de 7 inviernos Niño y 3 de 7 inviernos Niña tuvieron al menos un día extremo"."""
+    """ "5 de 7 inviernos Niño y 3 de 7 inviernos Niña tuvieron al menos un día extremo"."""
     noun = SEASON_NOUN[row["season"]]
     parts = []
     for phase, name in (("nino", "Niño"), ("nina", "Niña")):
@@ -250,6 +251,65 @@ def count_sentence(row: dict) -> str:
 
 def _k_of_n(g: dict) -> str:
     return f"{g['years_with_extreme']} de {g['n']}"
+
+
+def _c(x, nd: int = 2) -> str:
+    """Decimal-comma number ("n/d" for None/NaN)."""
+    return _num(x, nd).replace(".", ",")
+
+
+def _pc(x) -> str:
+    """p-value with decimal comma: 3 decimals below 0.1, else 2."""
+    return _c(x, 3 if x is not None and not math.isnan(x) and x < 0.1 else 2)
+
+
+def _row(variant: dict, season: str) -> dict:
+    return next(r for r in variant["rows"] if r["season"] == season)
+
+
+def _below(x) -> bool:
+    return x is not None and not math.isnan(x) and x < ALPHA
+
+
+def reading(rows: Sequence[dict], robust: bool) -> str:
+    """Plain-language reading of one season across the variants' rows."""
+    sustained = [bool(r["sustained_bh"]) for r in rows]
+    if not any(sustained):
+        return "ninguna variante sostiene diferencia"
+    if all(sustained) and robust:
+        return "diferencia sostenida en las tres"
+    return "cambia según la variante"
+
+
+def summary_bullet(season: str, variants: dict, robust: bool) -> str:
+    """One Resumen bullet: main-variant counts and tests, ONI correlation under each variant."""
+    rows = [_row(v, season) for v in variants.values()]
+    m = rows[0]
+    noun = SEASON_NOUN[season]
+    g = m["groups"]
+    counts = (
+        f"{_k_of_n(g['nino'])} {noun} Niño y {_k_of_n(g['nina'])} {noun} Niña "
+        "con al menos un día extremo"
+    )
+    verdict = "sostenido" if m["sustained_bh"] else "no sostenido"
+    pair_reading = "igual en las tres variantes" if robust else "cambia según la variante"
+    p_bh = [_pc(r["p_oni_bh"]) for r in rows]
+    # The ONI correlation is outside the pre-fixed robust rule: it holds only if every variant agrees.
+    oni_sig = [
+        r["p_oni_bh"] is not None and not math.isnan(r["p_oni_bh"]) and r["p_oni_bh"] < ALPHA
+        for r in rows
+    ]
+    if all(oni_sig):
+        oni_reading = "se sostiene en las tres variantes"
+    elif any(oni_sig):
+        oni_reading = "no robusto"
+    else:
+        oni_reading = "no sostenido"
+    return (
+        f"- {season}: {counts}; Niño − Niña p {_pc(m['p'])} sin ajustar, p BH {_pc(m['p_bh'])} "
+        f"({verdict}; {pair_reading}). ρ con el ONI {_c(m['spearman_rho'], 2)}, p BH {p_bh[0]} con "
+        f"p99 en el polígono, {p_bh[1]} con p95 y {p_bh[2]} con el rectángulo: {oni_reading}."
+    )
 
 
 def write_report(payload: dict, path: Path | str) -> Path:
@@ -301,7 +361,11 @@ def write_report(payload: dict, path: Path | str) -> Path:
         )
     lines += [
         "",
-        "La variante principal debería coincidir con el umbral de F1.4 (29,2 mm/día); comprobar contra `F1.4.md`.",
+        (
+            "Coincide con el umbral de F1.4 (29,2 mm/día)."
+            if abs(variants["main"]["threshold_mm"] - F14_P99_MM) < 0.05
+            else "No coincide con F1.4 (29,2 mm/día): revisar."
+        ),
         "",
         "## Años por fase y estación",
         "",
@@ -339,21 +403,48 @@ def write_report(payload: dict, path: Path | str) -> Path:
     lines += [
         "## Sensibilidad",
         "",
-        "| Estación | ¿Robusto? |",
-        "|---|---|",
+        (
+            "| Estación | p BH Niño − Niña (p99 pol. / p95 pol. / p99 rect.) | "
+            "p ONI BH (p99 pol. / p95 pol. / p99 rect.) | ¿Robusto? (regla fijada) | Lectura |"
+        ),
+        "|---|---|---|---|---|",
     ]
     for season, ok in payload["robust"].items():
-        lines.append(f"| {season} | {'sí' if ok else 'no'} |")
-    n_sus = sum(r["sustained_bh"] for r in main_rows)
-    n_rob = sum(payload["robust"].values())
+        rows = [_row(v, season) for v in variants.values()]
+        pbh = " / ".join(_pc(r["p_bh"]) for r in rows)
+        poni = " / ".join(_pc(r["p_oni_bh"]) for r in rows)
+        lines.append(
+            f"| {season} | {pbh} | {poni} | {'sí' if ok else 'no'} | {reading(rows, ok)} |"
+        )
     lines += [
+        "",
+        (
+            "«Robusto» sigue la regla fijada antes de correr (dirección y resultado BH coinciden en las "
+            "tres variantes), así que una estación puede ser «no» solo porque el signo de la diferencia "
+            "cambia alrededor de 0 mientras ninguna variante encuentra diferencia."
+        ),
         "",
         "## Resumen",
         "",
-        (
-            f"- Variante principal: {n_sus} de {len(main_rows)} estaciones con p BH < {ALPHA} en "
-            f"Niño − Niña. Estaciones robustas en las tres variantes: {n_rob} de {len(payload['robust'])}."
-        ),
+    ]
+    flagged = [
+        season
+        for season in payload["robust"]
+        if any(
+            _below(r[k])
+            for v in variants.values()
+            for r in [_row(v, season)]
+            for k in ("p", "p_bh", "p_3group", "p_3group_bh", "p_oni", "p_oni_bh")
+        )
+    ]
+    for season in flagged:
+        lines.append(summary_bullet(season, variants, payload["robust"][season]))
+    if not flagged:
+        lines.append(
+            "- Ninguna prueba de ninguna variante tiene p < 0,05, ni sin ajustar ni con BH."
+        )
+    lines += [
+        "- ENSO se informa como contexto de los extremos, no como predictor.",
         "",
         "## Salvedades",
         "",

@@ -67,9 +67,7 @@ def test_incomplete_edge_seasons_dropped():
 
 def test_threshold_from_quantile_matches_numpy():
     rng = np.random.default_rng(1)
-    daily = pd.Series(
-        rng.gamma(0.5, 5.0, size=len(zeros())), index=zeros().index
-    )
+    daily = pd.Series(rng.gamma(0.5, 5.0, size=len(zeros())), index=zeros().index)
     assert ex.threshold_of(daily, 0.99) == float(np.quantile(daily.to_numpy(), 0.99))
 
 
@@ -207,9 +205,7 @@ def test_count_sentence_format():
         },
     }
     s = ex.count_sentence(row)
-    assert s == (
-        "5 de 7 inviernos Niño y 3 de 7 inviernos Niña tuvieron al menos un día extremo"
-    )
+    assert s == ("5 de 7 inviernos Niño y 3 de 7 inviernos Niña tuvieron al menos un día extremo")
     for season, noun in (("DJF", "veranos"), ("MAM", "otoños"), ("SON", "primaveras")):
         assert noun in ex.count_sentence({**row, "season": season})
 
@@ -248,3 +244,80 @@ def test_run_writes_both_files(tmp_path, monkeypatch):
     assert calls[1] == catalog.LEGACY_RECTANGLE
     assert (tmp_path / "out" / "F1.9.md").is_file() and (tmp_path / "out" / "F1.9.json").is_file()
     assert set(out["variants"]) == {"main", "p95", "rectangle"}
+
+
+def _payload_for_report(tmp_path):
+    daily, enso = long_daily(), long_enso()
+    return ex.build_payload({"polygon": daily, "rectangle": daily * 1.1}, enso, n_perm=100, seed=0)
+
+
+def test_threshold_note_is_computed(tmp_path):
+    payload = _payload_for_report(tmp_path)
+    payload["variants"]["main"]["threshold_mm"] = 29.21
+    md = ex.write_report(payload, tmp_path / "a.md").read_text(encoding="utf-8")
+    assert "Coincide con el umbral de F1.4 (29,2 mm/día)." in md
+    payload["variants"]["main"]["threshold_mm"] = 31.0
+    md = ex.write_report(payload, tmp_path / "b.md").read_text(encoding="utf-8")
+    assert "No coincide con F1.4 (29,2 mm/día): revisar." in md
+
+
+def test_reading_labels():
+    on, off = {"sustained_bh": True}, {"sustained_bh": False}
+    assert ex.reading([off, off, off], False) == "ninguna variante sostiene diferencia"
+    assert ex.reading([on, on, on], True) == "diferencia sostenida en las tres"
+    assert ex.reading([on, off, on], False) == "cambia según la variante"
+    assert ex.reading([on, on, on], False) == "cambia según la variante"
+
+
+def test_sensitivity_table_and_note(tmp_path):
+    md = ex.write_report(_payload_for_report(tmp_path), tmp_path / "a.md").read_text(
+        encoding="utf-8"
+    )
+    assert "p BH Niño − Niña (p99 pol. / p95 pol. / p99 rect.)" in md
+    assert "| ¿Robusto? (regla fijada) | Lectura |" in md
+    assert "cambia alrededor de 0" in md
+
+
+def test_summary_bullets_and_closing_line(tmp_path):
+    payload = _payload_for_report(tmp_path)
+    for v in payload["variants"].values():
+        for r in v["rows"]:
+            r["p"] = r["p_bh"] = r["p_3group"] = r["p_3group_bh"] = r["p_oni"] = r["p_oni_bh"] = 0.5
+    son = next(r for r in payload["variants"]["main"]["rows"] if r["season"] == "SON")
+    payload["robust"]["SON"] = True  # as in the real run: same sign, no variant sustained
+    son.update(p=0.047, p_bh=0.19, spearman_rho=0.38, p_oni_bh=0.043)
+    for name, val in (("p95", 0.055), ("rectangle", 0.06)):
+        next(r for r in payload["variants"][name]["rows"] if r["season"] == "SON")["p_oni_bh"] = val
+    md = ex.write_report(payload, tmp_path / "a.md").read_text(encoding="utf-8")
+    resumen = md.split("## Resumen")[1].split("## Salvedades")[0]
+    assert resumen.count("\n- ") == 2  # SON bullet + closing line
+    assert (
+        "Niño − Niña p 0,047 sin ajustar, p BH 0,19 (no sostenido; igual en las tres variantes)"
+        in resumen
+    )
+    assert (
+        "ρ con el ONI 0,38, p BH 0,043 con p99 en el polígono, 0,055 con p95 y 0,060 con el rectángulo"
+        in resumen
+    )
+    # The ONI result is significant only in the main variant: not robust, whatever the pair rule says.
+    assert "primaveras Niño y" in resumen and "con el rectángulo: no robusto." in resumen
+    for name in ("p95", "rectangle"):
+        next(r for r in payload["variants"][name]["rows"] if r["season"] == "SON")["p_oni_bh"] = (
+            0.01
+        )
+    payload["robust"]["SON"] = False
+    md = ex.write_report(payload, tmp_path / "b.md").read_text(encoding="utf-8")
+    assert "(no sostenido; cambia según la variante)" in md
+    assert "con el rectángulo: se sostiene en las tres variantes." in md
+    assert resumen.rstrip().endswith(
+        "ENSO se informa como contexto de los extremos, no como predictor."
+    )
+
+
+def test_write_report_accepts_loaded_json(tmp_path):
+    payload = _payload_for_report(tmp_path)
+    first = ex.write_report(payload, tmp_path / "a.md")
+    loaded = json.loads((tmp_path / "a.json").read_text(encoding="utf-8"))
+    second = ex.write_report(loaded, tmp_path / "b.md")
+    assert first.read_text(encoding="utf-8") == second.read_text(encoding="utf-8")
+    assert (tmp_path / "a.json").read_text() == (tmp_path / "b.json").read_text()

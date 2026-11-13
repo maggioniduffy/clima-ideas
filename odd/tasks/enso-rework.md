@@ -42,3 +42,12 @@ and a one-dot-per-year chart, and record in the Rumbo that ENSO is context for e
   season): DJF 15/14/16, MAM 9/29/8, JJA 7/32/7, SON 14/18/14 (Niño/Neutro/Niña).
 - L3 (2026-11-12) Plan approved by the user ("Try again" after approval). Units T1/T2 to Sonnet builders in
   parallel, disjoint edit surfaces; the F1.9 JSON shape is fixed in both handoffs.
+- L4 (2026-11-13) User: "resume workin but load controlled max 4gb ram" → every heavy command runs under
+  `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0`; vitest 2 forks, Playwright 1 worker. T1 done
+  (d82326e; pytest 285 passed, ruff clean; RED not captured, the first builder run was cut by the usage limit).
+- L5 (2026-11-13) T3 real run (MemoryMax=2G): p99 polígono 29,2 mm/día (= F1.4), p95 13,0, p99 rectángulo 35,5;
+  169/841/169 días extremos. Principal: 0 de 4 estaciones con p BH < 0,05 (Niño − Niña). SON: 6 de 14 primaveras
+  Niño y 1 de 14 Niña con ≥ 1 día extremo, p 0,047 sin ajustar, p BH 0,19; ρ con ONI 0,38, p BH 0,043 solo en la
+  principal (0,055 p95, 0,060 rectángulo): no robusto. JJA: 7 de 7 inviernos en ambas fases. Rule unchanged; added a
+  "Lectura" next to the pre-fixed "robusto" (DJF is "no" only because the sign flips around 0 with no variant
+  sustaining a difference) and the panel's sensitivity line reads all three variants.
