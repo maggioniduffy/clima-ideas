@@ -17,6 +17,7 @@ from clima_nqn.publish import (
 )
 from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.ar import enso as ar_enso
+from clima_nqn.stages.ar import enso_extremes as ar_enso_extremes
 from clima_nqn.stages.ar import extremes as ar_extremes
 from clima_nqn.stages.ar import layer as ar_layer
 from clima_nqn.stages.flood import causes as flood_causes
@@ -390,6 +391,38 @@ def ar_enso_cmd(
     typer.echo(f"-> {out_dir / 'F1.8.md'}, {out_dir / 'F1.8.json'}")
 
 
+@ar_app.command("enso-extremes")
+def ar_enso_extremes_cmd(
+    events: Annotated[Path, typer.Option(help="Catalog Parquet (clima-nqn ar catalog).")] = (
+        ar_catalog.DEFAULT_OUT
+    ),
+    era5_dir: Annotated[Path, typer.Option(help="Directory with the <year>.zarr stores.")] = (
+        era5.DEFAULT_OUT
+    ),
+    enso: Annotated[Path, typer.Option(help="ENSO Parquet (clima-nqn enso fetch).")] = DEFAULT_PATH,
+    out_dir: Annotated[Path, typer.Option(help="Directory for F1.9.md and F1.9.json.")] = (
+        ar_catalog.DEFAULT_OUT.parent
+    ),
+    n_perm: Annotated[int, typer.Option(help="Permutations per test.")] = 10000,
+) -> None:
+    """Extreme-rain days by ENSO phase and ONI, with p95 and rectangle sensitivity (F1.9)."""
+    if not events.exists():
+        raise typer.BadParameter(f"catalog not found: {events}")
+    if not enso.exists():
+        raise typer.BadParameter(f"ENSO table not found: {enso} (run clima-nqn enso fetch)")
+    era5_stores = sorted(p for p in era5_dir.glob("[0-9][0-9][0-9][0-9].zarr") if p.is_dir())
+    if not era5_stores:
+        raise typer.BadParameter(f"no <year>.zarr stores in {era5_dir}")
+    payload = ar_enso_extremes.run(events, era5_stores, enso, out_dir, n_perm=n_perm)
+    main = payload["variants"]["main"]
+    for r in main["rows"]:
+        typer.echo(
+            f"{r['season']}: diff Nino-Nina {r['diff_nino_nina']:.2f} d, p_bh {r['p_bh']:.3f}, "
+            f"robust {payload['robust'][r['season']]}"
+        )
+    typer.echo(f"-> {out_dir / 'F1.9.md'}, {out_dir / 'F1.9.json'}")
+
+
 @ar_app.command("layer")
 def ar_layer_cmd(
     events: Annotated[Path, typer.Option(help="Catalog Parquet (clima-nqn ar catalog).")] = (
@@ -407,6 +440,12 @@ def ar_layer_cmd(
             help="F1.8 JSON (clima-nqn ar enso); published as enso.json when it exists, else skipped."
         ),
     ] = ar_catalog.DEFAULT_OUT.parent / "F1.8.json",
+    extremes_report: Annotated[
+        Path,
+        typer.Option(
+            help="F1.9 JSON (clima-nqn ar enso-extremes); published as enso-extremes.json when it exists, else skipped."
+        ),
+    ] = ar_catalog.DEFAULT_OUT.parent / "F1.9.json",
 ) -> None:
     """Publish the ar-events viewer layer: events, hourly IVT frames and the ENSO report (F1.6, F1.8)."""
     if not events.exists():
@@ -414,7 +453,11 @@ def ar_layer_cmd(
     if not any(era5_dir.glob("[0-9][0-9][0-9][0-9].zarr")):
         raise typer.BadParameter(f"no <year>.zarr stores in {era5_dir}")
     layer_dir, index = ar_layer.build_layer(
-        events, era5_dir, out, enso_report if enso_report.is_file() else None
+        events,
+        era5_dir,
+        out,
+        enso_report if enso_report.is_file() else None,
+        extremes_report if extremes_report.is_file() else None,
     )
     frames = sum(e["n_frames"] for e in index["events"].values())
     typer.echo(f"{len(index['events'])} events with frames, {frames} hourly frames -> {layer_dir}")
