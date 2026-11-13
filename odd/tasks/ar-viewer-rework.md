@@ -33,7 +33,7 @@ every modelled datum shows source and period; no alert levels, highlighted thres
 
 - [x] T1 — S1, S2, S3 — year → month toggles and ranked peaks (web only) — route: delegated (builder) — commit: 147c33c (vitest 214 passed, tsc and eslint clean; Playwright scenario written, not yet run)
 - [x] T2 — S4 — footprints in the AR layer, count map, footprint, core and peak cell — route: delegated (builder) — commit: 8fec2af (backend pytest 371 passed, vitest 230 passed, tsc and eslint clean; Playwright scenario written, not run; real layer not regenerated)
-- [ ] T3 — S5 — AR response table, AR ids on top floods, flood → AR tag, caudal chart in the event view — route: delegated (builder) — commit:
+- [ ] T3 — S5 — AR response table, AR ids on top floods, flood → AR tag, caudal chart in the event view — route: delegated (builder, Sonnet) — commits: e8a2071 backend (`clima-nqn ar response`, `responses.json`, `ar_events` on top floods; focused pytest 45 passed, ruff clean), 1c44aae fixtures (station 1002 flood moved to 2000-07-25 inside AR-2000-002; response ratio 4.14, lag 4 d); web part in progress
 - [ ] T4 — S6 — plan documents (V5–V8 in phase 1, proposed tasks in phases 5 and 6, `plan.md` status) — route: inline — commit:
 
 Route evidence: user's "Model roles" rule (Opus orchestrates, Sonnet implements). Tasks run one after another:
@@ -50,3 +50,6 @@ T2 and T3 build on T1's filter state in `Shell.tsx`.
   too much visible load"
 - **L3** (2026-11-13): user chose scope "Full viewer rework" and default map "Count of rivers per cell".
   Branch fast-forwarded to `origin/main` (0cfc4e4) at the user's request before starting.
+- **L4** (2026-11-13): session moved to the cloud. Playwright 1.64.1 expects a browser build that is not installed
+  there; e2e runs with a scratchpad config pointing at the preinstalled Chromium (not committed). Pre-existing
+  `ruff format` failure in `backend/src/clima_nqn/stages/ar/geo/__init__.py` (trailing blank line), left alone.
