@@ -137,6 +137,14 @@ cd backend && uv run clima-nqn flow layer
   y con GEV: `gev` (`irregular` si ξ ≥ 0,5), `return_levels` y `curve` (T de 1,1 a 200; el IC 95 % solo dentro del rango guardado, 2–100).
   Sin GEV, los períodos de retorno son empíricos (Weibull).
 - El inspector abre el panel de la estación (curva T–caudal con banda IC, serie diaria con máximos anuales, mayores crecidas).
+- Ficha de crecida (F2.6, opcional): `cd backend && uv run --group ml clima-nqn flow lstm-hindcast --run-name fc-default` escribe
+  `events/<id>.json` (JSON estricto, `null` en huecos) con las crecidas máximas anuales de los años de prueba del run (3 mayores por
+  estación, más 2023-06-26 en 12004): `meta` (run, modo, semillas, años de prueba, forzante "ERA5 observada, no pronóstico", `caveat`
+  "Pronóstico retrospectivo con meteorología observada (ERA5), no pronóstico operativo. Experimental, no es una alerta.", preentreno,
+  `area_km2` y `area_note`, fuente y período) y `events[]`: `peak_date`, `peak_q`, `obs` (`start` y 22 valores, pico−14..pico+7, m³/s) e
+  `issues[]` (8 días de emisión pico−7..pico: `days_before_peak`, `persistence`, `median`, `lo`, `hi` para plazos 1–7, m³/s; banda 90 %
+  con los cuantiles de validación). Los archivos se agregan a `files` del manifiesto y el detalle de la estación lleva `has_events: true`;
+  sin ellos la capa es válida y el panel no muestra la ficha. `flow layer` conserva los `events/` existentes.
 
 ## API
 

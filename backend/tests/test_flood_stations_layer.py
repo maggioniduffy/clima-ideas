@@ -181,3 +181,27 @@ def test_cli_flow_layer(tmp_path, world):
     )  # fmt: skip
     assert res.exit_code == 0, res.output
     assert (out / "manifest.json").is_file()
+
+
+def test_layer_builds_and_validates_without_hindcast_events(world):
+    m = load_manifest(world / "manifest.json")
+    assert not any(f.startswith("events/") for f in m.files)
+    assert "has_events" not in load(world, "stations/1001.json")
+    assert fs.attach_events(world) == []
+
+
+def test_attach_events_flags_detail_and_lists_files_once(world):
+    (world / "events").mkdir()
+    (world / "events" / "1001.json").write_text("{}", encoding="utf-8")
+    (world / "events" / "9999.json").write_text("{}", encoding="utf-8")  # no station: ignored
+    assert fs.attach_events(world) == ["events/1001.json"]
+    assert fs.attach_events(world) == ["events/1001.json"]
+    m = load_manifest(world / "manifest.json")
+    assert m.files == [
+        "stations.json",
+        "stations/1001.json",
+        "stations/1002.json",
+        "events/1001.json",
+    ]
+    assert load(world, "stations/1001.json")["has_events"] is True
+    assert "has_events" not in load(world, "stations/1002.json")

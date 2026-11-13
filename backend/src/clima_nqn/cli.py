@@ -22,6 +22,7 @@ from clima_nqn.stages.ar import layer as ar_layer
 from clima_nqn.stages.flood import causes as flood_causes
 from clima_nqn.stages.flood import enso as flood_enso
 from clima_nqn.stages.flood import extremes as flood_extremes
+from clima_nqn.stages.flood import hindcast as flood_hindcast
 from clima_nqn.stages.flood import lstm as flood_lstm
 from clima_nqn.stages.flood import streamflow_eval
 
@@ -343,6 +344,43 @@ def flow_streamflow_eval(
     path = streamflow_eval.write_metrics(metrics, out_dir / run_name)
     typer.echo(streamflow_eval.metrics_table(metrics))
     typer.echo(f"metrics -> {path}")
+
+
+@flow_app.command("lstm-hindcast")
+def flow_lstm_hindcast(
+    run_name: Annotated[str, typer.Option(help="Forecast-mode run name (see flow lstm-train).")],
+    forcing_path: Annotated[
+        Path, typer.Option("--forcing", help="Forcing Parquet (clima-nqn flow forcing).")
+    ] = forcing.DEFAULT_OUT,
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    out_dir: Annotated[Path, typer.Option(help="Runs directory.")] = flood_lstm.DEFAULT_RUNS_DIR,
+    out: Annotated[
+        Path, typer.Option(help="Layer directory that receives events/<id>.json.")
+    ] = flood_stations.DEFAULT_OUT,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default: those of the run.")
+    ] = None,
+) -> None:
+    """Flood-card hindcasts of a forecast run for past test-year floods, into the flood-stations layer (F2.6)."""
+    try:
+        flood_lstm.import_torch()
+    except flood_lstm.TorchMissing as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1) from e
+    try:
+        run = flood_lstm.load_run(out_dir / run_name)
+        run.info.setdefault("run_name", run_name)
+        ids = station or [int(i) for i in run.info.get("neuquen_basins", [])] or None
+        basins, _ = flood_lstm.neuquen_basins(forcing_path, flow_dir, ids)
+        payloads = flood_hindcast.build_events(
+            run, basins, flow_dir, [str(i) for i in ids] if ids else None, progress=typer.echo
+        )
+    except (FileNotFoundError, ValueError, KeyError) as e:
+        raise typer.BadParameter(str(e)) from e
+    if not payloads:
+        raise typer.BadParameter("no station has an annual-maximum flood in the test years")
+    paths = flood_hindcast.write_events(payloads, out)
+    typer.echo(f"{len(paths)} stations -> {out / flood_hindcast.EVENTS_DIR}")
 
 
 @flow_app.command("causes")

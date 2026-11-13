@@ -44,3 +44,54 @@ test("flood stations: pick a station, see the return-period curve and the top fl
   expect(overflow).toBeLessThanOrEqual(0);
   expect(errors).toEqual([]);
 });
+
+test("flood card: past event, LSTM forecast with band vs observed, issue day changes the forecast", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("pageerror", (e) => errors.push(e.message));
+
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-flood-stations").check();
+  await page.getByTestId("feature-1001").click();
+
+  const card = page.getByTestId("flood-event-card");
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.getByRole("heading", { name: "Ficha de crecida" })).toBeVisible();
+
+  // pick a past event
+  await card.getByTestId("event-2002-03-01").click();
+  await expect(card.getByTestId("event-2002-03-01")).toHaveAttribute("aria-selected", "true");
+  await expect(card.getByTestId("event-2002-03-01")).toContainText("01/03/2002 · 520 m³/s");
+
+  // observed line, 90 % band, forecast median, persistence and the caveat are all visible
+  await expect(card.getByTestId("event-observed")).toBeVisible();
+  await expect(card.getByTestId("event-band")).toBeVisible();
+  await expect(card.getByTestId("event-median")).toBeVisible();
+  // persistence is a flat dashed line (zero height), so check its path rather than its box
+  await expect(card.getByTestId("event-persistence")).toHaveAttribute("d", /^M[\d. ]+L/);
+  await expect(card.getByTestId("event-legend")).toContainText("Banda 90 %");
+  await expect(card.getByTestId("event-caveat")).toBeVisible();
+  await expect(card.getByTestId("event-caveat")).toHaveText(
+    "Pronóstico retrospectivo con meteorología observada (ERA5), no pronóstico operativo. Experimental, no es una alerta.",
+  );
+  await expect(card).toContainText("ERA5 observada, no pronóstico");
+
+  // the forecast follows the issue day
+  await expect(card.getByTestId("event-issue-label")).toHaveText("Emitido el día del pico");
+  const median0 = await card.getByTestId("event-median").getAttribute("d");
+  const band0 = await card.getByTestId("event-band").getAttribute("d");
+  await card.getByTestId("event-issue-slider").fill("0");
+  await expect(card.getByTestId("event-issue-label")).toHaveText("Emitido 7 días antes del pico");
+  await expect(card.getByTestId("event-median")).not.toHaveAttribute("d", median0!);
+  await expect(card.getByTestId("event-band")).not.toHaveAttribute("d", band0!);
+
+  // keyboard: arrow keys move the issue day
+  await card.getByTestId("event-issue-slider").press("ArrowRight");
+  await expect(card.getByTestId("event-issue-label")).toHaveText("Emitido 6 días antes del pico");
+
+  // the station without hindcast has no card
+  await page.getByTestId("feature-1002").click();
+  await expect(page.getByTestId("flood-no-gev")).toBeVisible();
+  await expect(page.getByTestId("flood-event-card")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

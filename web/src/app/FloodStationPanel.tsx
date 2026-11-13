@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FloodMaximum, FloodStationDetail } from "../api/client";
 import { es } from "../i18n/es";
 import type { FloodStationState } from "../layers/useFloodStation";
+import { FloodEventCard } from "./FloodEventCard";
 import {
   bandPath,
   dayOffset,
@@ -225,6 +226,7 @@ export function FloodStationPanel({ state }: { state: FloodStationState }) {
           </li>
         ))}
       </ol>
+      {(d as FloodStationDetail & { has_events?: boolean }).has_events && <FloodEventCard key={d.id} stationId={d.id} width={w} />}
     </div>
   );
 }
