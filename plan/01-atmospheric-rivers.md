@@ -103,6 +103,21 @@ Tras ver la capa completa (433 eventos) en el visor, costaba leer qué muestra. 
 - [x] Más área: IVT y relieve cubren todo el recorte ERA5 (34–43 °S, 74–66 °O), sin recorte a la provincia;
   relieve regenerado con paso 1/66° (304 920 puntos; 2 teselas oceánicas sin DEM).
 
+## Rediseño de la capa (pedido del usuario, 2026-11-13)
+
+Los ríos atmosféricos quedaban perdidos: mapa vacío hasta elegir uno de 433 eventos de una lista plana, y sin
+relación visible con los caudales. Detalle y registro en `odd/tasks/ar-viewer-rework.md`.
+
+- [ ] V5 Lista por año con interruptores, y dentro de cada año sus meses; sin grilla (decisión del usuario).
+- [ ] V6 Picos: orden por IVT máximo, lluvia total o duración, e interruptor "top N"; marcas más grandes en la
+  línea de tiempo. Por ranking, sin categorías.
+- [ ] V7 Mapa: sin evento elegido, cantidad de eventos que alcanzaron IVT ≥ 250 en cada celda para los años y
+  meses activos; con evento, su huella (IVT máximo por celda), el núcleo y la celda del pico. El núcleo de IVT
+  es por donde pasa la humedad, no donde más llueve; no hay lluvia por celda.
+- [ ] V8 Relación con caudales: las crecidas que coinciden con un río atmosférico (F2.3) llevan al evento; el
+  evento muestra el caudal diario de las estaciones alrededor de su ventana. Tabla por evento y estación
+  (caudal previo, pico en [inicio, fin + 10 días], demora). "Coincide con", nunca "causó".
+
 ## Abierto
 
 - Pocos años por fase ENSO: informar n y no afirmar diferencias que el test no sostiene.
