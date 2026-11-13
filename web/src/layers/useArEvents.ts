@@ -195,7 +195,7 @@ export function useArEvents(
   }, [counts, selectedEventId, filtered, footprints]);
 
   const deckLayers = useMemo((): Layer[] => {
-    if (!layerId || !index) return [];
+    if (!active || !layerId || !index) return []; // a layer that is off draws nothing, whatever is still loaded
     if (!selectedEventId) {
       return count && counts ? [buildCountLayer({ layerId, grid: index.grid, cells, counts, max: count.max, theme })] : [];
     }
@@ -226,7 +226,7 @@ export function useArEvents(
         ? [buildPeakLayer({ layerId, lon: selectedEvent.ivt_max_lon, lat: selectedEvent.ivt_max_lat, theme })]
         : []),
     ];
-  }, [layerId, index, selectedEventId, selectedEvent, field, fieldFrame, footprintShown, cells, theme, picked, view, relief, count, counts]);
+  }, [active, layerId, index, selectedEventId, selectedEvent, field, fieldFrame, footprintShown, cells, theme, picked, view, relief, count, counts]);
 
   const startIso = entry?.start;
   const timeMs = startIso ? frameTime(startIso, frame, index?.step_hours) : null;
