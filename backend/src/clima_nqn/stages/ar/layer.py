@@ -20,6 +20,9 @@ Output in ``<out>/ar-events/``:
   only events that have frames are included. Listed in the manifest so ``GET /layers/ar-events/data?file=``
   serves it.
 
+- ``responses.json`` optional: river response per event and station (``clima-nqn ar response``, see
+  ``stages.ar.response``); kept in the manifest when it already exists in the directory.
+
 ``GET /layers/ar-events/frames/<event_id>`` serves the ``.bin`` (see ``clima_nqn.api.app``).
 """
 
@@ -49,6 +52,7 @@ INDEX_NAME = f"{FRAMES_DIR}/index.json"
 FOOTPRINTS_NAME = f"{FRAMES_DIR}/footprints.bin"
 ENSO_NAME = "enso.json"
 ENSO_EXTREMES_NAME = "enso-extremes.json"
+RESPONSES_NAME = "responses.json"
 DATETIME_COLUMNS = ("start", "end", "ivt_max_time")
 
 
@@ -203,6 +207,8 @@ def build_layer(
     if extremes_report is not None:
         shutil.copyfile(extremes_report, out_dir / ENSO_EXTREMES_NAME)
         files.append(ENSO_EXTREMES_NAME)
+    if (out_dir / RESPONSES_NAME).is_file():  # keep the file of an earlier `ar response`
+        files.append(RESPONSES_NAME)
     manifest = LayerManifest(
         id=LAYER_ID,
         title=TITLE,

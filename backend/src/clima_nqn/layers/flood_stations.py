@@ -11,6 +11,9 @@ Output in ``<out>/`` (default ``data/processed/flood-stations``):
   ``return_levels`` and a smooth ``curve`` (T 1.1..200; ``lo``/``hi`` only inside the stored T range).
 - ``events/<id>.json``  optional flood-card hindcast of the LSTM (``clima-nqn flow lstm-hindcast``, F2.6); when it
   exists the station detail has ``has_events: true`` and the manifest lists it. A layer without them is valid.
+- ``top_floods`` / ``annual_maxima`` entries may carry ``ar_events`` (ids of the AR events that coincide with
+  that flood in ``causes.json`` of F2.3, ``clima-nqn flow causes``); the field is absent when there is none or
+  when ``causes.json`` is missing. The coincidence is a time window rule, not a cause.
 """
 
 from __future__ import annotations
@@ -201,12 +204,38 @@ def attach_events(out_dir: Path | str) -> list[str]:
     return rels
 
 
+def load_ar_events(causes_path: Path | str | None) -> dict[str, dict[str, list[str]]]:
+    """``{station id: {flood date: [AR event ids]}}`` from ``causes.json`` (empty without the file)."""
+    if causes_path is None or not Path(causes_path).is_file():
+        return {}
+    payload = json.loads(Path(causes_path).read_text(encoding="utf-8"))
+    out: dict[str, dict[str, list[str]]] = {}
+    for st in payload.get("stations", []):
+        dates = {f["date"]: list(f["events"]) for f in st.get("floods", []) if f.get("events")}
+        if dates:
+            out[str(st["station_id"])] = dates
+    return out
+
+
+def add_ar_events(detail: dict, by_date: dict[str, list[str]]) -> None:
+    """Tag the maxima and top floods of ``detail`` whose date has AR events (in place)."""
+    for key in ("annual_maxima", "top_floods"):
+        detail[key] = [
+            {**m, "ar_events": by_date[m["date"]]} if m["date"] in by_date else m
+            for m in detail[key]
+        ]
+
+
 def build_layer(
     flow_dir: Path | str = flow.OUT_DIR,
     gev_dir: Path | str | None = None,
     out_dir: Path | str = DEFAULT_OUT,
+    causes_path: Path | str | None = None,
 ) -> Path:
     flow_dir = Path(flow_dir)
+    if causes_path is None:
+        causes_path = flow_dir / "causes.json"
+    ar_by_station = load_ar_events(causes_path)
     gev_dir = Path(gev_dir) if gev_dir is not None else flow_dir / "gev"
     out_dir = Path(out_dir)
     payload = json.loads((flow_dir / "stations.json").read_text(encoding="utf-8"))
@@ -222,6 +251,7 @@ def build_layer(
             json.loads(gev_path.read_text(encoding="utf-8")) if gev_path.is_file() else None
         )
         detail = station_detail(meta, df, gev_result, fetched)
+        add_ar_events(detail, ar_by_station.get(detail["id"], {}))
         rel = f"stations/{detail['id']}.json"
         _write_json(out_dir / rel, detail)
         files.append(rel)
