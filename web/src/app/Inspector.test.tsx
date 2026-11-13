@@ -59,7 +59,7 @@ test("events layer: shows the selected event fields, source/period and the cell 
     expect(box).toHaveTextContent(t);
   expect(screen.getByTestId("inspector-source")).toHaveTextContent("Fuente X");
   expect(screen.getByText(es.events.cellHint)).toBeInTheDocument();
-  const reading = { lat: -38.5, lon: -70.5, value: 250, timeMs: Date.parse("2000-03-10T07:00:00Z") };
+  const reading = { lat: -38.5, lon: -70.5, value: 250, timeMs: Date.parse("2000-03-10T07:00:00Z"), kind: "hour" as const };
   rerender(<Inspector {...props} event={{ selected, loadingFrames: false, reading }} />);
   expect(screen.getByTestId("cell-value")).toHaveTextContent("250 kg m-1 s-1");
   expect(screen.getByTestId("cell-where")).toHaveTextContent("38.50 °S, 70.50 °O, 2000-03-10 07:00 UTC");
@@ -82,4 +82,26 @@ test("flood-stations layer lists station names (its charts live in the detail ca
   rerender(<Inspector layer={layer} features={features} selectedPointId={null} onSelectPoint={vi.fn()} />);
   expect(screen.getByTestId("feature-p1")).toHaveTextContent(`${es.inspector.point} p1`);
   vi.unstubAllGlobals();
+});
+
+test("the event view notes that the IVT core is moisture transport, not where most rain falls", () => {
+  const events: LayerManifest = { ...layer, id: "ar-events", kind: "events" };
+  const selected = { event_id: "AR-1", start: "2000-03-10T06:00:00Z", end: "2000-03-10T09:00:00Z", duration_h: 3 } as never;
+  render(
+    <Inspector layer={events} features={[]} selectedPointId={null} onSelectPoint={vi.fn()}
+      event={{ selected, loadingFrames: false, reading: null }} />,
+  );
+  expect(screen.getByTestId("event-core-note")).toHaveTextContent(es.events.coreNote);
+});
+
+test("the footprint reading is labelled as the event maximum and shows only the place", () => {
+  const events: LayerManifest = { ...layer, id: "ar-events", kind: "events" };
+  const selected = { event_id: "AR-1", start: "2000-03-10T06:00:00Z", end: "2000-03-10T09:00:00Z", duration_h: 3 } as never;
+  const reading = { lat: -38.5, lon: -70.5, value: 480, timeMs: 0, kind: "max" as const };
+  render(
+    <Inspector layer={events} features={[]} selectedPointId={null} onSelectPoint={vi.fn()}
+      event={{ selected, loadingFrames: false, reading }} />,
+  );
+  expect(screen.getByTestId("inspector-cell")).toHaveTextContent(es.events.cellMax);
+  expect(screen.getByTestId("cell-where")).not.toHaveTextContent("UTC");
 });

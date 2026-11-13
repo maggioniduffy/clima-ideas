@@ -93,7 +93,7 @@ export function Shell() {
   const [arToggles, setArToggles] = useState<ArToggles>(DEFAULT_TOGGLES);
   const [arSortKey, setArSortKey] = useState<SortKey>("ivt_max");
   const [arTopOn, setArTopOn] = useState(false);
-  const ar = useArEvents(eventsLayer, eventsActive, { relief: s.activeRelief?.data ?? null, view: ivtView });
+  const ar = useArEvents(eventsLayer, eventsActive, { relief: s.activeRelief?.data ?? null, view: ivtView, toggles: arToggles });
   // In the drape view the relief itself carries the IVT: swap its slate colors for the frame's drape colors.
   const baseLayers = useMemo(
     () =>
@@ -183,7 +183,7 @@ export function Shell() {
               ...refLayers,
             ]}
           >
-            {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} />}
+            {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} count={ar.count} />}
             {ar.selectedEvent && ar.cursorMs != null && (
               <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />
             )}

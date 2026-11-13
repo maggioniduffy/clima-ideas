@@ -32,6 +32,11 @@ export const tokens = {
     light: ["#DCE6BE", "#8CCBB0", "#3FA3B8", "#2B6FB0", "#38399A", "#5A1A72"],
     dark: ["#22384A", "#2B5F80", "#1E9A9C", "#6BCB6C", "#E3E24A", "#F8F5B4"],
   },
+  /** Sequential ramp of the AR count map (events per cell), low to high; `--count-0..4` in tokens.css. Not the IVT ramp. */
+  countRamp: {
+    light: ["#EFE8DA", "#D9C7A4", "#B79C70", "#8A6F46", "#55402A"],
+    dark: ["#2A2F3C", "#4A4468", "#76588A", "#A77FA6", "#DDB9C6"],
+  },
   /** Monochrome slate relief ramp (mockup), far/low to peaks (elevations in RELIEF_STOPS_M); `--relief-0..3` in tokens.css. */
   reliefRamp: {
     light: ["#A7AEAF", "#77848A", "#4A5A64", "#2A343B"],

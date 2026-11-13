@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
-import { ivtColor } from "./arEvents";
+import { countColor, ivtColor } from "./arEvents";
+import { DEFAULT_TOGGLES } from "./arFilter";
 import { parseRelief } from "./reliefLayer";
 import { REPLAY_INTERVAL_MS, useArEvents } from "./useArEvents";
 
@@ -170,4 +171,124 @@ test("isolines view: contour layers added, no drape, cells still give readings; 
   rerender({ relief, view: "drape" });
   expect(result.current.deckLayers.map((l) => l.id)).toEqual(["ivt-ar-events"]);
   expect(result.current.drapeColors).not.toBeNull();
+});
+
+// ---- footprints: count map without a selection, footprint + core + peak at the start of a replay ----
+
+const eventA = { ...event, ivt_max_lat: -39, ivt_max_lon: -70 };
+const eventB = { ...event, event_id: "AR-2000-002", start: "2000-07-21T00:00:00Z", end: "2000-07-21T03:00:00Z" };
+const fpIndex = {
+  ...index,
+  events: { ...index.events, "AR-2000-002": { start: eventB.start, n_frames: 3, vmin: 100, vmax: 300 } },
+  footprints: { file: "frames/footprints.bin", events: ["AR-2000-001", "AR-2000-002"], shape: [2, 1, 2] },
+};
+const fpLayer = { ...layer, files: [...layer.files, "frames/footprints.bin"] };
+// A: [300, 100]; B: [600, 300]  ->  reaching 250: [2, 1]
+const footprintBytes = new Float32Array([300, 100, 600, 300]).buffer;
+
+function stubFootprintFetch() {
+  const f = vi.fn(async (url: string) => ({
+    ok: true,
+    status: 200,
+    json: async () => (url.includes("frames%2Findex.json") ? fpIndex : [eventA, eventB]),
+    arrayBuffer: async () => (url.includes("footprints") ? footprintBytes : frames),
+  }));
+  vi.stubGlobal("fetch", f);
+  return f;
+}
+const ids = (r: { current: { deckLayers: { id: string }[] } }) => r.current.deckLayers.map((l) => l.id);
+
+async function ready(opts: Parameters<typeof useArEvents>[2]) {
+  const f = stubFootprintFetch();
+  const hook = renderHook((o) => useArEvents(fpLayer, true, o), { initialProps: opts });
+  await waitFor(() => expect(hook.result.current.status).toBe("ready"));
+  return { ...hook, f };
+}
+
+test("no event selected: the count map of the filtered events, updating with the toggles", async () => {
+  const { result, rerender, f } = await ready({ toggles: DEFAULT_TOGGLES });
+  expect(f).toHaveBeenCalledWith("/api/layers/ar-events/data?file=frames%2Ffootprints.bin");
+  await waitFor(() => expect(ids(result)).toEqual(["ar-count-ar-events"]));
+  const cells = () => (result.current.deckLayers[0]!.props as unknown as { data: { row: number; col: number }[] }).data;
+  expect(cells().map((c) => c.col)).toEqual([0, 1]);
+  const fill = (result.current.deckLayers[0]!.props as unknown as { getFillColor: unknown }).getFillColor as unknown as (c: { row: number; col: number }) => number[];
+  expect(fill({ row: 0, col: 0 })).toEqual(countColor(2, 2, "light"));
+  expect(fill({ row: 0, col: 1 })).toEqual(countColor(1, 2, "light"));
+  expect(result.current.count).toEqual({ n: 2, max: 2, from: "2000-03-10", to: "2000-07-21" });
+
+  rerender({ toggles: { offYears: new Set(), offMonths: new Set(["2000-7"]) } }); // July off: only event A
+  await waitFor(() => expect(result.current.count?.n).toBe(1));
+  expect(cells().map((c) => c.col)).toEqual([0]);
+  expect(result.current.count).toEqual({ n: 1, max: 1, from: "2000-03-10", to: "2000-03-10" });
+
+  rerender({ toggles: { offYears: new Set([2000]), offMonths: new Set() } }); // everything off
+  expect(result.current.count).toEqual({ n: 0, max: 0, from: null, to: null });
+  expect(cells()).toEqual([]);
+});
+
+test("an index without footprints keeps the old behavior: no count map, hourly frames from the start", async () => {
+  stubFetch();
+  const { result } = renderHook(() => useArEvents(layer, true, { toggles: DEFAULT_TOGGLES }));
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+  expect(result.current.count).toBeNull();
+  expect(result.current.deckLayers).toEqual([]);
+  act(() => result.current.select("AR-2000-001"));
+  await waitFor(() => expect(ids(result)).toEqual(["ivt-ar-events"]));
+});
+
+test("selecting an event swaps the count map for its footprint, core outline and peak marker", async () => {
+  const { result } = await ready({ toggles: DEFAULT_TOGGLES });
+  await waitFor(() => expect(result.current.count).not.toBeNull());
+  act(() => result.current.select("AR-2000-001"));
+  await waitFor(() => expect(result.current.deckLayers.length).toBeGreaterThan(1));
+  expect(result.current.count).toBeNull();
+  expect(ids(result)).toEqual([
+    "ivt-ar-events",
+    "ivt-contours-halo-ar-events-core",
+    "ivt-contours-ar-events-core",
+    "ar-peak-ar-events",
+  ]);
+  const raster = result.current.deckLayers[0]!.props as unknown as { getFillColor: (c: unknown) => number[] };
+  expect(raster.getFillColor({ row: 0, col: 0 })).toEqual(ivtColor(300, "light", true)); // footprint, not hour 0 (100)
+  const core = result.current.deckLayers[2]!.props.data as { level: number }[];
+  expect(core.every((d) => d.level === 250)).toBe(true); // footprint max 300 -> 250
+  const peak = result.current.deckLayers[3]!.props.data as { position: number[] }[];
+  expect(peak).toEqual([{ position: [-70, -39] }]);
+});
+
+test("playing or scrubbing shows the hourly frames again, keeping the peak marker", async () => {
+  const { result } = await ready({ toggles: DEFAULT_TOGGLES });
+  act(() => result.current.select("AR-2000-001"));
+  await waitFor(() => expect(result.current.deckLayers.length).toBeGreaterThan(1));
+  act(() => result.current.seek(1));
+  expect(ids(result)).toEqual(["ivt-ar-events", "ar-peak-ar-events"]);
+  const raster = result.current.deckLayers[0]!.props as unknown as { getFillColor: (c: unknown) => number[] };
+  expect(raster.getFillColor({ row: 0, col: 0 })).toEqual(ivtColor(200, "light", true)); // frame 1
+  act(() => result.current.seek(0));
+  expect(ids(result)).toContain("ivt-contours-ar-events-core"); // back at the start: footprint again
+  act(() => result.current.toggle()); // play
+  expect(ids(result)).toEqual(["ivt-ar-events", "ar-peak-ar-events"]);
+});
+
+test("the reading in the footprint state is the event maximum of the cell", async () => {
+  const { result } = await ready({ toggles: DEFAULT_TOGGLES });
+  act(() => result.current.select("AR-2000-001"));
+  await waitFor(() => expect(result.current.deckLayers.length).toBeGreaterThan(1));
+  const raster = result.current.deckLayers[0]!.props as unknown as {
+    onHover: (i: { object: { row: number; col: number } }) => void;
+  };
+  act(() => raster.onHover({ object: { row: 0, col: 1 } }));
+  expect(result.current.reading).toMatchObject({ value: 100, kind: "max" });
+  act(() => result.current.seek(1));
+  expect(result.current.reading).toMatchObject({ value: 210, kind: "hour" });
+});
+
+test("turning the layer off empties deckLayers even though events, index and footprints stay loaded", async () => {
+  stubFootprintFetch();
+  const { result, rerender } = renderHook(({ active }) => useArEvents(fpLayer, active), { initialProps: { active: true } });
+  await waitFor(() => expect(ids(result)).toEqual(["ar-count-ar-events"]));
+  rerender({ active: false });
+  expect(result.current.deckLayers).toEqual([]);
+  rerender({ active: true });
+  expect(ids(result)).toEqual(["ar-count-ar-events"]);
 });

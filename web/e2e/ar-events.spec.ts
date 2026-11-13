@@ -143,7 +143,7 @@ test("IVT view toggle: drape over the relief by default, isolines add contour la
   const canvas = page.getByTestId("map-canvas");
   const drape = page.getByTestId("ivt-view-drape");
   const lines = page.getByTestId("ivt-view-isolines");
-  await expect(canvas).toHaveAttribute("data-deck-layers", /^relief-relief,ivt-ar-events,ref-/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /^relief-relief,ivt-ar-events,ivt-contours-halo-ar-events-core,ivt-contours-ar-events-core,ar-peak-ar-events,ref-/);
   await expect(drape).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("map-legend-bar")).toBeVisible();
 
@@ -159,7 +159,7 @@ test("IVT view toggle: drape over the relief by default, isolines add contour la
   await expect(page.getByTestId("map-legend-levels")).toContainText("1000");
   await expect(canvas).toHaveAttribute(
     "data-deck-layers",
-    /^relief-relief,ivt-ar-events,ivt-contours-halo-ar-events,ivt-contours-ar-events,ref-/,
+    /^relief-relief,ivt-ar-events,ivt-contours-halo-ar-events,ivt-contours-ar-events,ar-peak-ar-events,ref-/,
   );
   await page.getByTestId("replay-slider").fill("2");
   await expect(page.getByTestId("cell-value")).toHaveText("300 kg m-1 s-1");
@@ -234,4 +234,37 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
   expect(narrow.width).toBeGreaterThan(narrowMap.width - 24);
 
   expect(errors).toEqual([]);
+});
+
+test("AR events: count map and legend with no event, footprint and peak marker once an event is picked", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-ar-events").check();
+  const canvas = page.getByTestId("map-canvas");
+  // no event picked: the count map of the events that are toggled on, and its legend
+  await expect(canvas).toHaveAttribute("data-deck-layers", /ar-count-ar-events/);
+  const legend = page.getByTestId("map-legend");
+  await expect(legend).toContainText("Eventos por celda");
+  await expect(legend).toContainText("IVT ≥ 250");
+  await expect(legend).toContainText("2 eventos en la selección");
+  await expect(legend).toContainText("Período: 2000-03-10 a 2000-07-21");
+  await expect(legend).toContainText("ERA5");
+
+  // turning the year off empties the selection; the count map follows
+  await page.getByTestId("year-toggle-2000").uncheck();
+  await expect(legend).toContainText("0 eventos en la selección");
+  await page.getByTestId("year-toggle-2000").check();
+
+  // picking an event: footprint, core outline at the highest isoline level reached, and the peak cell
+  await page.getByTestId("timeline-event-AR-2000-002").click();
+  await expect(canvas).not.toHaveAttribute("data-deck-layers", /ar-count-ar-events/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /ivt-contours-ar-events-core/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /ar-peak-ar-events/);
+  await expect(page.getByTestId("event-core-note")).toContainText("no donde más llueve");
+
+  // playing the replay shows the hourly frames: the core outline goes, the peak marker stays
+  await page.getByTestId("replay-play").click();
+  await expect(canvas).not.toHaveAttribute("data-deck-layers", /ivt-contours-ar-events-core/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /ar-peak-ar-events/);
 });

@@ -43,6 +43,12 @@ export const es = {
     viewDrape: "Color sobre relieve",
     viewIsolines: "Isolíneas",
     outlineSource: "Contorno provincial: Natural Earth (dominio público)",
+    countTitle: "Eventos por celda",
+    countLabel: "Escala de eventos por celda",
+    countDef: "Cantidad de eventos que alcanzaron IVT ≥ 250 kg m⁻¹ s⁻¹ en cada celda",
+    countEvents: (n: number) => `${n} ${n === 1 ? "evento" : "eventos"} en la selección`,
+    countPeriod: (from: string, to: string) => `Período: ${from} a ${to}`,
+    countSource: "Fuente: ERA5 (Copernicus)",
   },
   enso: {
     open: "ENSO por estación",
@@ -146,6 +152,9 @@ export const es = {
       noneShown: "Ningún año o mes activado",
     },
     cell: "IVT en la celda",
+    cellMax: "IVT máx. del evento en la celda",
+    coreNote:
+      "El núcleo del IVT es por donde viaja la humedad, no donde más llueve; la lluvia por celda no está disponible.",
     cellHint: "Pasá el cursor o hacé clic sobre el mapa",
     play: "Reproducir",
     pause: "Pausar",
