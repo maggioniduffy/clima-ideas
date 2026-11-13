@@ -36,6 +36,17 @@ test("draws one colored mark per event and reports clicks", () => {
   expect(onSelectEvent).toHaveBeenCalledWith("a");
 });
 
+test("draws only the events it is given and enlarges the peak ones", () => {
+  const { rerender } = render(<Timeline events={events} period="2000-01-01/2000-01-03" peakIds={new Set(["b"])} />);
+  expect(screen.getByTestId("timeline-event-b")).toHaveAttribute("data-peak", "true");
+  expect(screen.getByTestId("timeline-event-b")).toHaveClass("timeline-mark-peak");
+  expect(screen.getByTestId("timeline-event-a")).not.toHaveAttribute("data-peak");
+  expect(screen.getByTestId("timeline-event-a")).not.toHaveClass("timeline-mark-peak");
+  rerender(<Timeline events={[events[0]]} period="2000-01-01/2000-01-03" />);
+  expect(screen.queryByTestId("timeline-event-b")).toBeNull();
+  expect(screen.getByTestId("timeline-event-a")).not.toHaveAttribute("data-peak");
+});
+
 test("replay controls drive the callbacks and the cursor follows the replay time", () => {
   const replay = {
     selectedEvent: events[1],

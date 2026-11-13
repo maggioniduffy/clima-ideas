@@ -1,0 +1,52 @@
+# AR viewer rework
+
+Objective: make atmospheric rivers (AR) findable in the viewer and link them to caudales.
+Branch: `fm/atmospheric-rivers-viz-aceb45`. Delivery strategy: `ask-on-risk` (forecast > 400 lines; chain strategy pending).
+Test runners: `pytest` (backend/), `vitest` and Playwright (web/).
+
+## Specs
+
+- **S1** "divide them by years with toggles". Correction: "year toggle and inside them month toggle. A grid is
+  too much visible load". Each year is a toggle; no year × month grid.
+- **S2** "by month". Month toggles live inside each year.
+- **S3** "highlight peak ones". Ranked, not categorised: sort by peak IVT (`ivt_max`), total rain
+  (`tp_sum_mm`) or duration (`duration_h`), plus a "top N" switch; peak events drawn larger on the timeline.
+  (Ranking instead of categories is an assumption, approved with the plan.)
+- **S4** "mark the most concentrated part or cells of the river in map". Per-event footprint (maximum |IVT|
+  per cell), core outlined with the highest existing isoline level reached (250/500/750/1000), peak cell
+  marked from `ivt_max_lat` / `ivt_max_lon`. With no event picked (user's choice): "Count of rivers per cell"
+  — for the years and months toggled on, each cell shows how many events reached IVT ≥ 250 there.
+  The legend states n events, period and source (ERA5). The viewer says the IVT core is where moisture
+  travels, not where most rain falls.
+- **S5** "direct UI relationship between this rivers precipitations and caudales". Top floods that coincide
+  with an AR get a tag that selects the event; the event view shows daily caudal at the stations around the
+  event with the AR window shaded, freezing level (`deg0l_max`) next to it, regulated stations labelled.
+  Wording "coincide con", never "causó". New per event × station table: flow the day before, peak flow in
+  [start, end + 10 days] (window is an assumption, a named parameter), lag in days. Sort by largest response.
+- **S6** "they may be useful for forecast". Plan documents only: proposed tasks in `plan/05-hindcast.md` and
+  `plan/06-forecast.md`, marked "sin verificar". No forecast code, nothing forecast-related in the viewer.
+
+General rules (CLAUDE.md): code, file names and commits in English; UI copy in Spanish in `web/src/i18n/es.ts`;
+every modelled datum shows source and period; no alert levels, highlighted thresholds or action advice.
+
+## Tasks
+
+- [x] T1 — S1, S2, S3 — year → month toggles and ranked peaks (web only) — route: delegated (builder) — commit: 147c33c (vitest 214 passed, tsc and eslint clean; Playwright scenario written, not yet run)
+- [ ] T2 — S4 — footprints in the AR layer, count map, footprint, core and peak cell — route: delegated (builder) — commit:
+- [ ] T3 — S5 — AR response table, AR ids on top floods, flood → AR tag, caudal chart in the event view — route: delegated (builder) — commit:
+- [ ] T4 — S6 — plan documents (V5–V8 in phase 1, proposed tasks in phases 5 and 6, `plan.md` status) — route: inline — commit:
+
+Route evidence: user's "Model roles" rule (Opus orchestrates, Sonnet implements). Tasks run one after another:
+T2 and T3 build on T1's filter state in `Shell.tsx`.
+
+## Log
+
+- **L1** (2026-11-13, user, verbatim): "Atmospherics rivers seem a little lost in the app, is there work
+  related coming up? I feel that they can be more useful otherway 1. divide them by years with toggles 2. by
+  month 3. highlight peak ones and from here I need your opinion 4. mark the most concentrated part or cells
+  of the river in map 5. direct UI relationship between this rivers precipitations and caudales any use or
+  integration you may consider" — "they may be useful for forecast (the app plan in remote main now allows it)"
+- **L2** (2026-11-13, user, verbatim): "No, my idea was: year toggle and inside them month toggle. A grid is
+  too much visible load"
+- **L3** (2026-11-13): user chose scope "Full viewer rework" and default map "Count of rivers per cell".
+  Branch fast-forwarded to `origin/main` (0cfc4e4) at the user's request before starting.

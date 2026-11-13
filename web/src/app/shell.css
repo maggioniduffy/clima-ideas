@@ -127,6 +127,31 @@
 .event-value { display: flex; flex-direction: column; align-items: flex-end; font-size: 13px; line-height: 1.3; white-space: nowrap; }
 .event-date { color: var(--text-muted); }
 
+/* Event filter: sort selector + top-N switch, then year -> month toggles (checkbox + separate disclosure) */
+.ar-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
+.ar-sort, .ar-top {
+  min-height: 44px; padding: 0 var(--space-3); font: inherit; font-size: 13px; cursor: pointer;
+  background: var(--raised); color: var(--text); border: 0; border-radius: var(--radius-md);
+}
+.ar-sort:disabled { opacity: 0.6; cursor: not-allowed; }
+.ar-hint { flex-basis: 100%; font-size: 12px; color: var(--text-muted); }
+.ar-top[aria-pressed="true"] { background: var(--ctrl); color: var(--on-ctrl); }
+.ar-top-list, .ar-tree, .ar-months, .ar-events { list-style: none; margin: 0; padding: 0; }
+.ar-months { padding-left: var(--space-4); }
+.ar-events { padding-left: var(--space-2); }
+.ar-top-list { margin-bottom: var(--space-2); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
+.ar-row { display: flex; align-items: center; min-height: 44px; }
+.ar-expand, .ar-expand-gap { flex: none; width: 44px; height: 44px; }
+.ar-expand {
+  display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.ar-expand svg { transition: transform 120ms; }
+.ar-expand[aria-expanded="true"] svg { transform: rotate(90deg); }
+.ar-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.ar-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.ar-label { flex: 1; min-width: 0; text-transform: capitalize; }
+.ar-count { color: var(--text-muted); font-size: 13px; }
+
 /* Timeline strip: 44 px prev / play / next, slider and mono replay time, then the track */
 .shell-timeline { display: flex; flex-direction: column; gap: var(--space-2); }
 .replay-controls { display: flex; align-items: center; gap: var(--space-1); }
@@ -147,6 +172,7 @@
   position: absolute; top: 4px; bottom: 4px; min-width: 5px; padding: 0; border: 0; cursor: pointer;
   border-radius: 1px;
 }
+.timeline-mark-peak { top: 0; bottom: 0; min-width: 9px; z-index: 1; }
 .timeline-mark[aria-pressed="true"] { box-shadow: 0 0 0 1px var(--casing), 0 0 0 3px var(--accent); z-index: 1; }
 .timeline-cursor {
   position: absolute; top: -2px; bottom: -2px; width: 5px; margin-left: -2.5px;
