@@ -8,14 +8,16 @@ interface Props {
   flood?: FloodStationState | null;
   /** Opened ENSO panel (table); wins over the flood charts. */
   enso?: ComponentProps<typeof EnsoPanel> | null;
+  /** Opens an AR event (flood tags). */
+  onOpenArEvent?: (id: string) => void;
 }
 
 /** Second card of the card row: ENSO table or flood-station charts; not rendered when there is nothing to show. */
-export function DetailCard({ flood = null, enso = null }: Props) {
+export function DetailCard({ flood = null, enso = null, onOpenArEvent }: Props) {
   if (!enso && !flood) return null;
   return (
     <section className="detail-card card tx" data-testid="detail-card">
-      {enso ? <EnsoPanel {...enso} /> : flood && <FloodStationPanel state={flood} />}
+      {enso ? <EnsoPanel {...enso} /> : flood && <FloodStationPanel state={flood} onOpenArEvent={onOpenArEvent} />}
     </section>
   );
 }

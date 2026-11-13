@@ -5,7 +5,8 @@ import type { FloodStationFeature } from "../api/client";
 import { buildFloodStationsLayer } from "../layers/floodStations";
 import { FLOOD_LAYER_ID, useFloodStation } from "../layers/useFloodStation";
 import { useArEvents } from "../layers/useArEvents";
-import { DEFAULT_TOGGLES, TOP_N, type ArToggles, type SortKey, visibleEvents } from "../layers/arFilter";
+import { useArResponses } from "../layers/useArResponses";
+import { DEFAULT_TOGGLES, TOP_N, responseRatios, revealEvent, type ArToggles, type SortKey, visibleEvents } from "../layers/arFilter";
 import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
 import { buildReliefLayer } from "../layers/reliefLayer";
@@ -84,6 +85,8 @@ export function Shell() {
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
   const enso = useEnsoStats(eventsLayer, eventsActive);
   const ensoExtremes = useEnsoExtremes(eventsLayer, eventsActive);
+  const responses = useArResponses(eventsLayer, eventsActive).data;
+  const ratios = useMemo(() => responseRatios(responses), [responses]);
   const [ensoOpen, setEnsoOpen] = useState(false);
   const showEnso = ensoOpen && eventsActive && enso.status !== "none";
   const [ivtView, setIvtView] = useState<IvtView>("drape");
@@ -133,13 +136,29 @@ export function Shell() {
   const flood = useFloodStation(floodPoint ? FLOOD_LAYER_ID : null, floodPoint?.id ?? null);
   const refLayers = useReferenceLayers();
   const arVisible = useMemo(
-    () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn),
-    [ar.events, arToggles, arSortKey, arTopOn],
+    () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn, TOP_N, ratios),
+    [ar.events, arToggles, arSortKey, arTopOn, ratios],
   );
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);
   };
+  // Flood tag -> AR event: turn the ar-events layer on if needed, show it in the inspector and select the event once the
+  // events are loaded; its year and month are switched back on so the filter never hides the selected event.
+  const [pendingArId, setPendingArId] = useState<string | null>(null);
+  const openArEvent = (id: string) => {
+    if (!eventsLayer) return;
+    if (eventsActive) s.select(eventsLayer.id);
+    else s.toggle(eventsLayer.id);
+    setPendingArId(id);
+  };
+  const pendingEvent = pendingArId ? ar.events.find((e) => e.event_id === pendingArId) : undefined;
+  if (pendingArId && eventsActive && !pendingEvent && (ar.status === "error" || ar.status === "ready")) setPendingArId(null);
+  if (pendingEvent && eventsActive) {
+    setPendingArId(null);
+    setArToggles((t) => revealEvent(t, pendingEvent));
+    ar.select(pendingEvent.event_id);
+  }
   return (
     <div
       className="shell"
@@ -196,9 +215,10 @@ export function Shell() {
               features={s.selectedFeatures}
               selectedPointId={s.selectedPointId}
               onSelectPoint={s.selectPoint}
-              event={{ selected: ar.selectedEvent, loadingFrames: ar.loadingFrames, reading: ar.reading }}
+              event={{ selected: ar.selectedEvent, loadingFrames: ar.loadingFrames, reading: ar.reading, responses }}
             />
             <DetailCard
+              onOpenArEvent={openArEvent}
               flood={floodPoint ? flood : null}
               enso={
                 showEnso && eventsLayer && enso.status !== "none"
@@ -225,6 +245,7 @@ export function Shell() {
                 topOn={arTopOn}
                 onTopOnChange={setArTopOn}
                 topN={TOP_N}
+                hasResponses={!!responses}
                 selectedEventId={ar.selectedEventId}
                 onSelectEvent={selectEvent}
               />

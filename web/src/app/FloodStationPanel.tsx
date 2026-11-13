@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import type { FloodMaximum, FloodStationDetail } from "../api/client";
 import { es } from "../i18n/es";
 import type { FloodStationState } from "../layers/useFloodStation";
 import { FloodEventCard } from "./FloodEventCard";
+import { useWidth } from "./useWidth";
 import {
   bandPath,
   CHART_MARGIN,
@@ -20,7 +20,6 @@ import {
   type Pt,
 } from "./floodCharts";
 
-const W0 = 200; // chart width before the container is measured
 const M = CHART_MARGIN;
 const flowFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 const fmtQ = (q: number) => flowFmt.format(Math.round(q));
@@ -31,22 +30,6 @@ const chartSize = (w: number) => {
   const h = Math.round(Math.min(300, Math.max(170, w * 0.62)));
   return { W: w, H: h, HS: Math.round(h * 0.8) };
 };
-
-/** Content width of the element, following the panel as it is resized. */
-function useWidth() {
-  // callback ref: the panel div mounts only after the loading state, so observe it when it appears
-  const [el, ref] = useState<HTMLDivElement | null>(null);
-  const [w, setW] = useState(W0);
-  useEffect(() => {
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const read = () => setW(Math.max(W0, Math.round(el.clientWidth)) || W0);
-    read();
-    const ro = new ResizeObserver(read);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [el]);
-  return [ref, w] as const;
-}
 
 const topSet = (d: FloodStationDetail) => new Set(d.top_floods.map((m) => m.hydro_year));
 
@@ -189,7 +172,14 @@ function SeriesChart({ d, w }: { d: FloodStationDetail; w: number }) {
   );
 }
 
-export function FloodStationPanel({ state }: { state: FloodStationState }) {
+export function FloodStationPanel({
+  state,
+  onOpenArEvent,
+}: {
+  state: FloodStationState;
+  /** Opens an AR event in the ar-events layer; without it the tags are not shown. */
+  onOpenArEvent?: (id: string) => void;
+}) {
   const { status, detail: d } = state;
   const [ref, w] = useWidth();
   if (status === "loading") return <p className="empty">{es.flood.loading}</p>;
@@ -231,6 +221,19 @@ export function FloodStationPanel({ state }: { state: FloodStationState }) {
               {fmtQ(m.q)} {es.flood.unit}
             </span>
             <span>{tText(periodOf(m, d))}</span>
+            {onOpenArEvent &&
+              (m.ar_events ?? []).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="flood-ar-tag"
+                  data-testid={`flood-ar-tag-${id}`}
+                  aria-label={es.flood.coincidesLabel(id)}
+                  onClick={() => onOpenArEvent(id)}
+                >
+                  {es.flood.coincides(id)}
+                </button>
+              ))}
           </li>
         ))}
       </ol>

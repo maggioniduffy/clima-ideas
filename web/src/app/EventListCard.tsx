@@ -28,6 +28,8 @@ interface Props {
   topOn?: boolean;
   onTopOnChange?: (on: boolean) => void;
   topN?: number;
+  /** True when `responses.json` is loaded: only then the response sort key is offered. */
+  hasResponses?: boolean;
   selectedEventId: string | null;
   onSelectEvent: (id: string) => void;
 }
@@ -36,6 +38,7 @@ const SORT_LABEL: Record<SortKey, string> = {
   ivt_max: es.events.filter.sortIvt,
   tp_sum_mm: es.events.filter.sortRain,
   duration_h: es.events.filter.sortDuration,
+  q_response: es.events.filter.sortResponse,
 };
 
 function EventRow({ e, selected, onSelect }: { e: ArEvent; selected: boolean; onSelect: (id: string) => void }) {
@@ -113,6 +116,7 @@ export function EventListCard({
   topOn = false,
   onTopOnChange,
   topN = TOP_N,
+  hasResponses = false,
   selectedEventId,
   onSelectEvent,
 }: Props) {
@@ -145,7 +149,7 @@ export function EventListCard({
             value={sortKey}
             onChange={(e) => onSortKeyChange?.(e.target.value as SortKey)}
           >
-            {SORT_KEYS.map((k) => (
+            {SORT_KEYS.filter((k) => k !== "q_response" || hasResponses).map((k) => (
               <option key={k} value={k}>{SORT_LABEL[k]}</option>
             ))}
           </select>

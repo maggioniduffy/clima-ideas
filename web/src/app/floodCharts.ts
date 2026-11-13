@@ -168,3 +168,65 @@ export function forecastBandPath(points: readonly ForecastPoint[], x: (d: number
     ok.map((p): Pt => ({ x: x(p.day), y: y(p.lo!) })),
   );
 }
+
+/** dd/mm from an ISO `YYYY-MM-DD` date (short tick label). */
+export const formatDayMonth = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
+export interface ResponseChartInput {
+  /** Daily flow series of the station: `start` ISO date, one value per day. */
+  daily: { start: string; q: readonly (number | null)[] };
+  /** First and last day (UTC ISO dates) of the AR event. */
+  eventStart: string;
+  eventEnd: string;
+  /** Days after the last event day that the response window covers. */
+  windowDaysAfter: number;
+  /** Height of the chart in px (the width is the measured one). */
+  width: number;
+  height: number;
+}
+
+export interface ResponseChartGeometry {
+  yMax: number;
+  yTicks: number[];
+  /** Path of the daily flow; gaps break the line. */
+  path: string;
+  /** Shaded AR window: from the left edge of the first event day to the right edge of the last one (px). */
+  shade: { x0: number; x1: number };
+  /** x of the end of the response window (end of its last day), clipped to the plot area. */
+  windowEndX: number;
+  /** Date labels along the x axis. */
+  xTicks: { x: number; label: string }[];
+  /** Pixel position of day `i` of the series. */
+  x: (i: number) => number;
+  y: (v: number) => number;
+}
+
+/**
+ * Geometry of a station's caudal chart around an event: days on x (each day owns one band, points sit at its centre),
+ * flow from 0 on y, the AR window shaded and the end of the response window marked. Pure: the component only draws.
+ */
+export function responseChartGeometry(inp: ResponseChartInput): ResponseChartGeometry {
+  const { daily, eventStart, eventEnd, windowDaysAfter, width, height } = inp;
+  const n = Math.max(daily.q.length, 1);
+  const left = CHART_MARGIN.l;
+  const right = width - CHART_MARGIN.r;
+  const top = CHART_MARGIN.t;
+  const bottom = height - CHART_MARGIN.b;
+  const x = linearScale(-0.5, n - 0.5, left, right);
+  const yMax = niceMax(Math.max(0, ...daily.q.map((v) => v ?? 0)));
+  const y = linearScale(0, yMax, bottom, top);
+  const first = dayOffset(daily.start, eventStart.slice(0, 10));
+  const last = dayOffset(daily.start, eventEnd.slice(0, 10));
+  const clip = (px: number) => Math.min(right, Math.max(left, px));
+  const tickIdx = daily.q.length === 0 ? [] : n <= 2 ? [...Array(n).keys()] : [0, Math.floor((n - 1) / 2), n - 1];
+  return {
+    yMax,
+    yTicks: linearTicks(yMax, 2),
+    path: linePath(daily.q.map((v, i) => (v == null ? null : { x: x(i), y: y(v) }))),
+    shade: { x0: clip(x(first - 0.5)), x1: clip(x(last + 0.5)) },
+    windowEndX: clip(x(last + windowDaysAfter + 0.5)),
+    xTicks: tickIdx.map((i) => ({ x: x(i), label: formatDayMonth(isoAddDays(daily.start, i)) })),
+    x,
+    y,
+  };
+}

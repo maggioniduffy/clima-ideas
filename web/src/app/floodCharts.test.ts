@@ -4,6 +4,7 @@ import {
   dayOffset,
   downsampleMax,
   formatDateEs,
+  formatDayMonth,
   isoAddDays,
   linearScale,
   linearTicks,
@@ -11,6 +12,7 @@ import {
   logScale,
   niceMax,
   RETURN_TICKS,
+  responseChartGeometry,
   tickAnchor,
   TICK_CHAR_PX,
   yearTicks,
@@ -158,4 +160,50 @@ test("tickAnchor keeps every tick label inside the drawable width", () => {
   expect(tickAnchor(W - 2, W, label)).toBe("end");
   expect(tickAnchor(2, W, label)).toBe("start");
   expect(tickAnchor(150, W, label)).toBe("middle");
+});
+
+describe("responseChartGeometry", () => {
+  // series 2000-07-18 .. 2000-07-31 (14 days); event 07-21 .. 07-21; window 10 days after
+  const input = {
+    daily: { start: "2000-07-18", q: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, null, 12, 13, 14] as (number | null)[] },
+    eventStart: "2000-07-21T00:00:00Z",
+    eventEnd: "2000-07-21T03:00:00Z",
+    windowDaysAfter: 10,
+    width: 300,
+    height: 140,
+  };
+
+  test("shades the event days and marks the end of the window (UTC dates)", () => {
+    const g = responseChartGeometry(input);
+    // event is day index 3: the band is one day wide, centred on the point of that day
+    expect(g.shade.x0).toBeCloseTo(g.x(2.5));
+    expect(g.shade.x1).toBeCloseTo(g.x(3.5));
+    expect(g.windowEndX).toBeCloseTo(g.x(13.5)); // 3 + 10 + 0.5
+    expect(g.windowEndX).toBeLessThanOrEqual(300 - CHART_MARGIN.r);
+  });
+
+  test("clips to the plot area when the window runs past the series", () => {
+    const g = responseChartGeometry({ ...input, windowDaysAfter: 40 });
+    expect(g.windowEndX).toBe(300 - CHART_MARGIN.r);
+  });
+
+  test("y axis starts at zero with a nice maximum; the line breaks at gaps", () => {
+    const g = responseChartGeometry(input);
+    expect(g.yMax).toBe(20);
+    expect(g.y(0)).toBe(140 - CHART_MARGIN.b);
+    expect(g.yTicks).toEqual([0, 10, 20]);
+    expect(g.path.match(/M/g)).toHaveLength(2);
+  });
+
+  test("labels the first, middle and last day as dd/mm", () => {
+    const g = responseChartGeometry(input);
+    expect(g.xTicks.map((t) => t.label)).toEqual(["18/07", "24/07", "31/07"]);
+    expect(formatDayMonth("2000-07-05")).toBe("05/07");
+  });
+
+  test("an empty series does not throw", () => {
+    const g = responseChartGeometry({ ...input, daily: { start: "2000-07-18", q: [] } });
+    expect(g.path).toBe("");
+    expect(g.xTicks).toEqual([]);
+  });
 });
