@@ -22,6 +22,23 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 | F1.6 ✅ | Capa del visor: eventos en la línea de tiempo + replay de IVT por hora | Sonnet | e2e: elegir evento, reproducir, inspeccionar |
 | F1.7 ✅ | ML (media): detector preentrenado tipo ClimateNet vs. BARD | opencode corre, Sonnet integra | Acuerdo entre métodos medido; opcional |
 | F1.8 ✅ | Ríos atmosféricos por fase ENSO (F0.10): conteo, IVT y lluvia por estación del año; test de permutación | opencode analiza, Sonnet codifica el test | Tabla Niño/Neutro/Niña con p-valor y n de años + unit del test |
+| F1.9 | Días de lluvia extrema (≥ p99 de F1.4) por estación y fase ENSO, y contra el ONI, 1980–2025; regla fijada antes de correr (ver "Regla de F1.9") | Sonnet codifica, Opus corre y revisa | `reports/01/F1.9.md` con años por fase, conteos "k de n", test de permutación y sensibilidad p95 y rectángulo |
+
+## Regla de F1.9 (fijada el 2026-11-12, antes de correr)
+
+- Unidad: estación-año (DJF, MAM, JJA, SON; diciembre va al DJF del año siguiente; se descartan estaciones
+  incompletas en los bordes), 1980–2025, como F1.8.
+- Serie: lluvia diaria ERA5 (días UTC, convención de F1.4), media del polígono de cordillera de F1.3/F1.4.
+- Día extremo: media diaria ≥ p99 de todos los días del registro (definición principal de F1.4, 29,2 mm/día; se
+  recalcula igual y se comprueba).
+- Por estación-año: número de días extremos y si hubo al menos uno.
+- Fase: media del ONI de los tres meses de la estación; Niño ≥ +0,5, Niña ≤ −0,5 (como F1.8).
+- Pruebas por estación: Niño − Niña en la media de días extremos, permutación de etiquetas (10 000, semilla 0,
+  bilateral); prueba de 3 grupos con F; BH sobre las 4 estaciones. Contra el ONI: ρ de Spearman con p por
+  permutación (10 000, semilla 0), BH sobre las 4 estaciones.
+- Formato: "5 de 7 inviernos Niño tuvieron al menos un día extremo", nunca "de cada 10".
+- Sensibilidad junto a la cifra principal: p95 sobre el polígono, y p99 propio del rectángulo anterior. "Robusto"
+  solo si dirección y resultado BH coinciden en las tres variantes.
 
 ## Entregable
 
