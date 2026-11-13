@@ -26,6 +26,7 @@ Seis ajustes, que salen de los resultados y de `docs/research/data-access.md`:
 1. **ENSO pesa más que su evidencia.** En F1.8 ninguna de 16 pruebas sostiene p BH < 0,05 y el resultado cambia
    con el polígono. Queda una comprobación barata por fase; el modelo estacional (F6.2) depende de que F2.7
    encuentre señal en el caudal y usa primero nieve, humedad de suelo y caudal reciente, con ENSO como una entrada más.
+   ENSO se informa como contexto de extremos, no como predictor (F1.9: días de lluvia extrema por fase).
 2. **La segunda mitad de la fase 4 es la apuesta más débil.** Pide HEC-RAS 2D en Linux (sin probar), cientos de
    simulaciones y un evento con mancha conocida (ninguno verificado). El núcleo es F4.1–F4.3; F4.4–F4.6 son
    extensión y se abren solo si F4.4a da bien.
