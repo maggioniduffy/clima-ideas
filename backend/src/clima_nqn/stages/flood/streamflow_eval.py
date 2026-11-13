@@ -158,7 +158,8 @@ def evaluate(
     progress=lambda s: None,
 ) -> dict:
     """Metrics of GR4J, persistence (forecast) and, with ``run``, the LSTM on the test years."""
-    norm = lstm.compute_norm(basins, split)
+    # a saved run was trained with its own (pooled) normalization: inputs must use it
+    norm = run.norm if run is not None else lstm.compute_norm(basins, split)
     ds = lstm.Dataset.from_basins(basins, split, norm)
     n_out = lead if mode == "forecast" else 1
     if run is not None:

@@ -186,3 +186,33 @@ def test_evaluate_reports_log_eps_from_training_mean():
     cell = m["stations"]["12004"]["leads"]["0"]
     assert np.isfinite(cell["models"]["gr4j"]["nse_log"])
     assert "sin 2023" in ev.sensitivity_table(m)
+
+
+def test_evaluate_uses_the_runs_own_norm_not_the_neuquen_only_one():
+    pytest.importorskip("torch")
+    b = station_basin()
+    own = lstm.compute_norm([b], "default")
+    # a pooled norm (as after CAMELS-CL pretraining) differs from the Neuquén-only one
+    pooled = lstm.Norm(
+        own.dyn_mean + 3.0,
+        own.dyn_std * 2.0,
+        own.static_mean + 1.0,
+        own.static_std * 2.0,
+        own.q_mean + 0.5,
+        own.q_std * 3.0,
+    )
+    cfg = lstm.TrainConfig(mode="sim", hidden=4, seq_len=30, seeds=(0,))
+    lstm._seed_all(0)
+    run = lstm.Run(config=cfg, norm=pooled, models=[lstm.new_model(cfg).eval()])
+    m = ev.evaluate([b], mode="sim", split="default", run=run, **FAST)
+    ds = lstm.Dataset.from_basins([b], "default", run.norm)
+    frame = lstm.predict_frame(run, ds, "test", groups=("neuquen",))
+    frame = frame[frame["date"] >= b.dates[0] + pd.Timedelta(days=ev.WARMUP_DAYS)]
+    obs = frame["obs"].to_numpy()
+    expected = ev._scores(obs, frame["pred"].to_numpy(), None)
+    got = m["stations"]["12004"]["leads"]["0"]["models"]["lstm"]
+    assert got["nse"] == pytest.approx(expected["nse"])
+    assert got["kge"] == pytest.approx(expected["kge"])
+    wrong = lstm.Dataset.from_basins([b], "default", own)
+    wrong_pred = lstm.predict_frame(run, wrong, "test", groups=("neuquen",))["pred"].to_numpy()
+    assert not np.allclose(wrong_pred, frame["pred"].to_numpy())  # the norm really matters here
