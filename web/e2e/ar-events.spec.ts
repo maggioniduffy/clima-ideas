@@ -143,6 +143,18 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
 
   const panel = page.getByTestId("enso-panel");
   await expect(panel).toBeVisible();
+  await expect(page.getByRole("heading", { name: "¿Cambia ENSO los ríos atmosféricos en Neuquén?" })).toBeVisible();
+  await expect(page.getByTestId("enso-verdict")).toContainText("No se detecta diferencia entre años Niño y Niña (16 comparaciones, 1980–2025, 14 años por fase).");
+  await expect(page.getByTestId("enso-chart")).toBeVisible();
+  expect(await page.getByTestId("enso-dot").count()).toBe(46);
+  await page.getByTestId("enso-metric-ivt_mean").click();
+  expect(await page.getByTestId("enso-dot").count()).toBeLessThanOrEqual(46);
+  const extremes = page.getByTestId("enso-extremes");
+  await expect(extremes).toContainText("Días de lluvia extrema (≥ p99, 38,2 mm/día)");
+  await expect(extremes).toContainText("5 de 14 veranos Niño y 3 de 14 veranos Niña tuvieron al menos un día extremo.");
+  await expect(extremes).toContainText("Tampoco se detecta con p95 ni con el rectángulo anterior.");
+  await expect(page.getByTestId("enso-detail")).not.toHaveAttribute("open", "");
+  await page.getByTestId("enso-detail").locator("summary").click();
   await expect(page.getByTestId("enso-tab-DJF")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("enso-row-ivt_mean")).toContainText("527 ± 132 (n=14)");
   await expect(page.getByTestId("enso-row-ar_share")).toContainText("2,2 ± 0,5 (n=14)");
@@ -160,9 +172,9 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
   // the inspector keeps fitting without scrolling and the panel sits in the card row under the map
   const inspector = page.getByTestId("inspector");
   expect(await inspector.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
-  await expect(page.getByTestId("cards-row").getByTestId("detail-card")).toContainText("Ríos atmosféricos y ENSO");
+  await expect(page.getByTestId("cards-row").getByTestId("detail-card")).toContainText("¿Cambia ENSO los ríos atmosféricos en Neuquén?");
   const map = (await page.getByTestId("map-canvas").boundingBox())!;
-  const box = (await panel.boundingBox())!;
+  const box = (await page.getByTestId("detail-card").boundingBox())!; // the card scrolls its taller content
   expect(box.y).toBeGreaterThanOrEqual(map.y + map.height);
   expect(box.x + box.width).toBeLessThanOrEqual(map.x + map.width);
 

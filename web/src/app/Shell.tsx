@@ -5,6 +5,7 @@ import type { FloodStationFeature } from "../api/client";
 import { buildFloodStationsLayer } from "../layers/floodStations";
 import { FLOOD_LAYER_ID, useFloodStation } from "../layers/useFloodStation";
 import { useArEvents } from "../layers/useArEvents";
+import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
@@ -81,6 +82,7 @@ export function Shell() {
   const eventsLayer = s.layers.find((l) => l.kind === "events");
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
   const enso = useEnsoStats(eventsLayer, eventsActive);
+  const ensoExtremes = useEnsoExtremes(eventsLayer, eventsActive);
   const [ensoOpen, setEnsoOpen] = useState(false);
   const showEnso = ensoOpen && eventsActive && enso.status !== "none";
   const [ivtView, setIvtView] = useState<IvtView>("drape");
@@ -193,6 +195,7 @@ export function Shell() {
                   ? {
                       status: enso.status,
                       stats: enso.data,
+                      extremes: ensoExtremes.data,
                       source: eventsLayer.source,
                       period: eventsLayer.period,
                       onClose: () => setEnsoOpen(false),

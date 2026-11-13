@@ -47,7 +47,7 @@ export const es = {
   enso: {
     open: "ENSO por estación",
     close: "Cerrar",
-    title: "Ríos atmosféricos y ENSO",
+    title: "¿Cambia ENSO los ríos atmosféricos en Neuquén?",
     loading: "Cargando estadísticas ENSO…",
     error: "No se pudieron cargar las estadísticas ENSO",
     seasons: "Estación del año",
@@ -79,6 +79,30 @@ export const es = {
     caveatSome: (n: number) => `${n} diferencia(s) Niño − Niña mantienen p BH < 0,05; las demás no.`,
     caveatPolygon: "El resultado no es robusto a la elección del polígono (aproximación, sin verificar).",
     caveatRetro: "Análisis retrospectivo de asociación: no prueba causalidad ni es un sistema de alerta.",
+    verdictNone: (nTests: number, period: string, range: string) =>
+      `No se detecta diferencia entre años Niño y Niña (${nTests} comparaciones, ${period}, ${range}).`,
+    verdictSome: (nBh: number, nTests: number, period: string, range: string) =>
+      `Se detecta diferencia entre años Niño y Niña en ${nBh} de ${nTests} comparaciones (${period}, ${range}).`,
+    verdictCaution: "Con tan pocos años, no detectar no prueba que no exista.",
+    yearsRangeSame: (n: number) => `${n} años por fase`,
+    yearsRange: (min: number, max: number) => `entre ${min} y ${max} años por fase`,
+    chartLabel: "Un punto por año, agrupado por fase ENSO",
+    metricsLabel: "Métrica del gráfico",
+    mean: "media",
+    dotTitle: (year: number, value: string) => `${year}: ${value}`,
+    detail: "ver detalle",
+    extremes: {
+      heading: (mm: string) => `Días de lluvia extrema (≥ p99, ${mm} mm/día)`,
+      seasonNoun: { DJF: "veranos", MAM: "otoños", JJA: "inviernos", SON: "primaveras" } as Record<string, string>,
+      counts: (a: number, an: number, b: number, bn: number, noun: string) =>
+        `${a} de ${an} ${noun} Niño y ${b} de ${bn} ${noun} Niña tuvieron al menos un día extremo.`,
+      none: (p: string) => `No se detecta diferencia entre años Niño y Niña (p BH = ${p}).`,
+      some: (p: string) => `Se detecta diferencia entre años Niño y Niña (p BH = ${p}).`,
+      neverSustained: "Tampoco se detecta con p95 ni con el rectángulo anterior.",
+      oniFragile: (rho: string) => `La relación con el ONI (ρ ${rho}) solo aparece con el umbral principal: no es robusta.`,
+      robust: "Se mantiene con p95 y con el rectángulo anterior.",
+      notRobust: "Cambia con p95 o con el rectángulo anterior: no es robusto.",
+    },
   },
   events: {
     list: "Eventos",
