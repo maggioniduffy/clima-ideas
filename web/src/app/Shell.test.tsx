@@ -143,6 +143,8 @@ test("IVT view toggle: legend control only with the AR layer; isolines add conto
   expect(screen.queryByTestId("map-legend")).not.toBeInTheDocument();
   fireEvent.click(await screen.findByTestId("layer-toggle-ar-events"));
   expect(screen.getByTestId("ivt-view-drape")).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(await screen.findByTestId("year-expand-2000")); // years start collapsed
+  fireEvent.click(screen.getByTestId("month-expand-2000-03"));
   fireEvent.click(await screen.findByTestId("event-AR-1"));
   await waitFor(() => expect(canvas.getAttribute("data-deck-layers")).toContain("ivt-ar-events"));
   expect(canvas.getAttribute("data-deck-layers")).not.toContain("ivt-contours");
@@ -158,6 +160,58 @@ test("IVT view toggle: legend control only with the AR layer; isolines add conto
 
   fireEvent.click(screen.getByTestId("layer-toggle-ar-events"));
   expect(screen.queryByTestId("ivt-view-drape")).not.toBeInTheDocument();
+});
+
+test("AR filter: year and month toggles and top N drive the event list and the timeline marks", async () => {
+  const arLayer = { ...manifest, id: "ar-events", kind: "events", files: ["events.json", "frames/index.json"] };
+  const mk = (id: string, start: string, ivt: number) => ({
+    event_id: id, start, end: start.replace("T06", "T09"), duration_h: 3, n_steps: 1, prob_max: 0.8, area_frac_max: 0.5,
+    ivt_max: ivt, ivt_max_time: null, ivt_max_lat: null, ivt_max_lon: null, deg0l_max: null, deg0l_mean: null,
+    tp_sum_mm: null, enso_phase: null,
+  }); // fmt: skip
+  const evs = [mk("A", "2000-03-10T06:00:00Z", 300), mk("B", "2000-07-10T06:00:00Z", 900), mk("C", "2000-11-10T06:00:00Z", 600)];
+  const index = {
+    units: "", step_hours: 1, grid: { ny: 1, nx: 1, lat_min: 0, lat_max: 0, lon_min: 0, lon_max: 0 },
+    events: Object.fromEntries(evs.map((e) => [e.event_id, { start: e.start, n_frames: 1, vmin: 0, vmax: 900 }])),
+  }; // fmt: skip
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => new Float32Array([0]).buffer,
+      json: async () => {
+        if (url.endsWith(".geojson")) return province;
+        if (url.includes("frames%2Findex.json")) return index;
+        if (url.includes("events.json")) return evs;
+        return [arLayer];
+      },
+    })),
+  );
+  render(<Shell />);
+  fireEvent.click(await screen.findByTestId("layer-toggle-ar-events"));
+  for (const id of ["A", "B", "C"]) expect(await screen.findByTestId(`timeline-event-${id}`)).toBeInTheDocument();
+
+  // a month off removes just that event from the timeline
+  fireEvent.click(screen.getByTestId("year-expand-2000"));
+  fireEvent.click(screen.getByTestId("month-toggle-2000-07"));
+  expect(screen.queryByTestId("timeline-event-B")).toBeNull();
+  expect(screen.getByTestId("timeline-event-A")).toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("month-toggle-2000-07"));
+  expect(screen.getByTestId("timeline-event-B")).toBeInTheDocument();
+
+  // top N: the filtered set stays on the timeline, the peaks are enlarged and ranked in the card
+  fireEvent.click(screen.getByTestId("top-toggle"));
+  expect(screen.getByTestId("timeline-event-B")).toHaveAttribute("data-peak", "true"); // all three are within the top 10
+  fireEvent.click(screen.getByTestId("top-toggle"));
+  expect(screen.getByTestId("timeline-event-B")).not.toHaveAttribute("data-peak");
+
+  // the picked event leaves the filter: the selection is kept and nothing breaks
+  fireEvent.click(screen.getByTestId("timeline-event-A"));
+  fireEvent.click(screen.getByTestId("year-toggle-2000"));
+  expect(screen.queryByTestId("timeline-event-A")).toBeNull();
+  expect(screen.getByTestId("event-count")).toHaveTextContent("0");
+  expect(screen.getByTestId("replay-controls")).toBeInTheDocument();
 });
 
 test("ENSO panel: button only when the layer lists enso.json; opens in the detail card, closes with Esc and with the layer off", async () => {

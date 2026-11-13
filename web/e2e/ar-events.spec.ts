@@ -13,7 +13,11 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   await expect(page.getByTestId("inspector-source")).toHaveText("Eventos falsos de prueba");
   await expect(page.getByTestId("inspector-period")).toHaveText("2000-01-01/2000-12-31");
 
-  // both events appear in the panel list and as marks on the timeline
+  // both events appear in the panel tree (years start collapsed) and as marks on the timeline
+  await expect(page.getByTestId("event-AR-2000-001")).toHaveCount(0);
+  await page.getByTestId("year-expand-2000").click();
+  await page.getByTestId("month-expand-2000-03").click();
+  await page.getByTestId("month-expand-2000-07").click();
   await expect(page.getByTestId("event-AR-2000-001")).toBeVisible();
   await expect(page.getByTestId("event-AR-2000-002")).toBeVisible();
   await expect(page.getByTestId("timeline-event-AR-2000-001")).toBeVisible();
@@ -81,6 +85,45 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   await expect(page.getByTestId("map-clock")).toHaveCount(0);
   await expect(page.getByTestId("event-card")).toHaveCount(0);
   await expect(page.getByTestId("timeline")).toContainText("Sin serie temporal");
+
+  expect(errors).toEqual([]);
+});
+
+test("AR filter: year and month toggles, expanding a year and the top N switch", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("pageerror", (e) => errors.push(e.message));
+
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-ar-events").check();
+  await expect(page.getByTestId("event-count")).toHaveText("2");
+  await expect(page.getByTestId("year-toggle-2000")).toBeChecked();
+  await expect(page.getByTestId("year-expand-2000")).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByTestId("month-toggle-2000-03")).toHaveCount(0); // no year x month grid
+
+  // year off: its events leave the card and the timeline
+  await page.getByTestId("year-toggle-2000").uncheck();
+  await expect(page.getByTestId("event-count")).toHaveText("0");
+  await expect(page.getByTestId("timeline-event-AR-2000-001")).toHaveCount(0);
+  await page.getByTestId("year-toggle-2000").check();
+  await expect(page.getByTestId("timeline-event-AR-2000-001")).toBeVisible();
+
+  // expand the year, switch one month off: only that event goes
+  await page.getByTestId("year-expand-2000").click();
+  await expect(page.getByTestId("year-expand-2000")).toHaveAttribute("aria-expanded", "true");
+  await page.getByTestId("month-toggle-2000-07").uncheck();
+  await expect(page.getByTestId("timeline-event-AR-2000-002")).toHaveCount(0);
+  await expect(page.getByTestId("timeline-event-AR-2000-001")).toBeVisible();
+  await expect(page.getByTestId("event-count")).toHaveText("1");
+  await page.getByTestId("month-toggle-2000-07").check();
+
+  // top N: ranked list, peaks drawn larger on the timeline
+  await page.getByTestId("top-toggle").click();
+  await expect(page.getByTestId("top-toggle")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("top-list").getByRole("button")).toHaveCount(2);
+  await expect(page.getByTestId("timeline-event-AR-2000-001")).toHaveAttribute("data-peak", "true");
+  await page.getByTestId("sort-select").selectOption("duration_h");
+  await expect(page.getByTestId("top-list").getByRole("button")).toHaveCount(2);
 
   expect(errors).toEqual([]);
 });

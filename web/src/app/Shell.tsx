@@ -5,6 +5,7 @@ import type { FloodStationFeature } from "../api/client";
 import { buildFloodStationsLayer } from "../layers/floodStations";
 import { FLOOD_LAYER_ID, useFloodStation } from "../layers/useFloodStation";
 import { useArEvents } from "../layers/useArEvents";
+import { DEFAULT_TOGGLES, TOP_N, type ArToggles, type SortKey, visibleEvents } from "../layers/arFilter";
 import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
 import { buildReliefLayer } from "../layers/reliefLayer";
@@ -87,6 +88,11 @@ export function Shell() {
   const showEnso = ensoOpen && eventsActive && enso.status !== "none";
   const [ivtView, setIvtView] = useState<IvtView>("drape");
   const theme = useTheme();
+  // AR event filter: year and month toggles, ranking key and the "top N" switch (state lives here, no store).
+  // A selected event that the filter hides stays selected: the map and the replay keep working.
+  const [arToggles, setArToggles] = useState<ArToggles>(DEFAULT_TOGGLES);
+  const [arSortKey, setArSortKey] = useState<SortKey>("ivt_max");
+  const [arTopOn, setArTopOn] = useState(false);
   const ar = useArEvents(eventsLayer, eventsActive, { relief: s.activeRelief?.data ?? null, view: ivtView });
   // In the drape view the relief itself carries the IVT: swap its slate colors for the frame's drape colors.
   const baseLayers = useMemo(
@@ -126,6 +132,10 @@ export function Shell() {
     s.selectedLayer?.id === FLOOD_LAYER_ID ? (s.selectedFeatures.find((f) => f.id === s.selectedPointId) ?? null) : null;
   const flood = useFloodStation(floodPoint ? FLOOD_LAYER_ID : null, floodPoint?.id ?? null);
   const refLayers = useReferenceLayers();
+  const arVisible = useMemo(
+    () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn),
+    [ar.events, arToggles, arSortKey, arTopOn],
+  );
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);
@@ -207,6 +217,14 @@ export function Shell() {
               <EventListCard
                 status={ar.status}
                 items={ar.events}
+                shown={arVisible.events}
+                toggles={arToggles}
+                onTogglesChange={setArToggles}
+                sortKey={arSortKey}
+                onSortKeyChange={setArSortKey}
+                topOn={arTopOn}
+                onTopOnChange={setArTopOn}
+                topN={TOP_N}
                 selectedEventId={ar.selectedEventId}
                 onSelectEvent={selectEvent}
               />
@@ -215,7 +233,8 @@ export function Shell() {
           <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
           <div className="timeline-slot card tx" data-testid="timeline-slot" hidden={collapsed("timeline")}>
             <Timeline
-              events={eventsActive ? ar.events : []}
+              events={eventsActive ? arVisible.filtered : []}
+              peakIds={arVisible.peakIds}
               period={eventsLayer?.period}
               selectedEventId={ar.selectedEventId}
               onSelectEvent={selectEvent}
