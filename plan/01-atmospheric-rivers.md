@@ -22,7 +22,7 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 | F1.6 ✅ | Capa del visor: eventos en la línea de tiempo + replay de IVT por hora | Sonnet | e2e: elegir evento, reproducir, inspeccionar |
 | F1.7 ✅ | ML (media): detector preentrenado tipo ClimateNet vs. BARD | opencode corre, Sonnet integra | Acuerdo entre métodos medido; opcional |
 | F1.8 ✅ | Ríos atmosféricos por fase ENSO (F0.10): conteo, IVT y lluvia por estación del año; test de permutación | opencode analiza, Sonnet codifica el test | Tabla Niño/Neutro/Niña con p-valor y n de años + unit del test |
-| F1.9 | Días de lluvia extrema (≥ p99 de F1.4) por estación y fase ENSO, y contra el ONI, 1980–2025; regla fijada antes de correr (ver "Regla de F1.9") | Sonnet codifica, Opus corre y revisa | `reports/01/F1.9.md` con años por fase, conteos "k de n", test de permutación y sensibilidad p95 y rectángulo |
+| F1.9 ✅ | Días de lluvia extrema (≥ p99 de F1.4) por estación y fase ENSO, y contra el ONI, 1980–2025; regla fijada antes de correr (ver "Regla de F1.9") | Sonnet codifica, Opus corre y revisa | `reports/01/F1.9.md` con años por fase, conteos "k de n", test de permutación y sensibilidad p95 y rectángulo |
 
 ## Regla de F1.9 (fijada el 2026-11-12, antes de correr)
 
@@ -83,6 +83,12 @@ Catálogo de ríos atmosféricos + fracción de lluvia extrema explicada, visibl
   (`clima-nqn ar layer --enso-report`); botón "ENSO por estación" abre un panel con la tabla por estación. En el
   panel, "¿Sostenida?" usa p BH < 0,05 (el informe usa p < 0,05). Cifras de SON revisadas contra `reports/01/F1.8.md`
   con la capa real. F1.7 sigue solo como informe.
+- F1.9 hecha (2026-11-13, regla fijada antes de correr): umbral p99 29,2 mm/día (= F1.4), 169 días extremos. Ninguna
+  estación sostiene p BH < 0,05 en Niño − Niña. SON: 6 de 14 primaveras Niño y 1 de 14 Niña con al menos un día
+  extremo (p 0,047 sin ajustar, p BH 0,19); ρ con el ONI 0,38, p BH 0,043 solo con p99 en el polígono (0,055 con p95,
+  0,060 con el rectángulo): no robusto. JJA: 7 de 7 inviernos en ambas fases (`reports/01/F1.9.md`).
+- Panel ENSO reescrito (pedido del usuario, 2026-11-12): veredicto en lenguaje llano, un punto por año agrupado por
+  fase, la tabla de F1.8 detrás de "ver detalle" y el bloque de F1.9 (`enso-extremes.json`, `ar layer --extremes-report`).
 
 ## Mejoras del visor (pedido del usuario, 2026-11-08)
 

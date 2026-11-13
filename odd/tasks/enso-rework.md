@@ -27,10 +27,10 @@ and a one-dot-per-year chart, and record in the Rumbo that ENSO is context for e
 
 | ID | Specs | Route | Status | Evidence |
 |---|---|---|---|---|
-| T1 F1.9 module, CLI, layer file, tests | S1 | builder (parallel with T2) | pending | |
-| T2 ENSO panel rewrite + F1.9 block, tests | S2 | builder (parallel with T1) | pending | |
-| T3 run F1.9 on real data, report | S1 | inline (background run) | pending | |
-| T4 plan.md Rumbo, F3.6, phase 1 Avance | S3 | inline | pending | |
+| T1 F1.9 module, CLI, layer file, tests | S1 | builder (parallel with T2) | done | d82326e, 265cbe0; pytest 285 passed, ruff clean |
+| T2 ENSO panel rewrite + F1.9 block, tests | S2 | builder (parallel with T1) | done | e7efd45; vitest 185, tsc, eslint, Playwright 10/10; checked in browser with real data, light and dark |
+| T3 run F1.9 on real data, report | S1 | inline (background run) | done | 265cbe0, `reports/01/F1.9.md` |
+| T4 plan.md Rumbo, F3.6, phase 1 Avance | S3 | inline | done | 48abfbb + this commit |
 
 ## Log
 
@@ -51,3 +51,7 @@ and a one-dot-per-year chart, and record in the Rumbo that ENSO is context for e
   principal (0,055 p95, 0,060 rectángulo): no robusto. JJA: 7 de 7 inviernos en ambas fases. Rule unchanged; added a
   "Lectura" next to the pre-fixed "robusto" (DJF is "no" only because the sign flips around 0 with no variant
   sustaining a difference) and the panel's sensitivity line reads all three variants.
+- L6 (2026-11-13) Report wording: the SON bullet first said "robusto" after the ONI result; the pre-fixed rule only
+  covers Niño − Niña, so the bullet now reads the pair and the ONI separately (ONI: "no robusto"). Panel checked
+  in the browser pane with the real F1.9.json (46 dots per season, 12 px ticks, light and dark); 375 px not checked
+  by hand (Playwright covers the panel at the default size only).
