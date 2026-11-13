@@ -147,6 +147,9 @@ export function EventListCard({
             data-testid="sort-select"
             aria-label={es.events.filter.sortLabel}
             value={sortKey}
+            disabled={!topOn}
+            title={topOn ? undefined : es.events.filter.sortHint(topN)}
+            aria-describedby={topOn ? undefined : "ar-sort-hint"}
             onChange={(e) => onSortKeyChange?.(e.target.value as SortKey)}
           >
             {SORT_KEYS.filter((k) => k !== "q_response" || hasResponses).map((k) => (
@@ -162,6 +165,11 @@ export function EventListCard({
           >
             {es.events.filter.top(topN)}
           </button>
+          {!topOn && (
+            <small id="ar-sort-hint" className="ar-hint" data-testid="sort-hint">
+              {es.events.filter.sortHint(topN)}
+            </small>
+          )}
         </div>
       )}
       {showTree && shown.length === 0 && <p className="empty">{es.events.filter.noneShown}</p>}

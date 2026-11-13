@@ -149,6 +149,7 @@ export const es = {
       sortRain: "Lluvia acumulada",
       sortDuration: "Duración",
       sortResponse: "Mayor respuesta de caudal",
+      sortHint: (n: number) => `Ordena los ${n} mayores; activá «Los ${n} mayores» para usarlo`,
       top: (n: number) => `Los ${n} mayores`,
       topList: "Eventos mayores, de más a menos",
       noneShown: "Ningún año o mes activado",

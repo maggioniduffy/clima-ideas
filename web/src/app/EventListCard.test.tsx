@@ -122,6 +122,21 @@ test("the sort selector offers IVT, rain and duration, and the top switch names 
   expect(TOP_N).toBeGreaterThan(0);
 });
 
+test("the sort selector is disabled with a hint while top N is off, keeps its value, and is enabled when on", () => {
+  render(<Harness />);
+  const sort = screen.getByTestId("sort-select");
+  expect(sort).toBeDisabled();
+  expect(sort).toHaveValue("ivt_max");
+  expect(sort).toHaveAccessibleDescription(es.events.filter.sortHint(2));
+  fireEvent.click(screen.getByTestId("top-toggle"));
+  expect(sort).toBeEnabled();
+  expect(screen.queryByTestId("sort-hint")).toBeNull();
+  fireEvent.change(sort, { target: { value: "duration_h" } });
+  fireEvent.click(screen.getByTestId("top-toggle"));
+  expect(sort).toBeDisabled();
+  expect(sort).toHaveValue("duration_h");
+});
+
 test("the title carries the event count", () => {
   render(<Harness />);
   expect(screen.getByRole("heading", { name: `${es.events.list} 3` })).toBeInTheDocument();
