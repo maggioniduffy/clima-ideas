@@ -1,5 +1,6 @@
 import {
   bandPath,
+  CHART_MARGIN,
   dayOffset,
   downsampleMax,
   formatDateEs,
@@ -10,6 +11,8 @@ import {
   logScale,
   niceMax,
   RETURN_TICKS,
+  tickAnchor,
+  TICK_CHAR_PX,
   yearTicks,
 } from "./floodCharts";
 
@@ -136,4 +139,23 @@ test("issue label in Spanish", () => {
   expect(issueLabel(7)).toBe("Emitido 7 días antes del pico");
   expect(issueLabel(1)).toBe("Emitido 1 día antes del pico");
   expect(issueLabel(0)).toBe("Emitido el día del pico");
+});
+
+test("tickAnchor keeps every tick label inside the drawable width", () => {
+  const W = 300;
+  const x = linearScale(0, 30, CHART_MARGIN.l, W - CHART_MARGIN.r);
+  expect(x(0)).toBeGreaterThanOrEqual(CHART_MARGIN.l);
+  expect(x(30)).toBeLessThanOrEqual(W - CHART_MARGIN.r);
+  const label = "18/07";
+  const half = (label.length * TICK_CHAR_PX) / 2;
+  for (const d of [0, 7, 14, 21, 28, 30]) {
+    const px = x(d);
+    const a = tickAnchor(px, W, label);
+    const left = a === "start" ? px : a === "end" ? px - 2 * half : px - half;
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(left + 2 * half).toBeLessThanOrEqual(W);
+  }
+  expect(tickAnchor(W - 2, W, label)).toBe("end");
+  expect(tickAnchor(2, W, label)).toBe("start");
+  expect(tickAnchor(150, W, label)).toBe("middle");
 });

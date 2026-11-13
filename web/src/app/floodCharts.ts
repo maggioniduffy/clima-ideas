@@ -13,6 +13,19 @@ export const MAX_SERIES_POINTS = 2000;
 
 const DAY_MS = 86_400_000;
 
+/** Plot-area margins in CSS px (the charts draw in a viewBox of the measured width, so text never scales). */
+export const CHART_MARGIN = { l: 48, r: 18, t: 24, b: 30 } as const;
+/** Width of one glyph of the 12 px mono tick font, for fitting labels. */
+export const TICK_CHAR_PX = 7.3;
+
+/** Anchor of a tick label at `x` so the whole label stays inside [0, width]: centred unless it would clip. */
+export function tickAnchor(x: number, width: number, label: string): "start" | "middle" | "end" {
+  const half = (label.length * TICK_CHAR_PX) / 2;
+  if (x - half < 1) return "start";
+  if (x + half > width - 1) return "end";
+  return "middle";
+}
+
 export const linearScale =
   (d0: number, d1: number, r0: number, r1: number) =>
   (v: number): number =>

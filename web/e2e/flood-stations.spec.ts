@@ -95,3 +95,37 @@ test("flood card: past event, LSTM forecast with band vs observed, issue day cha
   await expect(page.getByTestId("flood-event-card")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+for (const width of [900, 1360]) {
+  test(`flood panel fits its container at ${width} px and keeps text legible`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await page.getByTestId("layer-toggle-flood-stations").check();
+    await page.getByTestId("feature-1001").click();
+    const card = page.getByTestId("detail-card");
+    const chart = page.getByTestId("event-chart");
+    await chart.scrollIntoViewIfNeeded();
+    await expect(chart).toBeVisible();
+    const overflow = await card.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+    const cardBox = (await card.boundingBox())!;
+    for (const id of ["event-chart", "return-period-chart", "flow-series-chart"]) {
+      const box = (await page.getByTestId(id).boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(cardBox.x - 0.5);
+      expect(box.x + box.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 0.5);
+    }
+    // every tick label lies inside its svg, and the font is at least 12 px
+    const bad = await page.locator("svg.flood-chart").evaluateAll((svgs) =>
+      svgs.flatMap((svg) => {
+        const s = svg.getBoundingClientRect();
+        return [...svg.querySelectorAll("text.flood-tick")]
+          .filter((t) => {
+            const r = t.getBoundingClientRect();
+            return r.left < s.left - 0.5 || r.right > s.right + 0.5 || parseFloat(getComputedStyle(t).fontSize) < 12;
+          })
+          .map((t) => t.textContent);
+      }),
+    );
+    expect(bad).toEqual([]);
+  });
+}

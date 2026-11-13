@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FLOOD_LAYER_ID, useFloodEvents, type FloodEvent } from "../layers/useFloodStation";
 import {
+  CHART_MARGIN,
   dayOffset,
   forecastBandPath,
   forecastPoints,
@@ -12,6 +13,7 @@ import {
   linearScale,
   linearTicks,
   persistencePoints,
+  tickAnchor,
 } from "./floodCharts";
 
 /** Spanish copy of the flood card (kept here: the card is self-contained). */
@@ -32,7 +34,7 @@ export const eventText = {
 };
 
 const SEP = " · ";
-const M = { l: 36, r: 10, t: 16, b: 22 };
+const M = CHART_MARGIN;
 const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 const fmtQ = (q: number) => numFmt.format(Math.round(q));
 const yearsOf = (period: string) => period.split("/").map((d) => d.slice(0, 4)).join("–");
@@ -40,7 +42,7 @@ const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 function EventChart({ event, issueIndex, w }: { event: FloodEvent; issueIndex: number; w: number }) {
   const W = w;
-  const H = Math.round(Math.min(280, Math.max(160, w * 0.7)));
+  const H = Math.round(Math.min(300, Math.max(180, w * 0.7)));
   const { start, q } = event.obs;
   const last = q.length - 1;
   const issue = event.issues[issueIndex]!;
@@ -63,17 +65,17 @@ function EventChart({ event, issueIndex, w }: { event: FloodEvent; issueIndex: n
       {linearTicks(yMax, 4).map((v) => (
         <g key={v}>
           <line x1={M.l} x2={W - M.r} y1={y(v)} y2={y(v)} className="flood-grid" />
-          <text x={M.l - 4} y={y(v) + 3} textAnchor="end" className="flood-tick">
+          <text x={M.l - 6} y={y(v) + 4} textAnchor="end" className="flood-tick">
             {fmtQ(v)}
           </text>
         </g>
       ))}
-      {ticks.map((d, i) => (
-        <text key={d} x={x(d)} y={H - M.b + 11} textAnchor={i === 0 ? "start" : "middle"} className="flood-tick">
+      {ticks.map((d) => (
+        <text key={d} x={x(d)} y={H - M.b + 15} textAnchor={tickAnchor(x(d), W, ddmm(isoAddDays(start, d)))} className="flood-tick">
           {ddmm(isoAddDays(start, d))}
         </text>
       ))}
-      <text x={4} y={7} className="flood-axis">
+      <text x={4} y={12} className="flood-axis">
         {eventText.axisQ}
       </text>
       <line x1={x(peakDay)} x2={x(peakDay)} y1={M.t} y2={H - M.b} stroke="var(--accent)" strokeWidth={2} data-testid="event-peak-mark" />
@@ -106,7 +108,7 @@ function EventChart({ event, issueIndex, w }: { event: FloodEvent; issueIndex: n
 
 function Legend() {
   const item = (label: string, swatch: JSX.Element) => (
-    <li style={{ display: "flex", alignItems: "center", gap: 4 }}>
+    <li style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <svg width="18" height="8" aria-hidden="true">
         {swatch}
       </svg>
@@ -116,7 +118,7 @@ function Legend() {
   return (
     <ul
       data-testid="event-legend"
-      style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: 10.5, color: "var(--text-muted)" }}
+      style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: 13, color: "var(--text-muted)" }}
     >
       {item(eventText.observed, <line x1="0" x2="18" y1="4" y2="4" stroke="var(--text)" strokeWidth="1.5" />)}
       {item(eventText.median, <line x1="0" x2="18" y1="4" y2="4" stroke="var(--water)" strokeWidth="2" />)}
@@ -171,12 +173,12 @@ export function FloodEventCard({ stationId, width }: { stationId: string; width:
           </button>
         ))}
       </div>
-      <label style={{ display: "block", fontSize: 11 }}>
+      <label style={{ display: "block", fontSize: 13 }}>
         <span data-testid="event-issue-label">{issueLabel(issue.days_before_peak)}</span>
         <input
           type="range"
           data-testid="event-issue-slider"
-          style={{ display: "block", width: "100%", minHeight: 44, accentColor: "var(--ctrl)" }}
+          style={{ display: "block", width: "100%", margin: 0, minHeight: 44, accentColor: "var(--ctrl)" }}
           min={0}
           max={event.issues.length - 1}
           step={1}
