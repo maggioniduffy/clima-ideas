@@ -128,6 +128,22 @@ export const es = {
     rain: "Lluvia acumulada",
     enso: "Fase ENSO",
     noData: "sin dato",
+    filter: {
+      label: "Filtrar por año y mes",
+      yearMonths: (year: number) => `Meses de ${year}`,
+      monthEvents: (month: string, year: number) => `Eventos de ${month} de ${year}`,
+      months: [
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+      ], // fmt: skip
+      sortLabel: "Ordenar por",
+      sortIvt: "IVT máx.",
+      sortRain: "Lluvia acumulada",
+      sortDuration: "Duración",
+      top: (n: number) => `Los ${n} mayores`,
+      topList: "Eventos mayores, de más a menos",
+      noneShown: "Ningún año o mes activado",
+    },
     cell: "IVT en la celda",
     cellHint: "Pasá el cursor o hacé clic sobre el mapa",
     play: "Reproducir",

@@ -6,7 +6,10 @@ import { useTheme } from "../theme/themeStore";
 import type { ArEventsState } from "../layers/useArEvents";
 
 interface Props {
+  /** Only these are drawn (Shell passes the filtered set). */
   events?: ArEvent[];
+  /** Events drawn larger (the "top N" peaks). */
+  peakIds?: ReadonlySet<string>;
   period?: string;
   selectedEventId?: string | null;
   onSelectEvent?: (id: string) => void;
@@ -32,14 +35,14 @@ function Icon({ d, stroke = false }: { d: string; stroke?: boolean }) {
 
 const pct = (f: number) => `${(f * 100).toFixed(3)}%`;
 
-export function Timeline({ events = [], period, selectedEventId = null, onSelectEvent, replay = null }: Props) {
+export function Timeline({ events = [], peakIds, period, selectedEventId = null, onSelectEvent, replay = null }: Props) {
   const domain = useMemo(() => (period ? periodDomain(period) : null), [period]);
   const theme = useTheme();
   const spans = useMemo(() => (domain ? eventSpans(events, domain, theme) : []), [events, domain, theme]);
   const selected = replay?.selectedEvent ?? null;
   const detail = selected ? eventDomain(selected) : null;
 
-  if (!domain || events.length === 0) {
+  if (!domain || (events.length === 0 && !selected)) {
     return (
       <footer className="shell-timeline" data-testid="timeline">
         <p className="empty">{es.timeline.empty}</p>
@@ -99,7 +102,8 @@ export function Timeline({ events = [], period, selectedEventId = null, onSelect
           <button
             key={sp.id}
             type="button"
-            className="timeline-mark"
+            className={peakIds?.has(sp.id) ? "timeline-mark timeline-mark-peak" : "timeline-mark"}
+            data-peak={peakIds?.has(sp.id) ? "true" : undefined}
             data-testid={`timeline-event-${sp.id}`}
             aria-pressed={sp.id === selectedEventId}
             aria-label={sp.id}
