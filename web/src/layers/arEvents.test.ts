@@ -160,3 +160,21 @@ test("frameTime and fractionOf locate the replay cursor", () => {
   expect(fractionOf(d[0] - 1000, d)).toBe(0);
   expect(fractionOf(d[1] + 1000, d)).toBe(1);
 });
+
+describe("count ramp", () => {
+  test("zero is transparent, the maximum is the last stop, and it differs from the IVT ramp", async () => {
+    const { countColor, countTicks, ivtColor } = await import("./arEvents");
+    const { tokens } = await import("../theme/tokens");
+    expect(countColor(0, 4, "light")[3]).toBe(0);
+    expect(countColor(4, 4, "dark").slice(0, 3)).toEqual(
+      [1, 3, 5].map((i) => parseInt(tokens.countRamp.dark.at(-1)!.slice(i, i + 2), 16)),
+    );
+    expect(countColor(2, 4, "light")[3]).toBeGreaterThan(0);
+    expect(tokens.countRamp.light).not.toEqual(tokens.ivtRamp.light);
+    expect(countColor(4, 4, "light")).not.toEqual(ivtColor(1200, "light"));
+    expect(countColor(5, 0, "light")[3]).toBe(0); // no maximum: nothing to color
+    expect(countTicks(1)).toEqual([0, 1]);
+    expect(countTicks(8)).toEqual([0, 4, 8]);
+    expect(countTicks(0)).toEqual([0]);
+  });
+});

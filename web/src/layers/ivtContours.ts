@@ -94,6 +94,10 @@ interface ContourProps {
   frames: Float32Array;
   frame: number;
   theme: Theme;
+  /** Only these levels (default: all of IVT_CONTOUR_LEVELS). */
+  levels?: readonly number[];
+  /** Appended to the layer ids so a second set of contours (e.g. the event core) can coexist. */
+  idSuffix?: string;
 }
 
 interface ContourDatum {
@@ -105,11 +109,13 @@ interface ContourDatum {
 /** Halo + colored contour lines at IVT_CONTOUR_LEVELS for the current frame; flat at z = 0, drawn over the relief. */
 export function buildIvtContourLayers(p: ContourProps) {
   const data: ContourDatum[] = IVT_CONTOUR_LEVELS.flatMap((level, i) =>
-    contourPaths(p.frames, p.grid, p.frame, level).map((path) => ({
-      level,
-      width: IVT_CONTOUR_WIDTHS[i]!,
-      path,
-    })),
+    p.levels && !p.levels.includes(level)
+      ? []
+      : contourPaths(p.frames, p.grid, p.frame, level).map((path) => ({
+          level,
+          width: IVT_CONTOUR_WIDTHS[i]!,
+          path,
+        })),
   );
   const hex = tokens[p.theme].bg;
   const halo = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -131,13 +137,13 @@ export function buildIvtContourLayers(p: ContourProps) {
   return [
     new PathLayer<ContourDatum>({
       ...shared,
-      id: `ivt-contours-halo-${p.layerId}`,
+      id: `ivt-contours-halo-${p.layerId}${p.idSuffix ?? ""}`,
       getColor: [halo[0]!, halo[1]!, halo[2]!, 200],
       getWidth: (d) => d.width + HALO_EXTRA_PX,
     }),
     new PathLayer<ContourDatum>({
       ...shared,
-      id: `ivt-contours-${p.layerId}`,
+      id: `ivt-contours-${p.layerId}${p.idSuffix ?? ""}`,
       getColor: (d) => ivtColor(d.level, p.theme),
       getWidth: (d) => d.width,
     }),

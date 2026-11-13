@@ -123,8 +123,9 @@ function EventDetails({
         <dd className="num">{f.enso}</dd>
       </dl>
       {loadingFrames && <p className="empty">{es.events.loadingFrames}</p>}
+      <p className="empty" data-testid="event-core-note">{es.events.coreNote}</p>
       <dl className="inspector-point kv" data-testid="inspector-cell">
-        <dt>{es.events.cell}</dt>
+        <dt>{reading?.kind === "max" ? es.events.cellMax : es.events.cell}</dt>
         {reading ? (
           <dd className="num" data-testid="cell-value">{ivtText(reading.value)}</dd>
         ) : (
@@ -132,7 +133,7 @@ function EventDetails({
         )}
         {reading && (
           <dd className="num kv-wide" data-testid="cell-where">
-            {cellWhere(reading)}
+            {reading.kind === "max" ? formatLatLon(reading.lat, reading.lon) : cellWhere(reading)}
           </dd>
         )}
       </dl>

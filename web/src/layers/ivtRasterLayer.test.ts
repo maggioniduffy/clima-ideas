@@ -11,3 +11,20 @@ test("picked cell outline is --accent per theme; others stay transparent", () =>
     expect(line({ row: 0, col: 1 })).toEqual([0, 0, 0, 0]);
   }
 });
+
+test("count layer draws only the cells that were reached, colored by their count", async () => {
+  const { buildCountLayer, buildPeakLayer } = await import("./ivtRasterLayer");
+  const { countColor } = await import("./arEvents");
+  const grid = { ny: 1, nx: 3 } as never;
+  const cs = [0, 1, 2].map((col) => ({ row: 0, col, polygon: [] })) as never;
+  const layer = buildCountLayer({ layerId: "x", grid, cells: cs, counts: Uint16Array.from([0, 3, 1]), max: 3, theme: "dark" });
+  expect(layer.id).toBe("ar-count-x");
+  const data = layer.props.data as { col: number }[];
+  expect(data.map((c) => c.col)).toEqual([1, 2]);
+  const fill = layer.props.getFillColor as unknown as (c: { row: number; col: number }) => number[];
+  expect(fill({ row: 0, col: 1 })).toEqual(countColor(3, 3, "dark"));
+  expect(layer.props.pickable).toBe(false);
+  const peak = buildPeakLayer({ layerId: "x", lon: -70, lat: -39, theme: "light" });
+  expect(peak.id).toBe("ar-peak-x");
+  expect(peak.props.data).toEqual([{ position: [-70, -39] }]);
+});

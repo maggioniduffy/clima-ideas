@@ -26,5 +26,19 @@
    "vmin": 400.0,
    "vmax": 500.0
   }
+ },
+ "footprints": {
+  "file": "frames/footprints.bin",
+  "dtype": "float32-le",
+  "layout": "[n_events, ny, nx], same grid as the frames; events in the order of `events`",
+  "events": [
+   "AR-2000-001",
+   "AR-2000-002"
+  ],
+  "shape": [
+   2,
+   4,
+   6
+  ]
  }
 }

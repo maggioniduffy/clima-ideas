@@ -60,3 +60,13 @@ test("contour layers: halo + line, ids start with ivt-contours-, colored by the 
   const getColor = layers[1]!.props.getColor as unknown as (d: { level: number }) => number[];
   expect(getColor({ level: 500 })).toEqual(ivtColor(500, "light"));
 });
+
+test("`levels` restricts the contours to those levels and `idSuffix` keeps the ids apart", () => {
+  const layers = buildIvtContourLayers({
+    layerId: "ar", grid, frames: bump, frame: 0, eventId: "e", theme: "light", levels: [500], idSuffix: "-core",
+  });
+  expect(layers.map((l) => l.id)).toEqual(["ivt-contours-halo-ar-core", "ivt-contours-ar-core"]);
+  const data = layers[1]!.props.data as { level: number; width: number }[];
+  expect(new Set(data.map((d) => d.level))).toEqual(new Set([500]));
+  expect(data[0]!.width).toBe(2); // the width of its level in IVT_CONTOUR_WIDTHS
+});

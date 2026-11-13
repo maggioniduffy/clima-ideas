@@ -10,6 +10,7 @@ from clima_nqn.cli import app
 from clima_nqn.layers.manifest import load_manifest
 from clima_nqn.stages.ar import catalog, layer
 
+FILES = ["events.json", "events.parquet", "frames/index.json", "frames/footprints.bin"]
 LAT = np.array([-40.0, -39.75, -39.5])
 LON = np.array([-71.0, -70.75, -70.5, -70.25])
 
@@ -82,7 +83,7 @@ def test_manifest_is_valid_and_lists_files(published):
     assert m.source == "ERA5 (Copernicus) vía ARCO-ERA5 + TECA BARD"
     assert m.license == "CC BY 4.0"
     assert m.period == "2000-01-01/2001-12-31"
-    assert m.files == ["events.json", "events.parquet", "frames/index.json"]
+    assert m.files == FILES
     for f in m.files:
         assert (out_dir / f).is_file()
 
@@ -121,6 +122,44 @@ def test_frames_values_and_index(published):
     )
 
 
+def test_footprints_are_per_cell_max_of_each_event(published):
+    out_dir, index = published
+    fp = index["footprints"]
+    # events with frames only, in index order; shape is [n_events, ny, nx] on the frames grid
+    assert fp["file"] == "frames/footprints.bin"
+    assert fp["events"] == list(index["events"]) == ["AR-2000-001", "AR-2000-002"]
+    assert fp["shape"] == [2, 3, 4]
+    assert json.loads((out_dir / "frames" / "index.json").read_text())["footprints"] == fp
+    raw = np.fromfile(out_dir / fp["file"], dtype="<f4")
+    assert raw.size == 2 * 3 * 4
+    foot = raw.reshape(fp["shape"])
+    for i, eid in enumerate(fp["events"]):
+        n = index["events"][eid]["n_frames"]
+        frames = np.fromfile(out_dir / "frames" / f"{eid}.bin", dtype="<f4").reshape(n, 3, 4)
+        np.testing.assert_array_equal(foot[i], frames.max(axis=0))
+    # event 1 hours 6..11 -> max 55; event 2 hours 24..35 -> max 175
+    assert foot[0].max() == 55.0 and foot[1].max() == 175.0
+
+
+def test_footprint_ignores_nan_hours_and_keeps_all_nan_cells():
+    frames = np.array([[[np.nan, np.nan], [1.0, 5.0]], [[np.nan, 3.0], [4.0, np.nan]]], dtype="<f4")
+    out = layer.event_footprint(frames)
+    assert out.dtype == np.dtype("<f4")
+    assert np.isnan(out[0, 0]) and out[0, 1] == 3.0 and out[1, 0] == 4.0 and out[1, 1] == 5.0
+
+
+def test_existing_outputs_unchanged_by_footprints(published):
+    out_dir, index = published
+    # frames stay as they were: same files, same index fields (footprints is only an extra key)
+    assert sorted(p.name for p in (out_dir / "frames").iterdir()) == [
+        "AR-2000-001.bin", "AR-2000-002.bin", "footprints.bin", "index.json",
+    ]  # fmt: skip
+    base = {k: v for k, v in index.items() if k != "footprints"}
+    assert list(base) == ["units", "variable", "dtype", "layout", "step_hours", "grid", "events"]
+    assert list(base["events"]["AR-2000-001"]) == ["start", "n_frames", "vmin", "vmax"]
+    assert (out_dir / "frames" / "AR-2000-001.bin").stat().st_size == 6 * 3 * 4 * 4
+
+
 def test_missing_hours_are_nan():
     ivt = xr.DataArray(
         np.ones((2, 1, 1), dtype="float32"),
@@ -157,7 +196,7 @@ def test_enso_report_is_copied_and_listed(tmp_path):
     report.write_text('{"meta": {}, "results": {"rows": []}}', encoding="utf-8")
     out_dir, _ = layer.build_layer(events, tmp_path / "era5", tmp_path / "processed", report)
     m = load_manifest(out_dir / "manifest.json")
-    assert m.files == ["events.json", "events.parquet", "frames/index.json", "enso.json"]
+    assert m.files == [*FILES, "enso.json"]
     assert (out_dir / "enso.json").read_text(encoding="utf-8") == report.read_text(encoding="utf-8")
 
 
@@ -197,7 +236,7 @@ def test_extremes_report_is_copied_and_listed(tmp_path):
         events, tmp_path / "era5", tmp_path / "processed", extremes_report=report
     )
     m = load_manifest(out_dir / "manifest.json")
-    assert m.files == ["events.json", "events.parquet", "frames/index.json", "enso-extremes.json"]
+    assert m.files == [*FILES, "enso-extremes.json"]
     assert (out_dir / "enso-extremes.json").read_text(encoding="utf-8") == report.read_text(
         encoding="utf-8"
     )

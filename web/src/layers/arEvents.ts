@@ -53,6 +53,28 @@ export function ivtColor(value: number | null | undefined, theme: Theme, translu
   return [r!, g!, b!, Math.round(255 * alpha)];
 }
 
+const COUNT_ALPHA = 0.85;
+
+/**
+ * Color of a count-map cell (`tokens.countRamp[theme]`, evenly spaced over [0, max]): 0 (or no maximum) is transparent,
+ * a count of 1 already shows the first stop.
+ */
+export function countColor(count: number, max: number, theme: Theme): Rgba {
+  if (!(count > 0) || !(max > 0)) return [0, 0, 0, 0];
+  const stops = tokens.countRamp[theme].map(hex);
+  const x = Math.min(1, count / max) * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(x));
+  const f = x - i;
+  const [r, g, b] = [0, 1, 2].map((c) => Math.round(stops[i]![c]! + (stops[i + 1]![c]! - stops[i]![c]!) * f));
+  return [r!, g!, b!, Math.round(255 * COUNT_ALPHA)];
+}
+
+/** Legend tick values of the count ramp: 0, the middle (when max >= 4) and max. */
+export function countTicks(max: number): number[] {
+  if (max <= 0) return [0];
+  return max >= 4 ? [0, Math.round(max / 2), max] : Array.from({ length: max + 1 }, (_, i) => i);
+}
+
 export const rgbCss = ([r, g, b]: Rgba) => `rgb(${r}, ${g}, ${b})`;
 
 export interface LegendTick {

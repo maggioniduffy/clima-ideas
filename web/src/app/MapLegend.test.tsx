@@ -46,3 +46,22 @@ test("isolines view lists the four contour levels with their line width instead 
   expect(widths).toEqual(["1.5px", "2px", "2.5px", "3px"]);
   expect(screen.getByTestId("map-legend")).toHaveTextContent(es.map.outlineSource);
 });
+
+test("count map legend states what is counted, n events, the period and the source; no view toggle", () => {
+  const count = { n: 12, max: 5, from: "2000-03-10", to: "2004-07-21" };
+  render(<MapLegend view="drape" onViewChange={() => {}} count={count} />);
+  const legend = screen.getByTestId("map-legend");
+  expect(legend).toHaveTextContent(es.map.countTitle);
+  expect(legend).toHaveTextContent(es.map.countEvents(12));
+  expect(legend).toHaveTextContent(es.map.countPeriod("2000-03-10", "2004-07-21"));
+  expect(legend).toHaveTextContent(es.map.countSource);
+  expect(screen.getByTestId("map-legend-count-ticks")).toHaveTextContent("0" + "3" + "5");
+  expect(screen.queryByTestId("ivt-view-drape")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("map-legend-ticks")).not.toBeInTheDocument();
+});
+
+test("count map legend with no events selected says so and has no period", () => {
+  render(<MapLegend view="drape" onViewChange={() => {}} count={{ n: 0, max: 0, from: null, to: null }} />);
+  expect(screen.getByTestId("map-legend")).toHaveTextContent(es.map.countEvents(0));
+  expect(screen.queryByText(/Período/)).not.toBeInTheDocument();
+});
