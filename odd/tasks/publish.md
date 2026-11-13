@@ -23,7 +23,7 @@ reads them through `VITE_DATA_URL`. Branch: `fm/f0-11-publish`. Delivery: ask-on
 | T1 publish CLI + index | S1, S2, S4 | builder (parallel with T2) | done | RED ImportError; GREEN 10 passed; index uploaded last; suite 264 passed; dry-run 448 objects, 40.92 MB |
 | T2 web static mode | S1, S2, S3 | builder (parallel with T1) | done | RED 11/11 fail (missing helpers); GREEN src/api 11 passed, web 166 passed, lint + typecheck clean |
 | T3 docs, Makefile, R2 steps | S1, S4 | inline | done | `docs/architecture.md` "Publicación estática"; `make publish`, `make publish-dry` |
-| T4 user upload + check published site | S1 | user, then browser pane | pending | |
+| T4 user upload + check published site | S1 | user, then browser pane | upload done; Vercel pending | user ran publish: 448 objects, 40.92 MB -> bucket `nqn`; local web with `VITE_DATA_URL` loaded layers.json, ar-events (events, enso, frames/index, AR-1980-001.bin), flood-stations, relief from r2.dev; 0 `/api` calls, 0 console errors |
 
 ## Log
 
@@ -38,3 +38,4 @@ reads them through `VITE_DATA_URL`. Branch: `fm/f0-11-publish`. Delivery: ask-on
 - L5 (2026-11-12, user): public URL `https://pub-89e22e4a31da4ba2bde9dd24522147a9.r2.dev` → `VITE_DATA_URL` in Vercel.
 - L6: verifier (item 5): S1–S4 pass, no defects; every web fetch maps to an uploaded key (433 frames, 4 stations, relief). Static build with VITE_DATA_URL ok. Pending: T4 upload and check on the published site.
 - L7 (2026-11-12, user): "vercel no lo voy a configurar por ahora". The published-site check (S1) waits; meanwhile verify the local web against R2 (`VITE_DATA_URL`, API off).
+- L8 (2026-11-12): upload done and local static check passed (T4 row). F0.11 closes when the web is online with `VITE_DATA_URL` (user deferred Vercel). R2 token was shown in the terminal: user should rotate it.

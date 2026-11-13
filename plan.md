@@ -10,7 +10,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 |---|---|---|---|---|
 | 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | hecha, salvo F0.11 (publicar en línea) |
 | 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | hecha (F1.7 solo 2023; 3 estudios de F1.5 sin verificar; F1.9: ENSO sin diferencia sostenida en extremos) |
-| 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | en curso (F2.1–F2.4 y F2.7 hechas; siguen F2.5 y F2.6; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa) |
+| 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | tareas hechas (F2.5: el LSTM empata o gana a GR4J y gana a la persistencia desde 2 días; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa); cierra al publicar la capa |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | pendiente (lluvia horaria de estación sin verificar: F3.0) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | pendiente |
 | 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | pendiente |
@@ -19,9 +19,10 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 ## Rumbo (revisión del 2026-11-11)
 
 El rumbo se mantiene: solo Neuquén, de la atmósfera al suelo, cada modelo de ML junto a un baseline, nada sin
-verificar dado por cierto, sin alertas. Hilo principal hasta ahora: el 58 % de los días de lluvia ≥ p99 coincide
+verificar dado por cierto, sin alertas oficiales (desde el 2026-11-12: perspectiva de riesgo tras una
+compuerta de evidencia, ajuste 7). Hilo principal hasta ahora: el 58 % de los días de lluvia ≥ p99 coincide
 con un río atmosférico y la crecida de junio de 2023 en Paso de Indios tiene un período de retorno de ≈ 134 años.
-Seis ajustes, que salen de los resultados y de `docs/research/data-access.md`:
+Siete ajustes, que salen de los resultados y de `docs/research/data-access.md`:
 
 1. **ENSO pesa más que su evidencia.** En F1.8 ninguna de 16 pruebas sostiene p BH < 0,05 y el resultado cambia
    con el polígono. Queda una comprobación barata por fase; el modelo estacional (F6.2) depende de que F2.7
@@ -40,6 +41,12 @@ Seis ajustes, que salen de los resultados y de `docs/research/data-access.md`:
    empezar; si falla, la pregunta se reformula.
 6. **Nada está publicado.** La web estática con capas en R2 se decidió el 2026-11-05 y no estaba en el plan: es
    F0.11. Desde ahí, una fase cierra cuando su capa está en línea.
+7. **De analizar a prevenir (2026-11-12, decisión del usuario).** El objetivo suma ayudar a prevenir impactos de
+   lluvias y tormentas extremas. La salida es una perspectiva de riesgo a 1–10 días para usuarios técnicos, solo en
+   el visor y siempre remitiendo a SMN, AIC y Defensa Civil; no hay niveles de alerta ni avisos por mensaje. Una
+   variable y anticipación se muestra como perspectiva solo si pasa la compuerta de `plan/06-forecast.md` (hindcast
+   F5.8, temporada prospectiva F6.8 y, solo para caudal alto, prueba de crecidas F6.7); si no, queda "Experimental". La fase 5 es la
+   evidencia y la 6 la entrega. Plan: `odd/tasks/risk-outlook-rule.md`.
 
 Regla para tareas de análisis: la cifra principal lleva una comprobación de sensibilidad (otro umbral, polígono
 o período) antes de darse por hecha.
@@ -47,7 +54,7 @@ o período) antes de darse por hecha.
 ## Orden
 
 ```
-2 (F2.3, F2.7, F2.5) ──> 5 mitad ríos atmosféricos ──> 6 modelos
+2 (hecha) ──> 5 mitad ríos atmosféricos ──> 6 modelos
 F0.11 publicar        3 (tras F3.0) ──> 5 mitad convección
 F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 4 núcleo: en paralelo, cuando haya lluvias de diseño de 2 y 3
@@ -55,9 +62,9 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 
 ## Próximo
 
-1. F0.11: publicar las capas de las fases 1 y 2 (en curso: `odd/tasks/publish.md`).
+1. F0.11: capas subidas a R2 y probadas con la web local; falta la web en línea con `VITE_DATA_URL` (`odd/tasks/publish.md`).
 2. F3.0: comprobar lluvia horaria en NOAA ISD 877150.
-3. F2.5: LSTM de caudal contra GR4J y persistencia (la tarea más larga; habilita F2.6 y la fase 6).
+3. Fase 5, mitad ríos atmosféricos (F2.5 hecha: `reports/02/F2.5.md`).
 
 ## Advisor (hasta 2026-11-17)
 

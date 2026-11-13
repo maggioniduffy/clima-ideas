@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import type { FloodMaximum, FloodStationDetail } from "../api/client";
 import { es } from "../i18n/es";
 import type { FloodStationState } from "../layers/useFloodStation";
+import { FloodEventCard } from "./FloodEventCard";
 import {
   bandPath,
+  CHART_MARGIN,
   dayOffset,
   downsampleMax,
   formatDateEs,
@@ -13,19 +15,20 @@ import {
   logScale,
   niceMax,
   RETURN_TICKS,
+  tickAnchor,
   yearTicks,
   type Pt,
 } from "./floodCharts";
 
-const W0 = 228; // chart width before the container is measured
-const M = { l: 36, r: 10, t: 16, b: 22 };
+const W0 = 200; // chart width before the container is measured
+const M = CHART_MARGIN;
 const flowFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 const fmtQ = (q: number) => flowFmt.format(Math.round(q));
 const yearsOf = (period: string) => period.split("/").map((d) => d.slice(0, 4)).join("–");
 
 /** Chart size for a container width: text stays at its native size, the plot area grows with the panel. */
 const chartSize = (w: number) => {
-  const h = Math.round(Math.min(280, Math.max(150, w * 0.62)));
+  const h = Math.round(Math.min(300, Math.max(170, w * 0.62)));
   return { W: w, H: h, HS: Math.round(h * 0.8) };
 };
 
@@ -82,26 +85,26 @@ function ReturnPeriodChart({ d, w }: { d: FloodStationDetail; w: number }) {
       {linearTicks(yMax, 4).map((v) => (
         <g key={v}>
           <line x1={M.l} x2={W - M.r} y1={y(v)} y2={y(v)} className="flood-grid" />
-          <text x={M.l - 4} y={y(v) + 3} textAnchor="end" className="flood-tick">
+          <text x={M.l - 6} y={y(v) + 4} textAnchor="end" className="flood-tick">
             {fmtQ(v)}
           </text>
         </g>
       ))}
-      {RETURN_TICKS.map((t, i) => (
+      {RETURN_TICKS.map((t) => (
         <text
           key={t}
           x={x(t)}
-          y={H - M.b + 11}
-          textAnchor={i === RETURN_TICKS.length - 1 ? "end" : "middle"}
+          y={H - M.b + 15}
+          textAnchor={tickAnchor(x(t), W, String(t))}
           className="flood-tick"
         >
           {t}
         </text>
       ))}
-      <text x={(M.l + W - M.r) / 2} y={H - 2} textAnchor="middle" className="flood-axis">
+      <text x={(M.l + W - M.r) / 2} y={H - 3} textAnchor="middle" className="flood-axis">
         {es.flood.axisT}
       </text>
-      <text x={4} y={7} className="flood-axis">
+      <text x={4} y={12} className="flood-axis">
         {es.flood.axisQ}
       </text>
       {inBand.length > 1 && (
@@ -156,13 +159,19 @@ function SeriesChart({ d, w }: { d: FloodStationDetail; w: number }) {
       {linearTicks(yMax, 2).map((v) => (
         <g key={v}>
           <line x1={M.l} x2={W - M.r} y1={y(v)} y2={y(v)} className="flood-grid" />
-          <text x={M.l - 4} y={y(v) + 3} textAnchor="end" className="flood-tick">
+          <text x={M.l - 6} y={y(v) + 4} textAnchor="end" className="flood-tick">
             {fmtQ(v)}
           </text>
         </g>
       ))}
       {yearTicks(start, end).map((k) => (
-        <text key={k.year} x={x(dayOffset(start, k.iso))} y={HS - M.b + 11} textAnchor="middle" className="flood-tick">
+        <text
+          key={k.year}
+          x={x(dayOffset(start, k.iso))}
+          y={HS - M.b + 15}
+          textAnchor={tickAnchor(x(dayOffset(start, k.iso)), W, String(k.year))}
+          className="flood-tick"
+        >
           {k.year}
         </text>
       ))}
@@ -225,6 +234,7 @@ export function FloodStationPanel({ state }: { state: FloodStationState }) {
           </li>
         ))}
       </ol>
+      {(d as FloodStationDetail & { has_events?: boolean }).has_events && <FloodEventCard key={d.id} stationId={d.id} width={w} />}
     </div>
   );
 }

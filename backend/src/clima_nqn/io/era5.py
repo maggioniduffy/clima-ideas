@@ -7,10 +7,11 @@ Usage (from ``backend/``)::
     uv run clima-nqn era5 combine                              # data/raw/era5/neuquen.zarr
 
 Source: ERA5, Copernicus Climate Change Service, CC-BY 4.0, via the ARCO-ERA5 Google Cloud public
-dataset. Variables (ARCO name -> short name): ``viwve``/``viwvn`` (vertical integral of eastward /
+dataset. Default variables (ARCO name -> short name): ``viwve``/``viwvn`` (vertical integral of eastward /
 northward water vapour flux, kg m-1 s-1), ``tp`` (total precipitation, m, hourly accumulation that
 ends at the valid time, so the daily total of day D is hours D 01:00 .. D+1 00:00) and ``deg0l``
-(zero-degree level, m). Output grid: ascending latitude, longitudes in -180..180, float32.
+(zero-degree level, m). ``AVAILABLE_VARIABLES`` also offers ``t2m`` (2 m temperature, K); pick a
+subset with ``variables=`` / ``--variables``. Output grid: ascending latitude, longitudes in -180..180, float32.
 
 ARCO chunks are one global hour per variable (~1.9 MB), so every requested hour downloads the
 global field whatever the area; days are therefore fetched on a thread pool. A year is written to
@@ -41,6 +42,8 @@ VARIABLES = {
     "total_precipitation": "tp",
     "zero_degree_level": "deg0l",
 }
+# Everything that can be fetched; ``VARIABLES`` stays the default (phase 1).
+AVAILABLE_VARIABLES = {**VARIABLES, "2m_temperature": "t2m"}
 DEFAULT_OUT = Path("data/raw/era5/neuquen")
 COMBINED = Path("data/raw/era5/neuquen.zarr")
 SOURCE = "ERA5 (Copernicus Climate Change Service) via ARCO-ERA5 (Google Cloud public dataset)"
@@ -74,16 +77,20 @@ def _axis_selection(values: np.ndarray, lo: float, hi: float) -> np.ndarray:
     return idx[np.argsort(values[idx], kind="stable")]
 
 
-def crop_to_area(ds: xr.Dataset, area: tuple[float, float, float, float]) -> xr.Dataset:
+def crop_to_area(
+    ds: xr.Dataset,
+    area: tuple[float, float, float, float],
+    variables: dict[str, str] = VARIABLES,
+) -> xr.Dataset:
     """Crop a raw ARCO-like dataset to ``area`` = (N, W, S, E) in degrees.
 
     Input has longitudes 0..360 and descending latitudes with long variable names; the result has
-    ascending latitudes, longitudes in -180..180 (ascending) and the short names of ``VARIABLES``.
+    ascending latitudes, longitudes in -180..180 (ascending) and the short names of ``variables``.
     Selection uses integer indices only, so a lazy store reads just the needed cells (not that
     it helps with global-hour chunks) and nothing is loaded here.
     """
     north, west, south, east = area
-    ds = ds[[name for name in VARIABLES if name in ds.data_vars]]
+    ds = ds[[name for name in variables if name in ds.data_vars]]
     lat = ds["latitude"].values
     lon180 = ((ds["longitude"].values + 180.0) % 360.0) - 180.0
     ilat = _axis_selection(lat, south, north)
@@ -91,7 +98,7 @@ def crop_to_area(ds: xr.Dataset, area: tuple[float, float, float, float]) -> xr.
     out = ds.isel(latitude=ilat, longitude=ilon)
     out = out.assign_coords(latitude=lat[ilat], longitude=lon180[ilon])
     out = out.rename(
-        {**{k: v for k, v in VARIABLES.items() if k in out}, "latitude": "lat", "longitude": "lon"}
+        {**{k: v for k, v in variables.items() if k in out}, "latitude": "lat", "longitude": "lon"}
     )
     return out
 
@@ -155,14 +162,32 @@ def parse_years(text: str) -> list[int]:
     return _parse_ranges(text, 1940, 2100, "years")
 
 
+def resolve_variables(text: str) -> dict[str, str]:
+    """Parse comma-separated long ERA5 names or short names into ``{long: short}``."""
+    by_short = {short: long for long, short in AVAILABLE_VARIABLES.items()}
+    out: dict[str, str] = {}
+    for item in (part.strip() for part in text.split(",")):
+        if not item:
+            continue
+        long = item if item in AVAILABLE_VARIABLES else by_short.get(item)
+        if long is None:
+            valid = ", ".join(f"{k} ({v})" for k, v in AVAILABLE_VARIABLES.items())
+            raise ValueError(f"unknown variable {item!r}; valid: {valid}")
+        out[long] = AVAILABLE_VARIABLES[long]
+    if not out:
+        raise ValueError(f"no variables given in {text!r}")
+    return out
+
+
 def is_complete(
     path: Path,
     year: int,
     months: Iterable[int] = range(1, 13),
     hours: Iterable[int] = range(24),
     days: Iterable[int] | None = None,
+    variables: dict[str, str] = VARIABLES,
 ) -> bool:
-    """True if ``path`` holds exactly the expected steps and all variables, with no gaps."""
+    """True if ``path`` holds exactly the expected steps and all ``variables``, with no gaps."""
     path = Path(path)
     if not path.exists():
         return False
@@ -170,10 +195,10 @@ def is_complete(
         ds = xr.open_zarr(path, consolidated=False, chunks=None)
         want = expected_times(year, months, hours, days)
         have = pd.DatetimeIndex(ds["time"].values)
-        if not have.equals(want) or not set(VARIABLES.values()) <= set(ds.data_vars):
+        if not have.equals(want) or not set(variables.values()) <= set(ds.data_vars):
             return False
         # a rename only happens after a full write, but a cheap data check catches truncation
-        return all(not bool(ds[v].isel(time=-1).isnull().all()) for v in VARIABLES.values())
+        return all(not bool(ds[v].isel(time=-1).isnull().all()) for v in variables.values())
     except Exception:  # noqa: BLE001 - any unreadable store counts as incomplete
         return False
 
@@ -206,6 +231,7 @@ def fetch_month(
     workers: int = DEFAULT_WORKERS,
     days: Iterable[int] | None = None,
     stats: dict | None = None,
+    variables: dict[str, str] = VARIABLES,
 ) -> xr.Dataset:
     """Read one month at ``hours`` UTC over ``area``; chunks are read concurrently.
 
@@ -221,7 +247,7 @@ def fetch_month(
     stop = raw.attrs.get("valid_time_stop", FINAL_ERA5_STOP)
     steps = expected_times(year, [month], hours, days)
 
-    names = list(VARIABLES)
+    names = list(variables)
 
     def one_chunk(task: tuple[int, str]) -> xr.Dataset:
         i, name = task
@@ -230,7 +256,7 @@ def fetch_month(
             lazy = raw[[name]].sel(time=[steps[i]])
             if stats is not None:
                 stats["bytes"] = stats.get("bytes", 0) + lazy[name].nbytes
-            return crop_to_area(lazy, area).load()
+            return crop_to_area(lazy, area, variables).load()
 
         return _retry(load, retries, retry_wait, f"{steps[i]:%Y-%m-%d %H:00} {name}")
 
@@ -239,7 +265,7 @@ def fetch_month(
         results = list(pool.map(one_chunk, tasks))
     per_var = {}
     for (_, name), part in zip(tasks, results, strict=True):
-        per_var.setdefault(VARIABLES[name], []).append(part)
+        per_var.setdefault(variables[name], []).append(part)
     out = xr.merge([xr.concat(parts, dim="time") for parts in per_var.values()])
     out.attrs = {"valid_time_stop": stop}
     return out
@@ -282,13 +308,14 @@ def fetch_year(
     retry_wait: float = 60,
     workers: int = DEFAULT_WORKERS,
     days: Iterable[int] | None = None,
+    variables: dict[str, str] = VARIABLES,
 ) -> Path:
     """Fetch one year month by month into ``<out_dir>/<year>.zarr`` (atomic, idempotent)."""
     months, hours = sorted(set(months)), sorted(set(hours))
     days = None if days is None else sorted(set(days))
     out_dir = Path(out_dir)
     target = out_dir / f"{year}.zarr"
-    if is_complete(target, year, months, hours, days):
+    if is_complete(target, year, months, hours, days, variables):
         print(f"skip {target} (complete)", flush=True)
         return target
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -303,7 +330,7 @@ def fetch_year(
         t0 = time.monotonic()
         before = stats.get("bytes", 0)
         ds = fetch_month(
-            year, month, hours, area, opener, retries, retry_wait, workers, days, stats
+            year, month, hours, area, opener, retries, retry_wait, workers, days, stats, variables
         )
         stop = ds.attrs.pop("valid_time_stop", stop)
         parts.append(ds)
@@ -318,7 +345,7 @@ def fetch_year(
         area,
         era5t=pd.Timestamp(ds["time"].values[-1]) > pd.Timestamp(stop),
     )
-    for name, short in ((n, s) for n, s in VARIABLES.items() if s in ds.data_vars):
+    for name, short in ((n, s) for n, s in variables.items() if s in ds.data_vars):
         ds[short].attrs.setdefault("arco_name", name)
     if "tp" in ds:
         ds["tp"].attrs["note"] = TP_NOTE

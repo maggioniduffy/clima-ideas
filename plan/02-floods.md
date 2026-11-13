@@ -1,6 +1,6 @@
 # Fase 2 — Crecidas de ríos
 
-Estado: en curso (F2.1, F2.2, F2.3, F2.4 y F2.7 hechas; siguen F2.5 y F2.6) · Depende de: 1, acceso a caudales (F0.8) · Refs: `docs/architecture.md`
+Estado: tareas hechas (F2.1–F2.7); cierra cuando la capa con la ficha de crecida esté publicada (F0.11) · Depende de: 1, acceso a caudales (F0.8) · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -24,8 +24,8 @@ como mejora y pide clave de CDS. CAMELS-CL (F2.5): PANGAEA, CC-BY-4.0, solo Chil
 | F2.2 ✅ | Máximos anuales y GEV con intervalo de confianza (`pyextremes`) | Sonnet | Unit: recupera parámetros de una GEV sintética |
 | F2.3 ✅ | Etiquetar crecidas mayores con el catálogo F1.3 y lluvia sobre nieve | opencode | Tabla de crecidas con causa probable + sensibilidad a la ventana de días entre río atmosférico y pico |
 | F2.4 ✅ | Capa: estaciones + panel de período de retorno y serie | Sonnet | e2e: elegir estación, ver curva y crecidas |
-| F2.5 | ML (alta): LSTM de caudal diario; preentreno en CAMELS-CL, ajuste en Neuquén; baselines GR4J y persistencia | Sonnet implementa, opencode entrena, Opus revisa métricas; advisor si hace falta | NSE/KGE en test vs. baselines |
-| F2.6 | Ficha de crecida: pronóstico LSTM de próximos días con incertidumbre vs. observado | Sonnet | e2e sobre un evento pasado |
+| F2.5 ✅ | ML (alta): LSTM de caudal diario; preentreno en CAMELS-CL, ajuste en Neuquén; baselines GR4J y persistencia | Sonnet implementa, opencode entrena, Opus revisa métricas; advisor si hace falta | NSE/KGE en test vs. baselines |
+| F2.6 ✅ | Ficha de crecida: pronóstico LSTM de próximos días con incertidumbre vs. observado | Sonnet | e2e sobre un evento pasado |
 | F2.7 ✅ | Máximos anuales y caudal estacional por fase ENSO; GEV con ONI como covariable vs. estacionaria. Su resultado decide si se hace el modelo estacional F6.2 | Sonnet; advisor si hace falta | Comparación por verosimilitud + unit con GEV sintética dependiente de covariable |
 
 ## Avance
@@ -47,7 +47,18 @@ como mejora y pide clave de CDS. CAMELS-CL (F2.5): PANGAEA, CC-BY-4.0, solo Chil
   ENSO o queda en baselines; la decisión es del usuario (`reports/02/F2.7.md`).
 - Advisor (2026-11-12): ¿registrar «señal» tal cual y qué falta antes de abrir F6.2? Recomendó mantener el veredicto
   de la regla, leerlo como señal débil y concurrente, y condicionar F6.2 a un ONI rezagado. Decisión: adoptado.
-- Detalle y decisiones: `odd/tasks/floods.md`.
+- F2.5 (2026-11-12): test 2014–2025, mediana de tres estaciones. Simulación: LSTM NSE 0,51 frente a GR4J+CemaNeige
+  0,49 (KGE 0,50 frente a 0,53); gana en 12004 (0,58 frente a 0,49), empata en 12010 y 12012. Pronóstico: la persistencia
+  gana a 1 día (0,78 frente a 0,70); el LSTM gana desde 2 días (0,64 frente a 0,56) y a 7 días 0,64 frente a 0,05.
+  Sensibilidad: sin preentrenamiento empeora en las tres; con test 1980–1991 el LSTM gana claro en 12004 y 12010
+  (0,74 y 0,63 frente a 0,43 y 0,44). Junio de 2023 en 12004: momento acertado, pico subestimado unas 3 veces
+  (≈ 3800–4600 frente a 11 895 m³/s). Preentreno CAMELS-CL de PANGAEA (forzante CR2MET; Caravan no descargable,
+  Zenodo 403). Primera evaluación con un error de normalización, corregido en c5db09b (`reports/02/F2.5.md`).
+- F2.6 (2026-11-12): ficha de crecida en el panel de estación: 3 crecidas de test por estación (incluye 2023-06-26 en
+  12004 y 12010), emisión de 7 a 0 días antes del pico, plazos 1–7, mediana, banda 90 %, persistencia y observado;
+  aviso fijo "Pronóstico retrospectivo con meteorología observada (ERA5), no pronóstico operativo. Experimental, no es
+  una alerta." e2e de Playwright sobre fixture; revisada en el navegador con datos reales.
+- Detalle y decisiones: `odd/tasks/floods.md` (F2.1–F2.4, F2.7) y `odd/tasks/streamflow-lstm.md` (F2.5, F2.6).
 
 ## Entregable
 
@@ -64,4 +75,11 @@ Períodos de retorno con IC para una estación natural, crecidas etiquetadas por
 - F2.3: el caudal diario está en hora local (UTC−3) y el catálogo en UTC; la coincidencia por día es aproximada.
 - F2.7: el mecanismo entre ENSO y los picos queda sin verificar (F1.8 no halló señal en los ríos atmosféricos).
   El umbral de la regla se fijó en el encargo de la tarea, sin registro previo en la especificación.
+- F2.5: el LSTM aprovecha poco el caudal observado (pierde con la persistencia a 1 día); la banda del 90 % es ancha en
+  12004 y 12010 (cubre 94–99 %) y angosta en 12012; subestima los picos grandes (2023).
+- F2.5: Caravan (ERA5-Land) como preentreno si el usuario baja `Caravan-nc.tar.gz` (24,8 GB) desde el navegador.
+- F2.5: área SNIH de 12012 igual a la de 12013 Chos Malal (2131 km²): posible copia en los metadatos, sin verificar.
+- F2.5: GR4J con una sola capa de nieve; bandas de elevación de CemaNeige pendientes.
+- Fase 6: comprobar si una versión CUDA de torch soporta la GTX 1050 (Pascal, 2 GB) y sumarla como grupo opcional
+  aparte, sin tocar la CI.
 - Efecto de presas: usar solo estaciones aguas arriba para la GEV.

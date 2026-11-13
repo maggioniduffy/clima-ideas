@@ -1,5 +1,6 @@
 import {
   bandPath,
+  CHART_MARGIN,
   dayOffset,
   downsampleMax,
   formatDateEs,
@@ -10,6 +11,8 @@ import {
   logScale,
   niceMax,
   RETURN_TICKS,
+  tickAnchor,
+  TICK_CHAR_PX,
   yearTicks,
 } from "./floodCharts";
 
@@ -83,4 +86,76 @@ test("yearTicks returns January 1st marks inside the range", () => {
   expect(t.length).toBeGreaterThan(1);
   expect(t.every((k) => k.iso >= "1945-01-01" && k.iso <= "2026-03-31")).toBe(true);
   expect(yearTicks("2000-04-01", "2000-09-01")).toEqual([]);
+});
+
+import { eventYMax, forecastBandPath, forecastPoints, issueLabel, persistencePoints } from "./floodCharts";
+import type { FloodEvent, FloodEventIssue } from "../layers/useFloodStation";
+
+const issue = (over: Partial<FloodEventIssue> = {}): FloodEventIssue => ({
+  issue_date: "2023-06-23",
+  days_before_peak: 3,
+  persistence: 100,
+  median: [110, 150, 200],
+  lo: [90, 100, 120],
+  hi: [130, 200, 300],
+  ...over,
+});
+
+test("forecast points: lead k lands k days after the issue day on the event axis", () => {
+  const pts = forecastPoints("2023-06-12", issue());
+  expect(pts.map((p) => p.day)).toEqual([12, 13, 14]); // issue on day 11 (23 Jun - 12 Jun)
+  expect(pts[1]).toEqual({ day: 13, median: 150, lo: 100, hi: 200 });
+});
+
+test("persistence holds the issue-day flow flat over the leads; none when the flow is a gap", () => {
+  const p = persistencePoints("2023-06-12", issue());
+  expect(p.map((q) => q.x)).toEqual([11, 12, 13, 14]);
+  expect(new Set(p.map((q) => q.y))).toEqual(new Set([100]));
+  expect(persistencePoints("2023-06-12", issue({ persistence: null }))).toEqual([]);
+});
+
+test("forecast band polygon needs two leads with both edges", () => {
+  const x = (d: number) => d * 10;
+  const y = (v: number) => 1000 - v;
+  const pts = forecastPoints("2023-06-12", issue());
+  expect(forecastBandPath(pts, x, y)).toBe("M120 870L130 800L140 700L140 880L130 900L120 910Z");
+  expect(forecastBandPath(pts.slice(0, 1), x, y)).toBe("");
+  const gaps = forecastPoints("2023-06-12", issue({ lo: [null, null, 120] }));
+  expect(forecastBandPath(gaps, x, y)).toBe("");
+});
+
+test("event y max covers the observed flow and every issue's band, so the axis is fixed", () => {
+  const ev: FloodEvent = {
+    peak_date: "2023-06-26",
+    peak_q: 480,
+    hydro_year: 2023,
+    obs: { start: "2023-06-12", q: [10, null, 480] },
+    issues: [issue({ hi: [130, 200, 900] }), issue()],
+  };
+  expect(eventYMax(ev)).toBe(1000);
+});
+
+test("issue label in Spanish", () => {
+  expect(issueLabel(7)).toBe("Emitido 7 días antes del pico");
+  expect(issueLabel(1)).toBe("Emitido 1 día antes del pico");
+  expect(issueLabel(0)).toBe("Emitido el día del pico");
+});
+
+test("tickAnchor keeps every tick label inside the drawable width", () => {
+  const W = 300;
+  const x = linearScale(0, 30, CHART_MARGIN.l, W - CHART_MARGIN.r);
+  expect(x(0)).toBeGreaterThanOrEqual(CHART_MARGIN.l);
+  expect(x(30)).toBeLessThanOrEqual(W - CHART_MARGIN.r);
+  const label = "18/07";
+  const half = (label.length * TICK_CHAR_PX) / 2;
+  for (const d of [0, 7, 14, 21, 28, 30]) {
+    const px = x(d);
+    const a = tickAnchor(px, W, label);
+    const left = a === "start" ? px : a === "end" ? px - 2 * half : px - half;
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(left + 2 * half).toBeLessThanOrEqual(W);
+  }
+  expect(tickAnchor(W - 2, W, label)).toBe("end");
+  expect(tickAnchor(2, W, label)).toBe("start");
+  expect(tickAnchor(150, W, label)).toBe("middle");
 });

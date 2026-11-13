@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd backend && CLIMA_NQN_DATA=/home/faustino/Desktop/Documents/code/clima-ideas-teca/data/processed exec uv run uvicorn clima_nqn.api.app:app --port 8000"],
+      "port": 8000
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd web && exec pnpm dev"],
+      "port": 5173
+    }
+  ]
+}

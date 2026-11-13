@@ -9,6 +9,8 @@ Output in ``<out>/`` (default ``data/processed/flood-stations``):
 - ``stations/<id>.json`` station detail: meta, ``source``, ``period``, ``fetched``, ``daily`` (``start`` plus one
   1-decimal value per day, null for gaps), ``annual_maxima``, ``top_floods`` and, with a GEV fit, ``gev``,
   ``return_levels`` and a smooth ``curve`` (T 1.1..200; ``lo``/``hi`` only inside the stored T range).
+- ``events/<id>.json``  optional flood-card hindcast of the LSTM (``clima-nqn flow lstm-hindcast``, F2.6); when it
+  exists the station detail has ``has_events: true`` and the manifest lists it. A layer without them is valid.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ import pandas as pd
 from scipy.stats import genextreme
 
 from clima_nqn.io import flow
-from clima_nqn.layers.manifest import LayerManifest
+from clima_nqn.layers.manifest import MANIFEST_NAME, LayerManifest, load_manifest
 from clima_nqn.stages.flood import extremes
 
 LAYER_ID = "flood-stations"
@@ -32,6 +34,7 @@ DEFAULT_OUT = flow.OUT_DIR.parent / "processed" / LAYER_ID
 CURVE_T = (1.1, 200.0)
 CURVE_POINTS = 40
 TOP_N = 5
+EVENTS_DIR = "events"
 IRREGULAR_XI = extremes.IRREGULAR_XI
 
 
@@ -171,6 +174,33 @@ def station_value(detail: dict, df: pd.DataFrame) -> float:
     return _round(df["q_m3s"].max())
 
 
+def attach_events(out_dir: Path | str) -> list[str]:
+    """Register the ``events/<id>.json`` files of a built layer: flag the station details, list them in the manifest.
+
+    Files of stations without a ``stations/<id>.json`` are ignored. Does nothing without a manifest.
+    Returns the registered relative paths.
+    """
+    out_dir = Path(out_dir)
+    manifest_path = out_dir / MANIFEST_NAME
+    if not manifest_path.is_file():
+        return []
+    manifest = load_manifest(manifest_path)
+    rels = []
+    for path in sorted((out_dir / EVENTS_DIR).glob("*.json")):
+        detail_path = out_dir / "stations" / path.name
+        if not detail_path.is_file():
+            continue
+        detail = json.loads(detail_path.read_text(encoding="utf-8"))
+        if not detail.get("has_events"):
+            _write_json(detail_path, {**detail, "has_events": True})
+        rels.append(f"{EVENTS_DIR}/{path.name}")
+    files = [f for f in manifest.files if not f.startswith(f"{EVENTS_DIR}/")] + rels
+    if files != manifest.files:
+        updated = manifest.model_copy(update={"files": files})
+        manifest_path.write_text(updated.model_dump_json(indent=2), encoding="utf-8")
+    return rels
+
+
 def build_layer(
     flow_dir: Path | str = flow.OUT_DIR,
     gev_dir: Path | str | None = None,
@@ -227,4 +257,5 @@ def build_layer(
         files=files,
     )
     (out_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    attach_events(out_dir)  # keep the hindcast files of an earlier `flow lstm-hindcast`
     return out_dir

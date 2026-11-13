@@ -58,6 +58,8 @@ dibuja todas las celdas de la grilla de frames (37×33) y el relieve cubre el mi
 el marcador de Neuquén van encima como referencia. No hay franja ni recorte a la provincia (se quitó en noviembre de
 2026); el catálogo de ríos atmosféricos sigue usando su polígono de cordillera, que es otra cosa.
 
+ERA5 regional (`clima-nqn era5 fetch`): `--variables` elige variables por nombre ERA5 o corto (`2m_temperature`/`t2m`, además de las cuatro por defecto de la fase 1: `viwve`, `viwvn`, `tp`, `deg0l`); sin la opción baja solo las cuatro. El workflow `era5.yml` expone `variables` y `name` (directorio y artefacto `era5-<name>-<año>`).
+
 Capa `relief` (Copernicus GLO-30), construida en local desde la raíz del repo:
 
 ```
@@ -96,6 +98,22 @@ cd backend && uv run clima-nqn flow fetch && uv run clima-nqn flow ingest
   el agua equivalente de nieve de ERA5 (`snow_depth`, 0,25°; no es ERA5-Land) a las 00 UTC de `[pico − 8, pico + 1]` de cada crecida
   dentro del período del catálogo, recortada a un rectángulo aproximado aguas arriba (sin verificar); escribe un Parquet
   (`data/raw/era5/snow-floods/snow-floods.parquet`), omite las ventanas ya guardadas y reintenta lecturas fallidas.
+- `flow forcing` (`--era5-dir`, `--t2m-dir`, `--t2m-run-id`, `--dem-dir`, `--out`, `--station`) calcula, desde los Zarr locales de ERA5, el forzante
+  diario (UTC) por cuenca para GR4J y el LSTM (F2.5): precipitación (`tp`, suma de D 01:00 a D+1 00:00), nivel de 0 °C, temperatura media,
+  mínima y máxima (`t2m`) y PET de Oudin et al. (2005); promedio del rectángulo aproximado aguas arriba (sin verificar) ponderado por cos(lat) sobre las
+  celdas con centro adentro. Escribe un Parquet largo (`data/flow/forcing.parquet`) con fuente, licencia, unidades y período en los metadatos, y
+  `forcing.static.json` con área, elevación (GLO-30) y fracción sobre 2000 m. Los días son UTC y los de caudal locales (UTC−3), sin corregir. Omite
+  los años ya guardados; sin `t2m` deja la temperatura y la PET en NaN, lista los años faltantes y un nuevo corrido con `--t2m-dir` los completa.
+- `flow lstm-train` (`--mode sim|forecast`, `--split default|alt`, `--pretrain/--no-pretrain`, `--seeds`, `--epochs`, `--pretrain-epochs`, `--samples-per-epoch`, `--hidden`, `--seq-len`, `--station`, `--forcing`, `--flow-dir`, `--camels-dir`, `--camels-cache`, `--out-dir`, `--run-name`) entrena el LSTM de caudal diario (F2.5; PyTorch CPU,
+  grupo opcional `ml`: `uv sync --group ml`; CI y API no lo instalan, y sin torch el comando lo avisa). Preentrena con CAMELS-CL (PANGAEA, DOI 10.1594/PANGAEA.894885, CC-BY-4.0; zips en `data/raw/camels-cl/zip`,
+  forzante CR2MET con PET de Hargreaves, distinto del ERA5 de Neuquén; cuencas con ≥ 10 años de caudal válido) y ajusta en Neuquén con menor tasa de aprendizaje. Entradas: P, Tmedia, Tmin, Tmax, PET + log(área), elevación media y latitud;
+  objetivo en mm/d normalizado con las filas de entrenamiento; pérdida NSE* por cuenca (Kratzert et al. 2019). `sim` usa solo forzante (ventana de 365 días); `forecast` suma el caudal observado hasta el día de emisión
+  (más un canal de máscara) y lee los horizontes 1–7 con meteorología observada (ERA5), no un pronóstico operativo. Años hidrológicos (abril–marzo): `default` entrena 1980–2006, valida 2007–2013 y prueba 2014–2025; `alt` prueba 1980–1991,
+  valida 1992–1998 y entrena 1999–2025; las ventanas de entrenamiento y validación nunca incluyen días de prueba. Conjunto de semillas (mediana) y banda del 90 % desde los cuantiles 5/95 % del log((obs+ε)/(pred+ε)) de validación (ε = 0,01 mm/d).
+  Escribe `data/flow/lstm/<run-name>/` (pesos por semilla, `norm.json`, `quantiles.json`, `config.json`, `history.json`; archivos chicos).
+- `flow streamflow-eval` (`--run-name`, `--forcing`, `--flow-dir`, `--out-dir`, `--station`) compara en los años de prueba el LSTM con GR4J+CemaNeige (calibrado en los años de entrenamiento, 3 semillas, la mejor KGE) y, en `forecast`,
+  con persistencia: NSE/KGE por estación (y por horizonte 1–7), cobertura de la banda del 90 %, sensibilidad sin el año hidrológico 2023 y NSE del log(q + 0,01 × caudal medio de entrenamiento). Escribe `metrics.json` y `metrics.md` en la carpeta del run.
+  Los días de caudal son locales y los del forzante UTC, sin corregir; se excluyen los primeros 365 días de cada serie.
 - `flow causes` (`--flow-dir`, `--gev-dir`, `--catalog`, `--snow`, `--out`, `--report`, `--station`, `--n-perm`) etiqueta los máximos anuales por
   causa probable (río atmosférico del catálogo F1.3 en `[pico − 3, pico]` y lluvia sobre nieve), con la sensibilidad a la ventana
   `w = 0..7` frente a la línea base por azar (permutación); escribe `data/flow/causes.json` y `reports/02/F2.3.md`. Sin archivo de nieve
@@ -119,6 +137,14 @@ cd backend && uv run clima-nqn flow layer
   y con GEV: `gev` (`irregular` si ξ ≥ 0,5), `return_levels` y `curve` (T de 1,1 a 200; el IC 95 % solo dentro del rango guardado, 2–100).
   Sin GEV, los períodos de retorno son empíricos (Weibull).
 - El inspector abre el panel de la estación (curva T–caudal con banda IC, serie diaria con máximos anuales, mayores crecidas).
+- Ficha de crecida (F2.6, opcional): `cd backend && uv run --group ml clima-nqn flow lstm-hindcast --run-name fc-default` escribe
+  `events/<id>.json` (JSON estricto, `null` en huecos) con las crecidas máximas anuales de los años de prueba del run (3 mayores por
+  estación, más 2023-06-26 en 12004): `meta` (run, modo, semillas, años de prueba, forzante "ERA5 observada, no pronóstico", `caveat`
+  "Pronóstico retrospectivo con meteorología observada (ERA5), no pronóstico operativo. Experimental, no es una alerta.", preentreno,
+  `area_km2` y `area_note`, fuente y período) y `events[]`: `peak_date`, `peak_q`, `obs` (`start` y 22 valores, pico−14..pico+7, m³/s) e
+  `issues[]` (8 días de emisión pico−7..pico: `days_before_peak`, `persistence`, `median`, `lo`, `hi` para plazos 1–7, m³/s; banda 90 %
+  con los cuantiles de validación). Los archivos se agregan a `files` del manifiesto y el detalle de la estación lleva `has_events: true`;
+  sin ellos la capa es válida y el panel no muestra la ficha. `flow layer` conserva los `events/` existentes.
 
 ## API
 

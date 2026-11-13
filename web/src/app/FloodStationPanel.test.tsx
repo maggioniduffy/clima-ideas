@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import type { FloodStationDetail } from "../api/client";
 import { es } from "../i18n/es";
 import { FloodStationPanel } from "./FloodStationPanel";
@@ -99,5 +99,16 @@ test("charts follow the panel width after a loading state", () => {
   const { rerender } = render(<FloodStationPanel state={{ status: "loading", detail: null }} />);
   rerender(<FloodStationPanel state={{ status: "ready", detail: base }} />);
   expect(observed).toContain(screen.getByTestId("flood-station-panel"));
+  vi.unstubAllGlobals();
+});
+
+test("the flood card only appears (and fetches) when the station has events", async () => {
+  const f = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ events: [] }) }));
+  vi.stubGlobal("fetch", f);
+  const { rerender } = render(<FloodStationPanel state={{ status: "ready", detail: base }} />);
+  expect(screen.queryByTestId("flood-event-card")).toBeNull();
+  expect(f).not.toHaveBeenCalled();
+  rerender(<FloodStationPanel state={{ status: "ready", detail: { ...base, has_events: true } as FloodStationDetail }} />);
+  await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
   vi.unstubAllGlobals();
 });

@@ -24,11 +24,15 @@ Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de
 | F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
 | F5.6 | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |
 | F5.7 | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | opencode analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
+| F5.8 | Tabla de la compuerta de evidencia (`plan/06-forecast.md`, criterios 1–3) para "día de riesgo": por región y anticipación, BSS vs. climatología y vs. regresión logística con IC bootstrap por evento, eventos independientes en test (agrupados también entre regiones), diagrama de confiabilidad, POD y FAR | opencode corre, Sonnet codifica | Tabla con veredicto por región y anticipación + unit de agrupación de eventos y de anticipaciones contiguas |
 
 ## Entregable
 
 Acierto según anticipación por tipo de evento; hipótesis a medir: los ríos atmosféricos se ven días antes y la
 convección casi no.
+
+La fase 5 es la evidencia de la perspectiva de riesgo (`plan.md`, Rumbo 7): F5.8 dice qué anticipaciones pueden
+pasar a la fase 6 como perspectiva y cuáles quedan "Experimental".
 
 ## Abierto
 

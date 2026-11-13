@@ -26,6 +26,16 @@ clima-nqn = "clima_nqn.cli:app"
 
 [dependency-groups]
 dev = ["pytest", "ruff"]
+# Streamflow LSTM (F2.5): optional, CPU-only wheels; `uv sync --group ml`. Not installed by CI or the API.
+ml = ["torch"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["hatchling"]
