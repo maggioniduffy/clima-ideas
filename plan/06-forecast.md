@@ -41,7 +41,7 @@ encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en b
 | F6.5 | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, opencode corre | Tabla de skill por horizonte + unit de métricas |
 | F6.6 | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
 | F6.7 | Prueba de caudal alto: dejando afuera cada crecida grande (junio de 2023 incluida), con entradas de pronóstico y la latencia de caudal de F6.1, ¿la probabilidad de superar el umbral sube sobre la climatología antes de cada pico y los intervalos cubren los picos cerca de lo nominal? | opencode corre, Sonnet codifica | Tabla por crecida y anticipación con veredicto + unit de partición sin fuga |
-| F6.8 | Promoción y descenso: aplica la compuerta por variable y anticipación, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión |
+| F6.8 | Promoción y descenso: aplica la compuerta por variable, anticipación y región, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión; el descenso de una anticipación arrastra a las más largas |
 
 ## Validación (F6.2)
 
@@ -62,25 +62,32 @@ Nada de k-fold aleatorio: días vecinos y meses de un mismo año ENSO filtran in
 
 ## Compuerta de evidencia (perspectiva de riesgo)
 
-Decidida el 2026-11-12 (consulta al advisor en `odd/tasks/risk-outlook-rule.md`). Se aplica por variable y por
-anticipación; hasta pasarla, la salida es "Experimental".
+Decidida el 2026-11-12 (consulta al advisor en `odd/tasks/risk-outlook-rule.md`). Se aplica por variable, por
+anticipación y por región (o estación, para caudal): cada región tiene su propio estado y una región que no pasa
+no bloquea a otra; hasta pasarla, la salida es "Experimental".
+
+**Evento independiente** (criterios 1 y 5): días de riesgo seguidos de un mismo sistema cuentan como uno, y un mismo
+sistema que afecta a varias regiones también cuenta como uno. Los mínimos de eventos se cuentan sobre estos eventos
+agrupados de todas las regiones, nunca como suma de conteos por región; el BSS y su IC se calculan por región.
 
 1. **Hindcast (F5.8, F6.2):** BSS > 0 frente a la climatología y frente al baseline simple (regresión logística para
    día de riesgo; persistencia y GR4J para caudal), con IC 95 % bootstrap por evento o año que excluya 0, en test
-   temporal y con entradas tal como estaban disponibles. Al menos **20 eventos independientes** en test (días
-   seguidos de un mismo río atmosférico cuentan como uno).
+   temporal y con entradas tal como estaban disponibles. Al menos **20 eventos independientes** en test. Si el
+   modelo mostrado es el propio baseline simple (criterio 3), basta superar a la climatología y a la persistencia.
 2. **Anticipaciones contiguas:** la anticipación L pasa solo si pasan todas las más cortas.
-3. **Modelo más simple:** se muestra el modelo más simple que supera a climatología y persistencia; LightGBM o el
-   LSTM solo si superan con IC al baseline simple.
+3. **Modelo más simple:** se muestra el modelo más simple que supera a climatología y persistencia, y puede ser el
+   baseline simple (regresión logística, GR4J); LightGBM o el LSTM solo si superan con IC al baseline simple. Misma
+   regla para día de riesgo y caudal.
 4. **Caudal alto (F6.7):** solo como probabilidad de superar un umbral, nunca magnitud del pico, y solo si pasa la
    prueba dejando afuera cada crecida grande. Caudales fuera del rango de entrenamiento se muestran como "fuera del
    rango entrenado".
 5. **Prospectiva (F6.4, F6.5):** una temporada húmeda completa (mayo–septiembre) y al menos **10 eventos
-   independientes** en el registro, sumando regiones, lo que llegue último; el BSS prospectivo no contradice al
-   hindcast (estimación ≥ 0). Las regiones están correlacionadas: el n sumado sobreestima; se informa igual.
+   independientes** agrupados en el registro, lo que llegue último; el BSS prospectivo no contradice al hindcast
+   (estimación ≥ 0).
 6. **Aprobación:** cada promoción la aprueba el usuario (F6.8).
 7. **Descenso automático:** vuelve a "Experimental" si el BSS prospectivo de una temporada es < 0, o si cambia la
-   versión del modelo o de sus entradas (el historial es por versión congelada).
+   versión del modelo o de sus entradas (el historial es por versión congelada). Si desciende una anticipación,
+   descienden también todas las más largas de esa variable y región (criterio 2).
 
 Sin tope fijo de falsas alarmas: con eventos raros el FAR es alto por construcción. POD y FAR se muestran junto a la
 salida, sin destacar ninguna probabilidad. Las probabilidades mostradas se limitan al bin más alto con muestras

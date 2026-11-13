@@ -36,3 +36,7 @@ técnicos tras una compuerta de evidencia. Rama: `fm/alert-rule-plan-d909ef`. So
   el test del hindcast / en el registro prospectivo). Cambios: regla nueva en `CLAUDE.md`; Rumbo 7 en `plan.md`;
   F5.8 en la fase 5; F6.1 (latencia de caudal), F6.6 (dos estados y avisos), F6.7, F6.8, compuerta, avisos
   obligatorios y fuera de alcance en la fase 6.
+- L5 (2026-11-13, revisión de CodeRabbit en el PR 38): se precisa la compuerta: F6.7 solo para caudal alto en
+  `plan.md`; estado por región; eventos independientes agrupados también entre regiones para los mínimos de 20 y
+  10; el baseline simple puede ser el modelo mostrado; el descenso de una anticipación arrastra a las más largas.
+  Decide Opus; no cambia las decisiones del usuario.

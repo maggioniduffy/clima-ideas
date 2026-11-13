@@ -44,7 +44,7 @@ Siete ajustes, que salen de los resultados y de `docs/research/data-access.md`:
    lluvias y tormentas extremas. La salida es una perspectiva de riesgo a 1–10 días para usuarios técnicos, solo en
    el visor y siempre remitiendo a SMN, AIC y Defensa Civil; no hay niveles de alerta ni avisos por mensaje. Una
    variable y anticipación se muestra como perspectiva solo si pasa la compuerta de `plan/06-forecast.md` (hindcast
-   F5.8, prueba de crecidas F6.7, temporada prospectiva F6.8); si no, queda "Experimental". La fase 5 es la
+   F5.8, temporada prospectiva F6.8 y, solo para caudal alto, prueba de crecidas F6.7); si no, queda "Experimental". La fase 5 es la
    evidencia y la 6 la entrega. Plan: `odd/tasks/risk-outlook-rule.md`.
 
 Regla para tareas de análisis: la cifra principal lleva una comprobación de sensibilidad (otro umbral, polígono
