@@ -50,3 +50,8 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   de Zarr y ≈ 70 h secuencial. Pendiente: medir descarga con más hilos (prueba interrumpida; ojo, `download_all`
   de harmony-py es un generador: armar la lista de futures antes de esperar, y fijar `NUM_REQUESTS_WORKERS`),
   varios meses en vuelo, y escribir `odd/tasks/` + el módulo `io/imerg.py`.
+- 2026-11-16 F3.1 código hecho (`odd/tasks/imerg-ingest.md`): `clima-nqn imerg fetch/combine` (`io/imerg.py`), un Zarr
+  por mes y uno combinado. Prueba real del 7/4/2014 reproduce 92,015 mm/día y 15,41 mm/h. Detalles de los archivos de
+  Harmony: la variable está en el grupo `Grid` y el tiempo viene con calendario "julian" (se conservan las etiquetas).
+  Benchmark de 32 hilos descartado por el usuario. Corrida completa en GitHub Actions (`.github/workflows/imerg.yml`,
+  un job por año).
