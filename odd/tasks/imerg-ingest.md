@@ -43,3 +43,8 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
   finished months from earlier runs, fetch step stopped at 320 min so the upload runs. First Actions runs failed NASA
   login: the `EARTHDATA_USERNAME` secret arrived with 7 characters instead of 10; user reset it with `gh secret set`.
   One-month test (2014-01) green end to end; fetch step 3 min 16 s. Full run 43949673338 launched.
+- L7 (2026-11-16) Run 43949673338: year jobs died with exit 135 (SIGBUS) inside `merge_granules`, e.g. 2008 at
+  granule 20080229. Cause: `--parallel` merges several months at once and the HDF5 in the netCDF4 wheels is not
+  thread-safe; reproduced locally (8 threads reading granules: exit 135 and 139 without a lock, clean with it). Fix:
+  a process-wide lock around granule open+load (downloads stay parallel) and `CFDatetimeCoder` in place of the
+  deprecated `use_cftime`, which filled the log with ~30k warning lines. Not a corrupt file or a credentials issue.

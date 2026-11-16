@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import threading
 import time
 from calendar import monthrange
 from collections.abc import Iterable
@@ -38,6 +39,10 @@ PRODUCT = "GPM IMERG Final Run V07 half-hourly (GPM_3IMERGHH)"
 DEFAULT_WORKERS = 32  # download threads per Harmony job
 DEFAULT_PARALLEL_MONTHS = 4  # Harmony jobs in flight at once
 COMBINED_CHUNKS = (17520, 5, 5)
+# The HDF5 library in the netCDF4 wheels is not thread-safe. With --parallel, several months merge granules at
+# once, and concurrent reads crashed the process (SIGBUS, exit 135). Downloads stay parallel; only reads take turns.
+_HDF5_LOCK = threading.Lock()
+_TIME_CODER = xr.coders.CFDatetimeCoder(use_cftime=True)
 
 
 def month_list(first: tuple[int, int], last: tuple[int, int]) -> list[tuple[int, int]]:
@@ -66,7 +71,10 @@ def merge_granules(paths: Iterable[Path]) -> xr.Dataset:
     pieces = []
     for path in paths:
         # Harmony keeps the HDF5 layout: the variable sits in group "Grid"
-        with xr.open_dataset(path, engine="netcdf4", group="Grid", use_cftime=True) as raw:
+        with (
+            _HDF5_LOCK,
+            xr.open_dataset(path, engine="netcdf4", group="Grid", decode_times=_TIME_CODER) as raw,
+        ):
             var = raw["precipitation"].astype("float32").transpose("time", "lat", "lon").load()
         # IMERG labels time with a "julian" calendar; keep the date labels as naive UTC datetimes
         stamps = pd.DatetimeIndex([pd.Timestamp(t.isoformat()) for t in var.time.values])

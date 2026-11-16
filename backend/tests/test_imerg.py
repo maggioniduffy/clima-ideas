@@ -50,6 +50,22 @@ def test_merge_transposes_sorts_axes_and_uses_float32(tmp_path):
     assert pd.DatetimeIndex(ds.time.values).is_monotonic_increasing
 
 
+def test_merge_reads_granules_under_the_hdf5_lock(tmp_path, monkeypatch):
+    # --parallel merges several months at once; HDF5 reads must take turns (SIGBUS in the 2008 Actions run)
+    path = write_granule(tmp_path / "g.nc4", pd.Timestamp("2014-04-01T00:00"))
+    original = xr.open_dataset
+    held = []
+
+    def spy(*args, **kwargs):
+        held.append(imerg._HDF5_LOCK.locked())
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(imerg.xr, "open_dataset", spy)
+    imerg.merge_granules([path])
+    assert held == [True]
+    assert not imerg._HDF5_LOCK.locked()
+
+
 def test_check_complete_names_missing_and_duplicate_times():
     stamps = imerg.expected_times(2014, 4)[:3]
     ds = xr.Dataset({"precipitation": ("time", [1.0, 2.0])}, coords={"time": stamps[:2]})
