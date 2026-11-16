@@ -4,6 +4,9 @@
 # imerg-neuquen-<year> (90 days). Months after `last_month` (default: today minus 4 months, Final latency
 # ~3.5 months) are not requested. A final job joins every year that succeeded into neuquen.zarr
 # (artifact imerg-neuquen); months that are absent are listed in its `missing_months` attribute.
+# Progress survives a cut run: each finished month is its own store, the fetch step stops at 320 min so the
+# upload still runs, and every year job first restores imerg-neuquen-<year> from the newest earlier run that has
+# it, so a rerun only fetches the months still missing.
 name: IMERG regional fetch
 
 on:
@@ -21,6 +24,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   plan:
@@ -68,10 +72,10 @@ jobs:
   fetch:
     needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    timeout-minutes: 350
     strategy:
       fail-fast: false
-      max-parallel: 10
+      max-parallel: 20
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     defaults:
       run:
@@ -82,17 +86,45 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked
-      - env:
+      - name: Restore months from the newest earlier run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          YEAR: ${{ matrix.year }}
+        run: |
+          mkdir -p data/raw/imerg/neuquen
+          for id in $(gh run list -R "$GITHUB_REPOSITORY" --workflow imerg.yml --limit 30 \
+                        --json databaseId --jq '.[].databaseId'); do
+            [ "$id" = "$GITHUB_RUN_ID" ] && continue
+            if gh run download "$id" -R "$GITHUB_REPOSITORY" -n "imerg-neuquen-$YEAR" \
+                 -D data/raw/imerg/neuquen 2>/dev/null; then
+              echo "restored from run $id:"; ls data/raw/imerg/neuquen
+              break
+            fi
+          done
+      - timeout-minutes: 320
+        env:
           EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
           EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
           YEAR: ${{ matrix.year }}
           MONTHS: ${{ matrix.months }}
-        run: uv run clima-nqn imerg fetch --year "$YEAR" --months "$MONTHS" --workers 32
+        run: |
+          # shape check only, values are never printed
+          for v in EARTHDATA_USERNAME EARTHDATA_PASSWORD; do
+            val="${!v}"
+            trimmed="$(printf '%s' "$val" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            echo "$v: length ${#val}, edge whitespace: $([ "$val" != "$trimmed" ] && echo yes || echo no)"
+            [ -n "$val" ] || { echo "$v is empty"; exit 1; }
+          done
+          uv run clima-nqn imerg fetch --year "$YEAR" --months "$MONTHS" --workers 32 --parallel 4
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: imerg-neuquen-${{ matrix.year }}
-          path: backend/data/raw/imerg/neuquen/*.zarr
+          # the directory itself (not a *.zarr glob) keeps <YYYY-MM>.zarr/ at the artifact root even for one month
+          path: |
+            backend/data/raw/imerg/neuquen/
+            !backend/data/raw/imerg/neuquen/*-raw/
+            !backend/data/raw/imerg/neuquen/*.tmp/
           retention-days: 90
           if-no-files-found: warn
 

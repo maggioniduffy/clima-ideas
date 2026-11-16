@@ -1,5 +1,6 @@
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated
 
@@ -533,8 +534,11 @@ def imerg_fetch(
     workers: Annotated[
         int, typer.Option(help="Harmony download worker count.")
     ] = imerg.DEFAULT_WORKERS,
+    parallel: Annotated[
+        int, typer.Option(help="Months processed at once (one Harmony job each).", min=1)
+    ] = imerg.DEFAULT_PARALLEL_MONTHS,
 ) -> None:
-    """Fetch monthly half-hourly IMERG Final data."""
+    """Fetch monthly half-hourly IMERG Final data (complete months skipped, others rebuilt)."""
     if (year is None) == (years is None):
         raise typer.BadParameter("give exactly one of --year or --years")
     try:
@@ -544,13 +548,18 @@ def imerg_fetch(
         raise typer.BadParameter(str(exc)) from exc
     start = max(imerg.FIRST_MONTH, (min(selected_years), min(selected_months)))
     requested = [(y, m) for y in selected_years for m in selected_months if (y, m) >= start]
-    failed = []
-    for y, m in requested:
+
+    def one(month: tuple[int, int]) -> str | None:
+        y, m = month
         try:
             imerg.fetch_month(y, m, out, workers=workers)
         except Exception as exc:  # noqa: BLE001 - continue and summarize failures
             typer.echo(f"{y}-{m:02d} failed: {exc}", err=True)
-            failed.append(f"{y}-{m:02d}")
+            return f"{y}-{m:02d}"
+        return None
+
+    with ThreadPoolExecutor(max_workers=parallel) as pool:
+        failed = [f for f in pool.map(one, requested) if f]
     if failed:
         typer.echo(f"months failed: {failed}", err=True)
         raise typer.Exit(1)

@@ -35,7 +35,8 @@ SOURCE = "GPM IMERG Final Run V07 half-hourly (GPM_3IMERGHH), NASA GES DISC via 
 LICENSE = "CC BY 4.0"
 DOI = "https://doi.org/10.5067/GPM/IMERG/3B-HH/07"
 PRODUCT = "GPM IMERG Final Run V07 half-hourly (GPM_3IMERGHH)"
-DEFAULT_WORKERS = 32
+DEFAULT_WORKERS = 32  # download threads per Harmony job
+DEFAULT_PARALLEL_MONTHS = 4  # Harmony jobs in flight at once
 COMBINED_CHUNKS = (17520, 5, 5)
 
 

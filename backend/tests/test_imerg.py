@@ -156,3 +156,44 @@ def test_build_request_uses_box_variable_and_skip_preview():
     assert req.skip_preview is True
     assert (req.spatial.w, req.spatial.s, req.spatial.e, req.spatial.n) == imerg.BBOX
     assert req.is_valid()
+
+
+def test_cli_fetch_runs_months_in_parallel_and_reports_failures(tmp_path, monkeypatch):
+    import threading
+
+    lock, active, peak, seen = threading.Lock(), [0], [0], []
+    barrier = threading.Barrier(3, timeout=5)
+
+    def fake(y, m, out, **kw):
+        with lock:
+            active[0] += 1
+            peak[0] = max(peak[0], active[0])
+            seen.append((y, m))
+        if m <= 3:
+            barrier.wait()  # only passes if three months run at the same time
+        with lock:
+            active[0] -= 1
+        if m == 5:
+            raise RuntimeError("boom")
+        return Path(out) / f"{y}-{m:02d}.zarr"
+
+    monkeypatch.setattr(imerg, "fetch_month", fake)
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "imerg",
+            "fetch",
+            "--year",
+            "2014",
+            "--months",
+            "1-6",
+            "--parallel",
+            "3",
+            "--out",
+            str(tmp_path),
+        ],
+    )
+    assert result.exit_code == 1
+    assert sorted(seen) == [(2014, m) for m in range(1, 7)]
+    assert peak[0] >= 3
+    assert "2014-05 failed: boom" in result.output

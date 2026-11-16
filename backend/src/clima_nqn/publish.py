@@ -20,7 +20,12 @@ INDEX_CACHE = "public, max-age=300"
 DATA_CACHE = "public, max-age=86400"
 ENV_VARS = ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET")
 
-_CONTENT_TYPES = {".json": "application/json", ".geojson": "application/geo+json"}
+_CONTENT_TYPES = {
+    ".json": "application/json",
+    ".geojson": "application/geo+json",
+    # pinned: newer mime tables map .parquet to application/vnd.apache.parquet
+    ".parquet": "application/octet-stream",
+}
 
 
 @dataclass(frozen=True)
