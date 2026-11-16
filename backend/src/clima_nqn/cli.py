@@ -6,7 +6,7 @@ from typing import Annotated
 import typer
 
 from clima_nqn.api.app import DEFAULT_DATA_ROOT
-from clima_nqn.io import camels_cl, dem, era5, flow, forcing, snow
+from clima_nqn.io import camels_cl, dem, era5, flow, forcing, imerg, snow
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.layers import flood_stations
 from clima_nqn.publish import (
@@ -518,6 +518,51 @@ def era5_combine(
 ) -> None:
     """Concatenate all per-year stores into one time-series store."""
     era5.combine(src, out)
+
+
+imerg_app = typer.Typer(help="Regional GPM IMERG Final V07 precipitation for Neuquén.")
+app.add_typer(imerg_app, name="imerg")
+
+
+@imerg_app.command("fetch")
+def imerg_fetch(
+    year: Annotated[int | None, typer.Option(help="Calendar year.")] = None,
+    years: Annotated[str | None, typer.Option(help='Year range, e.g. "2000-2026".')] = None,
+    months: Annotated[str, typer.Option(help='Months, e.g. "1-12", "4".')] = "1-12",
+    out: Annotated[Path, typer.Option(help="Per-month Zarr directory.")] = imerg.DEFAULT_OUT,
+    workers: Annotated[
+        int, typer.Option(help="Harmony download worker count.")
+    ] = imerg.DEFAULT_WORKERS,
+) -> None:
+    """Fetch monthly half-hourly IMERG Final data."""
+    if (year is None) == (years is None):
+        raise typer.BadParameter("give exactly one of --year or --years")
+    try:
+        selected_years = [year] if year is not None else era5.parse_years(years or "")
+        selected_months = era5.parse_months(months)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    start = max(imerg.FIRST_MONTH, (min(selected_years), min(selected_months)))
+    requested = [(y, m) for y in selected_years for m in selected_months if (y, m) >= start]
+    failed = []
+    for y, m in requested:
+        try:
+            imerg.fetch_month(y, m, out, workers=workers)
+        except Exception as exc:  # noqa: BLE001 - continue and summarize failures
+            typer.echo(f"{y}-{m:02d} failed: {exc}", err=True)
+            failed.append(f"{y}-{m:02d}")
+    if failed:
+        typer.echo(f"months failed: {failed}", err=True)
+        raise typer.Exit(1)
+
+
+@imerg_app.command("combine")
+def imerg_combine(
+    src: Annotated[Path, typer.Option(help="Per-month store directory.")] = imerg.DEFAULT_OUT,
+    out: Annotated[Path, typer.Option(help="Combined Zarr store.")] = imerg.COMBINED,
+) -> None:
+    """Concatenate available per-month stores."""
+    imerg.combine(src, out)
 
 
 ar_app = typer.Typer(help="Atmospheric rivers in the Neuquén cordillera (phase 1).")

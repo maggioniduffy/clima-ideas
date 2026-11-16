@@ -1,0 +1,126 @@
+# Regional IMERG V07 Final half-hourly for Neuquén via NASA Harmony (plan/03, F3.1). Manual, or a push to branch run/imerg-fetch.
+# Needs repo secrets EARTHDATA_USERNAME / EARTHDATA_PASSWORD (Earthdata account with the GES DISC EULA accepted).
+# One job per year writes data/raw/imerg/neuquen/<YYYY-MM>.zarr stores and uploads them as artifact
+# imerg-neuquen-<year> (90 days). Months after `last_month` (default: today minus 4 months, Final latency
+# ~3.5 months) are not requested. A final job joins every year that succeeded into neuquen.zarr
+# (artifact imerg-neuquen); months that are absent are listed in its `missing_months` attribute.
+name: IMERG regional fetch
+
+on:
+  # A push to run/imerg-fetch runs the defaults without the workflow being on main yet.
+  push:
+    branches: [run/imerg-fetch]
+  workflow_dispatch:
+    inputs:
+      years:
+        description: 'Years, e.g. "2000-2026", "2014" or "2000-2005,2014"'
+        default: "2000-2026"
+      last_month:
+        description: 'Last month to request, "YYYY-MM"; empty = today minus 4 months'
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.years.outputs.matrix }}
+    steps:
+      - id: years
+        env:
+          YEARS: ${{ inputs.years || '2000-2026' }}
+          LAST: ${{ inputs.last_month || '' }}
+        run: |
+          python3 - <<'PY'
+          import datetime as dt, json, os, re, sys
+          years, last = os.environ["YEARS"].replace(" ", ""), os.environ["LAST"].strip()
+          if not re.fullmatch(r"\d{4}(-\d{4})?(,\d{4}(-\d{4})?)*", years):
+              sys.exit(f"invalid years: {years!r}")
+          if last:
+              if not re.fullmatch(r"\d{4}-\d{2}", last):
+                  sys.exit(f"invalid last_month: {last!r}")
+              ly, lm = map(int, last.split("-"))
+          else:
+              t = dt.date.today()
+              n = t.year * 12 + t.month - 1 - 4
+              ly, lm = divmod(n, 12)
+              lm += 1
+          out = []
+          for part in years.split(","):
+              a, _, b = part.partition("-")
+              lo, hi = int(a), int(b or a)
+              if lo > hi or lo < 2000 or hi > 2100:
+                  sys.exit(f"invalid range: {part!r}")
+              for y in range(lo, hi + 1):
+                  first = 6 if y == 2000 else 1
+                  last_m = 12 if y < ly else lm if y == ly else 0
+                  if last_m >= first:
+                      out.append({"year": y, "months": f"{first}-{last_m}"})
+          if not out:
+              sys.exit("no months to fetch")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("matrix=" + json.dumps({"include": out}) + "\n")
+          print(out)
+          PY
+
+  fetch:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - env:
+          EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
+          EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
+          YEAR: ${{ matrix.year }}
+          MONTHS: ${{ matrix.months }}
+        run: uv run clima-nqn imerg fetch --year "$YEAR" --months "$MONTHS" --workers 32
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: imerg-neuquen-${{ matrix.year }}
+          path: backend/data/raw/imerg/neuquen/*.zarr
+          retention-days: 90
+          if-no-files-found: warn
+
+  combine:
+    needs: fetch
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - working-directory: backend
+        run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: imerg-neuquen-*
+          path: backend/data/raw/imerg/neuquen
+          merge-multiple: true
+      - working-directory: backend
+        run: |
+          ls data/raw/imerg/neuquen | head -n 400
+          uv run clima-nqn imerg combine
+          uv run python -c "import xarray as xr; ds = xr.open_zarr('data/raw/imerg/neuquen.zarr', chunks=None); print(ds); print(ds.attrs)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: imerg-neuquen
+          path: backend/data/raw/imerg/neuquen.zarr
+          retention-days: 90
+          if-no-files-found: error
