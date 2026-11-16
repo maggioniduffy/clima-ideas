@@ -38,3 +38,8 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
 - L5 (2026-11-16) Real smoke (2014-04-07, 48 granules): variable lives in group `Grid`, time in a "julian" calendar;
   fixture changed to match (RED 2 failed), fix GREEN 7 passed. Neuquén Aero cell: 92.015 mm/day, 15.41 mm/h max, same
   as `reports/03/F3.1-access.md`. Harmony returns 31 lon columns (−70.05..−67.05) by 25 lat.
+- L6 (2026-11-16) User: "Entonces que guarde progreso si se corta el run. No era literal el 'asap', me refería a que uses
+  la máxima velocidad posible de la computadora". Added `--parallel` months (4), 20 year jobs at once, restore of
+  finished months from earlier runs, fetch step stopped at 320 min so the upload runs. First Actions runs failed NASA
+  login: the `EARTHDATA_USERNAME` secret arrived with 7 characters instead of 10; user reset it with `gh secret set`.
+  One-month test (2014-01) green end to end; fetch step 3 min 16 s. Full run 43949673338 launched.
