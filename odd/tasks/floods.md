@@ -17,6 +17,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   Fixed before looking at results (assumption, Opus): primary covariate = mean ONI of AMJJAS of the hydrological year, location `mu = mu0 + mu1·ONI`; one alternate (ONI of the peak's season) as sensitivity; all p-values BH-adjusted together. Stations 12004 and 12010; 12012 reported and flagged unreliable.
 - S8 (F2.3) "Etiquetar crecidas mayores con el catálogo F1.3 y lluvia sobre nieve" — "Tabla de crecidas con causa probable + sensibilidad a la ventana de días entre río atmosférico y pico".
   Approved scope (plan of 2026-11-12): floods = annual maxima of complete years inside the catalog period; AR label = catalog event active in `[peak − w, peak]`, primary `w = 3`, sensitivity `w = 0..7`; chance-coincidence baseline by permutation; rain on snow checked against downloaded snow (L9): snow water equivalent before the peak and its change over the window, over an approximate upstream area per station; rule fixed before the run (assumption, Opus): "lluvia sobre nieve probable" = AR in the window + snow-covered fraction of the area ≥ 0.2 (cells with ≥ 10 mm w.e.) at the window start + area-mean snow water equivalent lower at the peak than at the window start; the event's 0 °C isotherm is reported next to it, not thresholded. Other labels: "río atmosférico", "deshielo sin río atmosférico" (same snow conditions, no AR), "sin causa identificada". Source is ERA5 `snow_depth`/`snowmelt` at 0.25° from the anonymous ARCO store, not ERA5-Land (no CDS key on this machine); the report must say so, and the upstream areas are "sin verificar".
+- S9 (F2.3 on basins, user 2026-11-17) "rehacer F2.3 ... usando las cuencas reales de las estaciones en lugar de los rectángulos `io/snow.UPSTREAM_BOXES`" — done when: snow (ERA5 `snow_depth`, ARCO) and the other F2.3 variables averaged over the polygons with deterministic tests; flood table relabelled at the same stations and period with the same window sensitivity, rectangles result next to it; "nada ajustado mirando resultados: fijá el plan de corridas en el log antes de correr"; report in `reports/02/`, PR at the end. If a result contradicts F2.3 or changes the phase conclusion, tell the user (advisor unavailable).
 
 ## Tasks
 
@@ -30,6 +31,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 | T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | done | 27 tests, suite 231 passed, ruff clean; real run 114 floods; commit 1f58dd1 (L13) |
 | T6 F2.7 addendum | S4, S7, L12 | delegated (builder), after T5 (shared cli.py) | done | 19 tests in file, suite 240 passed, ruff clean; commit 31fe8dc (L14) |
 | T7 review fixes (PR #32) | S4, S7, S8, L12, L15 | delegated (builder; interrupted by a session restart and resumed) | done | suite 254 passed under CI colour settings, ruff clean (L16) |
+| T8 F2.3 on HydroBASINS basins | S4, S8, S9, L17 | delegated (builder: code + tests); Opus runs | in progress | L17 |
 
 ## Log
 
@@ -129,3 +131,24 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   the real data: verdict, meta, checks (a) and (c) identical; F2.3 labels, shares and p-values identical. Not changed: the fixed
   "unos 25 años completos" note in the F2.3 report; the lighter optimiser in the permutation refits. The existing snow file does
   carry its boxes (old format), contrary to the handoff. User (2026-11-12): "merge the PR when it's done".
+- L17 (2026-11-17) T8 plan, fixed before any run (Opus; advisor unavailable). Branch `fm/f23-basins` from
+  `fm/f25-cemaneige-bands` (PR #45). Polygons: `io/gauge_basins.geojson` (HydroBASINS v1c level 12). Data: flow
+  `data/f25-flow`, basin forcing `data/f25-forcing`, AR catalog = artifact `ar-events` of ar-catalog.yml run 42516927153
+  (copied to `data/f23-ar-events` by `ar-events-data.yml`), snow re-read from ARCO-ERA5 in this container.
+  What changes: only the snow part. The AR match, the chance baseline and the window sensitivity do not use the
+  upstream area, so they must come out identical; the event 0 °C level stays the catalog value (cordillera polygon).
+  Rules (unchanged from S8): w = 3 primary, thresholds 10 mm w.e., covered fraction >= 0.2, SWE lower at the peak;
+  N_PERM 10 000, seed 20260513 + station id; same stations (12004, 12010, 12012), same flood selection.
+  On a polygon, a cell counts with weight w = cos(lat) x fraction of the 0.25° cell inside the basin (`forcing.cell_weights`,
+  as in the F2.5 basin forcing): covered fraction = weighted share of cells with >= 10 mm, SWE = weighted mean. On a box
+  the old unweighted rule is kept, so R1 can reproduce F2.3.
+  Added, reported only (no threshold, no effect on labels): basin-mean 0 °C level (mean and max of the daily `deg0l_m`) and
+  precipitation summed over [peak - 3, peak] from `forcing-basins.parquet` (UTC days, as the catalog).
+  Runs, in this order, no other runs and no changes to rules after seeing results:
+  R1 boxes: re-fetch snow on `UPSTREAM_BOXES` and rerun causes. Check: labels, counts and sensitivity equal to
+  `reports/02/F2.3.md`. If they differ, stop and find why before R2 (it is a reproduction check, not a tuning step).
+  R2 basins: fetch snow on the polygons and rerun causes with the same settings.
+  Sensitivity, both geometries: label counts for w = 0..7 (AR at w and snow at w), next to the AR share table.
+  Comparison: per flood, box label vs basin label; counts of changes per station; the 2023-06-26 flood called out.
+  A change of the phase reading = the share of floods with an AR + rain on snow, or the 2023-06-26 label, changes
+  at any station; that would be reported to the user.
