@@ -48,3 +48,10 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
   thread-safe; reproduced locally (8 threads reading granules: exit 135 and 139 without a lock, clean with it). Fix:
   a process-wide lock around granule open+load (downloads stay parallel) and `CFDatetimeCoder` in place of the
   deprecated `use_cftime`, which filled the log with ~30k warning lines. Not a corrupt file or a credentials issue.
+- L8 (2026-11-17) Run 43976784052 (with the HDF5 lock): no crash, and the restore worked (e.g. 2004 restored 01-04 from
+  43949673338 and skipped them). But no year finished a single new month in 5 h 20 min; every fetch step hit the
+  320-min limit with no output after the skips. In the cancelled run, years had 2-4 months done by 2 h 45 min. Likely
+  cause (sin verificar): about 76 Harmony jobs from the cancelled run kept running on NASA's side, and the new run
+  added about 80 more under the same account, so the queue stalled. The lock is unlikely: the parallel CLI test and an
+  8-thread stress run both finish with it. `fetch_month` polls without logging, so the run cannot tell which. Harmony
+  is not reachable from the Claude container (proxy 403).
