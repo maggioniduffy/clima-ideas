@@ -4,11 +4,13 @@ import json
 import numpy as np
 import pandas as pd
 import pytest
+import shapely
 import xarray as xr
 from typer.testing import CliRunner
 
 from clima_nqn.cli import app
-from clima_nqn.io import flow, snow
+from clima_nqn.io import basins as basins_io
+from clima_nqn.io import flow, forcing, snow
 from clima_nqn.stages.ar import catalog as ar_catalog
 from clima_nqn.stages.flood import causes, extremes
 
@@ -420,3 +422,261 @@ def test_existing_flow_gev_help_unchanged():
     res = CliRunner().invoke(app, ["flow", "gev", "--help"], env=PLAIN)
     assert res.exit_code == 0 and "--flow-dir" in res.output and "--station" in res.output
     assert "--catalog" not in res.output and "--snow" not in res.output
+
+
+# --- basins: weighted snow, sensitivity by w, basin forcing, comparison ---------------------------
+
+
+def wcells(date_values, weights, station=12004, peak="2000-03-10"):
+    """Like ``cells`` plus a weight column ``w`` (one weight per cell)."""
+    df = cells(date_values, station, peak)
+    df["w"] = [weights[i] for d, vals in date_values.items() for i in range(len(vals))]
+    return df
+
+
+def test_weighted_snow_metrics_hand_computed():
+    # start: swe 20, 5, 12, NaN mm with weights 1, 3, 2, 4 -> NaN cell is dropped
+    # covered (>= 10 mm): cells 1 and 3 -> (1 + 2) / (1 + 3 + 2) = 0.5
+    # mean start = (20*1 + 5*3 + 12*2) / 6 = 59 / 6; peak: 0, 4, 2 mm with the same weights
+    df = wcells(
+        {"2000-03-07": [0.020, 0.005, 0.012, np.nan], "2000-03-10": [0.0, 0.004, 0.002, 0.050]},
+        [1.0, 3.0, 2.0, 4.0],
+    )
+    m = causes.snow_metrics(df, 12004, pd.Timestamp("2000-03-10"), 3)
+    assert m["status"] == "ok" and m["n_cells"] == 3
+    assert m["cover_frac"] == pytest.approx(0.5)
+    assert m["swe_start_mm"] == pytest.approx(59 / 6)
+    # peak mean uses its own non-NaN cells (all four): (0*1 + 4*3 + 2*2 + 50*4) / 10
+    assert m["swe_peak_mm"] == pytest.approx(21.6)
+
+
+def test_weighted_with_equal_weights_matches_the_unweighted_rule():
+    vals = {"2000-03-07": [0.02, 0.02, 0.0, 0.0], "2000-03-10": [0.0, 0.01, 0.0, 0.0]}
+    a = causes.snow_metrics(cells(vals), 12004, pd.Timestamp("2000-03-10"), 3)
+    b = causes.snow_metrics(wcells(vals, [0.7] * 4), 12004, pd.Timestamp("2000-03-10"), 3)
+    for k in ("cover_frac", "swe_start_mm", "swe_peak_mm", "n_cells"):
+        assert a[k] == pytest.approx(b[k])
+
+
+def test_unweighted_rule_is_kept_without_w_column():
+    df = cells({"2000-03-07": [0.02, 0.0], "2000-03-10": [0.0, 0.0]})
+    assert "w" not in df.columns
+    m = causes.snow_metrics(df, 12004, pd.Timestamp("2000-03-10"), 3)
+    assert m["cover_frac"] == 0.5 and m["swe_start_mm"] == pytest.approx(10.0)
+
+
+def test_label_sensitivity_counts_ar_and_snow_at_each_w():
+    peak = pd.Timestamp("2000-03-10")
+    # an event active on 2000-03-08 only: AR at w >= 2. Snow: at w = 0..7 start day = peak - w.
+    events = make_events([("AR-1", "2000-03-08 00:00", "2000-03-09 00:00", 3000.0, 3500.0)])
+    days = {}
+    for w in range(8):
+        days[(peak - pd.Timedelta(days=w)).strftime("%Y-%m-%d")] = [0.030, 0.030]
+    days["2000-03-10"] = [0.010, 0.010]  # peak: lower than 30 mm on every start day
+    df = cells(days)
+    out = causes.label_sensitivity([peak], events, df, 12004)
+    assert sorted(out) == list(range(8))
+    ar_snow, _ar, snow_only, none = causes.LABELS
+    for w in range(8):
+        counts = out[w]
+        assert sum(counts.values()) == 1
+        if w == 0:  # no AR, peak day equals start day: SWE not lower -> nothing
+            assert counts[none] == 1
+        elif w == 1:  # no AR, SWE falls from 30 to 10 mm: melting without AR
+            assert counts[snow_only] == 1
+        else:
+            assert counts[ar_snow] == 1
+    # the primary w agrees with the label of the flood
+    assert out[causes.W_PRIMARY][ar_snow] == 1
+
+
+def test_basin_forcing_window_sum_mean_max_and_missing_days():
+    peak = pd.Timestamp("2000-03-10")
+    days = pd.date_range("2000-03-06", "2000-03-10")
+    frame = pd.DataFrame(
+        {
+            "station_id": 12004,
+            "date": days,
+            "precip_mm": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "deg0l_m": [3000.0, 3100.0, 3200.0, 3400.0, 3300.0],
+        }
+    )
+    got = causes.basin_forcing(frame, 12004, peak)  # [03-07, 03-10]
+    assert got["basin_precip_mm"] == pytest.approx(14.0)
+    assert got["basin_deg0l_mean_m"] == pytest.approx(3250.0)
+    assert got["basin_deg0l_max_m"] == pytest.approx(3400.0)
+    assert causes.basin_forcing(frame, 12010, peak) == dict.fromkeys(got)  # other station
+    gap = frame[frame["date"] != "2000-03-08"]
+    assert causes.basin_forcing(gap, 12004, peak) == dict.fromkeys(got)
+    nan = frame.copy()
+    nan.loc[nan["date"] == "2000-03-09", "deg0l_m"] = np.nan  # precip still complete
+    part = causes.basin_forcing(nan, 12004, peak)
+    assert part["basin_deg0l_mean_m"] is None and part["basin_precip_mm"] == pytest.approx(14.0)
+    assert causes.basin_forcing(None, 12004, peak)["basin_precip_mm"] is None
+
+
+def _flood(date, q, label, ar=True, cover=0.5, start=30.0, peak=10.0, events=("E1",)):
+    return {
+        "date": date,
+        "q_m3s": q,
+        "ar": ar,
+        "events": list(events),
+        "label": label,
+        "snow": {"status": "ok", "cover_frac": cover, "swe_start_mm": start, "swe_peak_mm": peak},
+    }
+
+
+def _station(sid, floods, sens=None):
+    counts = {lab: sum(f["label"] == lab for f in floods) for lab in causes.LABELS}
+    return {
+        "station_id": sid,
+        "name": f"S{sid}",
+        "n_floods": len(floods),
+        "floods": floods,
+        "label_counts": counts,
+        "sensitivity": sens or [{"w": 0, "n": len(floods), "n_ar": 1, "share": 0.5, "p": 0.1}],
+    }
+
+
+def test_compare_counts_changes_key_flood_and_ar_identity():
+    ar_snow, ar_only = causes.LABELS[0], causes.LABELS[1]
+    box = {
+        "stations": [
+            _station(
+                12004,
+                [
+                    _flood("2023-06-26", 11895.0, ar_snow),
+                    _flood("2010-07-01", 900.0, ar_snow),
+                    _flood("2005-07-01", 800.0, ar_only, cover=0.1),
+                ],
+            ),
+            _station(12012, [_flood("2001-07-01", 50.0, ar_only, cover=0.1)]),
+        ]
+    }
+    basin = json.loads(json.dumps(box))
+    basin["stations"][0]["floods"][1].update(label=ar_only)
+    basin["stations"][0]["floods"][1]["snow"].update(cover_frac=0.15, swe_peak_mm=40.0)
+    basin["stations"][0]["label_counts"] = {
+        lab: sum(f["label"] == lab for f in basin["stations"][0]["floods"]) for lab in causes.LABELS
+    }
+    res = causes.compare(box, basin)
+    s04, s12 = res["stations"]
+    assert s04["n_changed"] == 1 and s04["changed"][0]["date"] == "2010-07-01"
+    assert (
+        s04["changed"][0]["box"]["label"] == ar_snow
+        and s04["changed"][0]["basin"]["label"] == ar_only
+    )
+    assert s04["changed"][0]["basin"]["cover_frac"] == 0.15
+    assert s04["label_counts"]["box"][ar_snow] == 2 and s04["label_counts"]["basin"][ar_snow] == 1
+    assert s04["ar_identical"] is True and res["all_ar_identical"] is True
+    assert s04["key_flood"]["date"] == "2023-06-26" and s04["key_flood"]["changed"] is False
+    assert s12["n_changed"] == 0 and s12["key_flood"] is None and not s12["key_flood_expected"]
+    assert res["reading_changed"] is True  # AR + snow share moved at 12004
+    md = causes.build_comparison(res)
+    assert "2010-07-01" in md and "2023-06-26" in md and "idénticos" in md
+
+    # an AR flag that differs breaks ar_identical; so does a different sensitivity table
+    basin["stations"][0]["floods"][2]["ar"] = False
+    assert causes.compare(box, basin)["stations"][0]["ar_identical"] is False
+    other = json.loads(json.dumps(box))
+    other["stations"][1]["sensitivity"][0]["p"] = 0.2
+    again = causes.compare(box, other)
+    assert again["stations"][1]["ar_identical"] is False and again["all_ar_identical"] is False
+    same = causes.compare(box, json.loads(json.dumps(box)))
+    assert same["reading_changed"] is False and same["stations"][0]["n_changed"] == 0
+
+
+def test_validate_stations_accepts_basin_stations_only_when_basins_given():
+    with pytest.raises(ValueError, match="box"):
+        causes.validate_stations([11803])
+    assert causes.validate_stations([11803], basins=[11803, 12004]) == [11803]
+    with pytest.raises(ValueError, match="basin"):
+        causes.validate_stations([12010], basins=[12004])
+
+
+def _basins_geojson(path):
+    def feat(sid, poly):
+        return {
+            "type": "Feature",
+            "properties": {"station_id": sid, "area_km2": 1234.5},
+            "geometry": shapely.geometry.mapping(poly),
+        }
+
+    doc = {
+        "type": "FeatureCollection",
+        "source": "HydroBASINS",
+        "features": [
+            feat(12004, shapely.box(-70.9, -37.6, -70.3, -37.1)),
+            feat(12012, shapely.box(-70.6, -36.9, -70.2, -36.7)),
+        ],
+    }
+    path.write_text(json.dumps(doc))
+    return path
+
+
+def test_cli_causes_on_basins_with_forcing_and_comparison(tmp_path):
+    flow_dir, gev_dir, catalog, _ = write_world(tmp_path)
+    period = (pd.Timestamp("1990-01-01"), pd.Timestamp("2010-12-31"))
+    floods = causes.collect_floods(flow_dir, [12004, 12012], period)
+    windows = [(sid, d) for sid, df in floods.items() for d in df["date"]]
+    store = melting_store()
+    box_snow, basin_snow = tmp_path / "box.parquet", tmp_path / "basin.parquet"
+    snow.fetch_snow(windows, box_snow, opener=lambda: store, retry_wait=0, workers=2)
+    gj = _basins_geojson(tmp_path / "basins.geojson")
+    geoms = basins_io.read_geojson(gj)
+    snow.fetch_snow(
+        windows, basin_snow, basins=geoms, opener=lambda: store, retry_wait=0, workers=2
+    )
+    days = pd.date_range("1989-12-01", "2011-01-31")
+    frame = pd.concat(
+        [
+            pd.DataFrame(
+                {"station_id": sid, "date": days, "precip_mm": 2.0, "deg0l_m": 3000.0 + sid % 7}
+            )
+            for sid in (12004, 12012)
+        ]
+    )
+    frame_path = tmp_path / "forcing-basins.parquet"
+    frame.to_parquet(frame_path)
+
+    res, box_json, _ = run_causes(tmp_path, box_snow, flow_dir, gev_dir, catalog)
+    assert res.exit_code == 0, res.output
+    out, report = tmp_path / "causes-basins.json", tmp_path / "F2.3-basins.md"
+    res = CliRunner().invoke(
+        app,
+        ["flow", "causes", "--flow-dir", str(flow_dir), "--gev-dir", str(gev_dir), "--catalog", str(catalog),
+         "--snow", str(basin_snow), "--out", str(out), "--report", str(report), "--n-perm", "200",
+         "--station", "12004", "--station", "12012", "--basins", str(gj), "--forcing", str(frame_path),
+         "--compare-with", str(box_json)],
+    )  # fmt: skip
+    assert res.exit_code == 0, res.output
+    data = json.loads(out.read_text())
+    s = {x["station_id"]: x for x in data["stations"]}[12004]
+    assert s["basin"]["kind"] == "hydrobasins" and s["basin"]["area_km2"] == 1234.5
+    assert "box" not in s and s["basin"]["digest"] == forcing.basin_digest(geoms[12004])
+    f = s["floods"][0]
+    assert (
+        f["basin_precip_mm"] == pytest.approx(8.0) and f["basin_deg0l_max_m"] == 3000.0 + 12004 % 7
+    )
+    assert set(s["label_sensitivity"]) == {str(w) for w in range(8)}
+    cmp = data["comparison"]
+    assert cmp["all_ar_identical"] is True and cmp["reading_changed"] is False  # uniform snow
+    text = report.read_text()
+    assert (
+        "cuenca delineada de HydroBASINS nivel 12 (Lehner & Grill 2013) aguas arriba del polígono"
+        in text
+    )
+    assert "cos(lat)" in text and "rectángulo" not in text.split("## Comparación")[0]
+    assert "Sensibilidad de las etiquetas a w" in text and "## Comparación" in text
+    assert "Lluvia cuenca" in text
+
+    # a box snow file is refused with --basins, and a basin snow file without it
+    bad = CliRunner().invoke(
+        app,
+        ["flow", "causes", "--flow-dir", str(flow_dir), "--gev-dir", str(gev_dir), "--catalog", str(catalog),
+         "--snow", str(box_snow), "--out", str(out), "--report", str(report), "--basins", str(gj),
+         "--station", "12004"],
+    )  # fmt: skip
+    assert bad.exit_code != 0
+    res, _, _ = run_causes(tmp_path, basin_snow, flow_dir, gev_dir, catalog)
+    assert res.exit_code != 0
