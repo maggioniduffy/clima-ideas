@@ -31,7 +31,7 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
 | T5 F2.3 | S4, S5, S8 | delegated (builder, model-roles override) | done | 27 tests, suite 231 passed, ruff clean; real run 114 floods; commit 1f58dd1 (L13) |
 | T6 F2.7 addendum | S4, S7, L12 | delegated (builder), after T5 (shared cli.py) | done | 19 tests in file, suite 240 passed, ruff clean; commit 31fe8dc (L14) |
 | T7 review fixes (PR #32) | S4, S7, S8, L12, L15 | delegated (builder; interrupted by a session restart and resumed) | done | suite 254 passed under CI colour settings, ruff clean (L16) |
-| T8 F2.3 on HydroBASINS basins | S4, S8, S9, L17 | delegated (builder: code + tests); Opus runs | in progress | L17 |
+| T8 F2.3 on HydroBASINS basins | S4, S8, S9, L17 | delegated (builder: code + tests); Opus runs | done | suite green, ruff clean; R1 reproduces F2.3; R2 5/114 labels change (L18) |
 
 ## Log
 
@@ -152,3 +152,11 @@ Quoted verbatim from `plan/02-floods.md` (column "Hecho cuando") and the user's 
   Comparison: per flood, box label vs basin label; counts of changes per station; the 2023-06-26 flood called out.
   A change of the phase reading = the share of floods with an AR + rain on snow, or the 2023-06-26 label, changes
   at any station; that would be reported to the user.
+- L18 (2026-11-17) T8 result (`reports/02/F2.3-basins.md`). Catalog copied by `ar-events-data.yml` (433 events, 1980–2025).
+  R1 boxes: labels, counts, snow values and sensitivity equal to F2.3; four Q values differ by 1 m³/s in the table because
+  `data/f25-flow` is the published layer rounded to 0.1 m³/s (x.5 values round to even); GEV refitted without the F2.2 JSON,
+  T equal in the rows checked. R2 basins: AR part identical (`ar_identical` at all stations); 5 of 114 labels change
+  (12004 1981-05-08 AR → AR+snow, 2022-10-31 AR+snow → AR; 12010 2021-06-02 AR+snow → AR, 2004-06-16 AR → AR+snow;
+  12012 2007-11-10 snowmelt → none); AR+snow counts 6/13/3 unchanged; 2023-06-26 still "río atmosférico". 12004 basin
+  has less snow than its box (median SWE at window start 70 vs 100 mm). Reading of the phase unchanged by the L17 rule;
+  nothing contradicts F2.3. Builder's addition kept: label counts by w in every report (also the box one).

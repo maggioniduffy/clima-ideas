@@ -533,14 +533,14 @@ def build_report(results: list[dict], meta: dict, comparison: dict | None = None
     ]
     for r in results:
         L += [
-            f"## {r['station_id']} {r['name']} ({r['river']})",
+            f"## {r['station_id']} {r['name']}" + (f" ({r['river']})" if r.get("river") else ""),
             "",
             (
                 f"- Cuenca: {_basin_line(r['basin'])} (fuente: {r['basin']['source']}; huella {r['basin']['digest']})."
             )
             if "basin" in r
             else f"- Cuenca: {r['box_note']} ({r['box']['lat_south']} a {r['box']['lat_north']} lat, {r['box']['lon_west']} a {r['box']['lon_east']} lon).",
-            f"- Período con datos: {r['period']}; última consulta: {r['fetched']}.",
+            f"- Período con datos: {r['period']}; última consulta: {r.get('fetched') or 'sin dato en el archivo de caudal'}.",
             f"- Crecidas dentro del catálogo: {r['n_floods']} (años completos del registro: {r['n_years_complete']}). Período de retorno: GEV {r['gev_source']}.",
         ]
         if r["short_record"]:
