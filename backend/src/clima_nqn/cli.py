@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 
 from clima_nqn.api.app import DEFAULT_DATA_ROOT
+from clima_nqn.io import basins as basins_io
 from clima_nqn.io import camels_cl, dem, era5, flow, forcing, imerg, snow
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.layers import flood_stations
@@ -213,30 +214,105 @@ def flow_forcing(
     dem_dir: Annotated[
         Path, typer.Option(help="GLO-30 tiles for the static elevation attributes.")
     ] = dem.RAW_DIR,
-    out: Annotated[Path, typer.Option(help="Output Parquet (static JSON goes next to it).")] = (
-        forcing.DEFAULT_OUT
-    ),
+    out: Annotated[
+        Path | None,
+        typer.Option(
+            help="Output Parquet (static JSON goes next to it); required with --basins "
+            "(suggested: data/flow/forcing-basins.parquet)."
+        ),
+    ] = None,
     station: Annotated[
         list[int] | None, typer.Option(help="Station ID (repeatable); default 12004, 12010, 12012.")
     ] = None,
+    basins: Annotated[
+        Path | None,
+        typer.Option(
+            help="GeoJSON of gauge basins (flow basins): average over the polygons, not the boxes."
+        ),
+    ] = None,
 ) -> None:
     """Daily ERA5 forcing (P, freezing level, T, PET) per upstream basin for the flow models (F2.5)."""
+    polygons = None
+    if basins is not None:
+        if out is None:
+            raise typer.BadParameter(
+                "--out is required with --basins (suggested: data/flow/forcing-basins.parquet)",
+                param_hint="--out",
+            )
+        try:
+            polygons = basins_io.read_geojson(basins)
+        except (OSError, KeyError, ValueError) as e:
+            raise typer.BadParameter(str(e), param_hint="--basins") from e
+    out = out or forcing.DEFAULT_OUT
     try:
-        chosen = flood_causes.validate_stations(station)
+        if polygons is not None:
+            chosen = sorted(station or polygons)
+        else:
+            chosen = flood_causes.validate_stations(station)
     except ValueError as e:
         raise typer.BadParameter(str(e)) from e
+    source = None if basins is None else basins_io.read_geojson_meta(basins)["source"]
     try:
         result = forcing.build_forcing(
-            era5_dir, out, t2m_dir, t2m_run_id, stations=chosen, progress=typer.echo
-        )
-    except (FileNotFoundError, ValueError) as e:
+            era5_dir, out, t2m_dir, t2m_run_id, stations=chosen, progress=typer.echo,
+            basins=polygons, basins_source=source,
+        )  # fmt: skip
+    except (FileNotFoundError, ValueError, KeyError) as e:
         raise typer.BadParameter(str(e)) from e
-    static = forcing.build_static(out, dem_dir, stations=chosen)
+    static = forcing.build_static(
+        out, dem_dir, stations=chosen, basins=polygons, basins_source=source
+    )
     typer.echo(f"forcing -> {result['path']}")
     typer.echo(f"static -> {static}")
     if result["missing_t2m_years"]:
         years = ", ".join(str(y) for y in result["missing_t2m_years"])
         typer.echo(f"no temperature (NaN) for years: {years}; rerun once --t2m-dir has them")
+
+
+@flow_app.command("forcing-static")
+def flow_forcing_static(
+    out: Annotated[
+        Path, typer.Option(help="Forcing Parquet path whose static JSON is (re)built.")
+    ] = forcing.DEFAULT_OUT,
+    basins: Annotated[
+        Path | None, typer.Option(help="GeoJSON of gauge basins; default: the approximate boxes.")
+    ] = None,
+    dem_dir: Annotated[Path, typer.Option(help="GLO-30 tiles.")] = dem.RAW_DIR,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default: all.")
+    ] = None,
+) -> None:
+    """Rebuild only the static attributes JSON of a forcing file (DEM stats, hypsometry; F2.5)."""
+    try:
+        if basins is None:
+            chosen = flood_causes.validate_stations(station)
+            path = forcing.build_static(out, dem_dir, stations=chosen)
+        else:
+            polygons = basins_io.read_geojson(basins)
+            chosen = sorted(station or polygons)
+            source = basins_io.read_geojson_meta(basins)["source"]
+            path = forcing.build_static(
+                out, dem_dir, stations=chosen, basins=polygons, basins_source=source
+            )
+    except (OSError, KeyError, ValueError) as e:
+        raise typer.BadParameter(str(e)) from e
+    typer.echo(f"static -> {path}")
+
+
+@flow_app.command("basins")
+def flow_basins(
+    hybas: Annotated[Path, typer.Option(help="HydroBASINS level-12 GeoParquet.")],
+    flow_dir: Annotated[
+        Path, typer.Option(help="Directory with stations.json (F2.1).")
+    ] = flow.OUT_DIR,
+    out: Annotated[Path, typer.Option(help="Output GeoJSON.")] = basins_io.DEFAULT_GEOJSON,
+) -> None:
+    """Delineate the gauge basins upstream of the HydroBASINS polygon holding each gauge (F2.5)."""
+    try:
+        path = basins_io.build(hybas, flow_dir / "stations.json", out, progress=typer.echo)
+    except (OSError, KeyError, ValueError) as e:
+        raise typer.BadParameter(str(e)) from e
+    typer.echo(f"basins -> {path}")
 
 
 @flow_app.command("lstm-train")
@@ -369,6 +445,13 @@ def flow_gr4j_bands(
     seeds: Annotated[str, typer.Option(help="Calibration seeds, comma separated.")] = "0,1,2",
     maxiter: Annotated[int, typer.Option(help="Differential evolution generations.")] = 50,
     popsize: Annotated[int, typer.Option(help="Differential evolution population factor.")] = 8,
+    x1_min: Annotated[
+        float, typer.Option(help="Lower bound of GR4J x1 (mm); default 1.0 = the model default.")
+    ] = flood_hydro.BOUNDS[0][0],
+    x2_max_abs: Annotated[
+        float,
+        typer.Option(help="GR4J x2 is bounded to [-v, v] mm/d; default 10.0 = model default."),
+    ] = flood_hydro.BOUNDS[1][1],
     workers: Annotated[int, typer.Option(help="Parallel processes (station x layer count).")] = 1,
     station: Annotated[
         list[int] | None, typer.Option(help="Station ID (repeatable); default: all in the forcing.")
@@ -402,6 +485,7 @@ def flow_gr4j_bands(
         result = streamflow_eval.gr4j_bands(
             basins, static, split, counts, seed_list, maxiter, popsize, grad_p, grad_t,
             z_inputs_source, workers=workers, progress=typer.echo,
+            x1_min=x1_min, x2_max_abs=x2_max_abs,
         )  # fmt: skip
     except (FileNotFoundError, ValueError, KeyError) as e:
         raise typer.BadParameter(str(e)) from e

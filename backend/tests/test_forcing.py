@@ -6,8 +6,10 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 import rasterio
+import shapely
 import xarray as xr
 from rasterio.transform import from_origin
+from shapely.geometry import box as sbox
 from typer.testing import CliRunner
 
 from clima_nqn import cli
@@ -281,3 +283,142 @@ def test_cli_runs_and_reports_missing_years(tmp_path, monkeypatch):
     assert res.exit_code == 0, res.output
     assert "no temperature (NaN) for years: 2020" in res.output
     assert out.exists() and (tmp_path / "o" / "f.static.json").exists()
+
+
+# --- polygon (HydroBASINS) forcing ----------------------------------------------------------
+
+G_LATS = np.array([-38.0, -37.75, -37.5, -37.0])
+G_LONS = np.array([-71.0, -70.75, -70.5])
+# footprint of the BOX cells (lat -37.75, -37.5; lon -71.0, -70.75), edges on the cell edges
+FOOTPRINT = sbox(-71.125, -37.875, -70.625, -37.375)
+
+
+def test_cell_weights_half_cell_and_full_cells():
+    # half of the cell centred at (-37.75, -70.75): west half only
+    ilat, ilon, w = forcing.cell_weights(G_LATS, G_LONS, sbox(-70.875, -37.875, -70.75, -37.625))
+    assert ilat.tolist() == [1] and ilon.tolist() == [1]
+    assert w[0, 0] == pytest.approx(0.5 * math.cos(math.radians(-37.75)))
+    # four full cells: weight is cos(lat) alone
+    ilat, ilon, w = forcing.cell_weights(G_LATS, G_LONS, FOOTPRINT)
+    assert ilat.tolist() == [1, 2] and ilon.tolist() == [0, 1]
+    assert w == pytest.approx(np.cos(np.radians([-37.75, -37.5]))[:, None] * np.ones((2, 2)))
+    # a polygon touching a cell only along its edge gives that cell no weight
+    ilat, ilon, w = forcing.cell_weights(G_LATS, G_LONS, sbox(-70.625, -37.875, -70.5, -37.625))
+    assert ilon.tolist() == [2] and w[0, 0] == pytest.approx(0.5 * math.cos(math.radians(-37.75)))
+    with pytest.raises(ValueError, match="no ERA5 cell"):
+        forcing.cell_weights(G_LATS, G_LONS, sbox(10, 10, 11, 11))
+
+
+def test_polygon_mean_equals_box_mean_for_the_cell_footprint():
+    rng = np.random.default_rng(1)
+    times = pd.date_range("2020-01-01", periods=48, freq="h")
+    vals = rng.normal(size=(48, 4, 3))
+    vals[3, 2, 0] = np.nan  # a NaN cell is left out of the mean
+    da = xr.DataArray(
+        vals, coords={"time": times, "lat": G_LATS, "lon": G_LONS}, dims=("time", "lat", "lon")
+    )
+    box_m = forcing.BoxRegion(BOX).mean(da)
+    poly_m = forcing.PolygonRegion(FOOTPRINT).mean(da)
+    assert np.allclose(box_m, poly_m, rtol=1e-12, atol=1e-12)
+    # a polygon covering cell (1,0) entirely and a 0.125 x 0.125 corner (a quarter) of cell (1,1)
+    full = sbox(-71.125, -37.875, -70.875, -37.625)
+    reg = forcing.PolygonRegion(shapely.union_all([full, sbox(-70.875, -37.875, -70.75, -37.75)]))
+    _, _, w = reg.weights(da)
+    assert w[0, 1] / w[0, 0] == pytest.approx(0.25, rel=0.01)
+    expect = (vals[:, 1, 0] * w[0, 0] + vals[:, 1, 1] * w[0, 1]) / (w[0, 0] + w[0, 1])
+    assert np.allclose(reg.mean(da), expect)
+
+
+def test_build_forcing_with_basins_matches_boxes_and_records_region(tmp_path):
+    e, t = make_dirs(tmp_path)
+    run(tmp_path, e, t)
+    box_df = pd.read_parquet(tmp_path / "out" / "forcing.parquet")
+    out = tmp_path / "out" / "forcing-basins.parquet"
+    res = forcing.build_forcing(
+        e, out, t, basins={SID: FOOTPRINT}, basins_source="test source", progress=lambda *_: None
+    )
+    assert res["computed"] == [2020]
+    df = pd.read_parquet(out)
+    cols = ["precip_mm", "deg0l_m", "tmean_c", "tmin_c", "tmax_c"]
+    assert np.allclose(df[cols], box_df[cols], equal_nan=True)
+    # PET uses the polygon centroid latitude (-37.625), not the box centre (-37.6)
+    expected = forcing.oudin_pet(
+        df["tmean_c"].to_numpy(), -37.625, df["date"].dt.day_of_year.to_numpy()
+    )
+    assert np.allclose(df["pet_mm"], expected)
+    meta = pq.read_schema(out).metadata
+    assert meta[b"region"] == b"hydrobasins" and meta[b"basin_source"] == b"test source"
+    assert snow.stored_boxes(out) == {SID: (-37.875, -37.375, -71.125, -70.625)}
+    assert b"basin_digests" in meta and b"cell" in meta[b"box_average"]
+    # a rerun is skipped; a different polygon for the same file is refused
+    res = forcing.build_forcing(e, out, t, basins={SID: FOOTPRINT}, progress=lambda *_: None)
+    assert res["computed"] == []
+    other = sbox(-71.125, -37.875, -70.625, -37.4)
+    with pytest.raises(ValueError, match="differs"):
+        forcing.build_forcing(e, out, t, basins={SID: other}, progress=lambda *_: None)
+    # a box run into the basin file is refused too
+    with pytest.raises(ValueError, match="differs"):
+        forcing.build_forcing(e, out, t, boxes={SID: BOX}, progress=lambda *_: None)
+
+
+def test_box_run_meta_is_unchanged_by_the_basin_feature(tmp_path):
+    e, t = make_dirs(tmp_path)
+    run(tmp_path, e, t)
+    meta = pq.read_schema(tmp_path / "out" / "forcing.parquet").metadata
+    assert b"region" not in meta and b"basin_digests" not in meta
+    assert meta[b"box_average"].startswith(b"Box mean over")
+
+
+def test_hypsometry_and_static_inside_polygon(tmp_path):
+    from test_cemaneige_bands import write_tile
+
+    dem_dir = tmp_path / "dem"
+    write_tile(dem_dir, -38, -71, lambda la, lo: 1000 + 2000 * (lo + 71))  # 1000..3000 W-E
+    poly = sbox(-70.9, -37.9, -70.5, -37.1)  # elevations about 1200..2000
+    h = forcing.dem_hypsometry(dem_dir, (-37.9, -37.1, -70.9, -70.5), 1 / 120, poly)
+    assert h[0] == pytest.approx(1200, abs=30) and h[100] == pytest.approx(2000, abs=30)
+    assert h[50] == pytest.approx(1600, abs=40)
+    out = tmp_path / "forcing-basins.parquet"
+    orog = xr.DataArray(
+        np.full((4, 3), 2500.0), coords={"lat": G_LATS, "lon": G_LONS}, dims=("lat", "lon")
+    )
+    spath = forcing.build_static(out, dem_dir, basins={SID: poly}, basins_source="src", orog=None)
+    doc = json.loads(spath.read_text())
+    b = doc["basins"][str(SID)]
+    assert doc["region"] == "hydrobasins" and b["region"] == "hydrobasins"
+    assert b["box"] == [-37.9, -37.1, -70.9, -70.5]
+    assert b["elev_mean_m"] == pytest.approx(1600, abs=40) and len(b["hypso_m"]) == 101
+    assert b["centroid_lon"] == pytest.approx(-70.7) and b["centroid_lat"] == pytest.approx(-37.5)
+    from clima_nqn.io import basins as bio
+
+    assert b["area_km2"] == pytest.approx(bio.area_km2(poly))
+    assert "era5_orog_m" not in b
+    forcing.build_static(out, dem_dir, basins={SID: poly}, orog=orog)
+    assert json.loads(spath.read_text())["basins"][str(SID)]["era5_orog_m"] == pytest.approx(2500.0)
+
+
+def test_cli_forcing_basins_requires_out_and_static_command(tmp_path):
+    from clima_nqn.io import basins as bio
+
+    gj = tmp_path / "b.geojson"
+    bio.write_geojson(
+        {SID: FOOTPRINT}, {SID: {"up_area_km2": 1.0, "n_polygons": 1, "gauge_hybas_id": 1}}, gj
+    )
+    r = CliRunner().invoke(cli.app, ["flow", "forcing", "--basins", str(gj)])
+    assert r.exit_code != 0 and "--out is required" in r.output
+    out = tmp_path / "fb.parquet"
+    r = CliRunner().invoke(
+        cli.app,
+        [
+            "flow",
+            "forcing-static",
+            "--basins",
+            str(gj),
+            "--out",
+            str(out),
+            "--dem-dir",
+            str(tmp_path / "none"),
+        ],
+    )
+    assert r.exit_code == 0, r.output
+    assert json.loads(forcing.static_path(out).read_text())["region"] == "hydrobasins"

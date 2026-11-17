@@ -251,3 +251,65 @@ def test_gr4j_bands_smoke_and_cli(tmp_path, monkeypatch):
     assert r.exit_code == 0, r.output
     assert json.loads(out.read_text())["layer_counts"] == [1, 2]
     assert "12004" in r.output
+
+
+# --- calibration bounds ---------------------------------------------------------------------------
+
+
+def test_calibration_bounds_defaults_equal_model_bounds_and_replace_x1_x2():
+    assert ev.calibration_bounds(1.0, 10.0) == hm.BOUNDS
+    b = ev.calibration_bounds(50.0, 2.0)
+    assert b[0] == (50.0, hm.BOUNDS[0][1]) and b[1] == (-2.0, 2.0) and b[2:] == hm.BOUNDS[2:]
+    with pytest.raises(ValueError, match="x2_max_abs"):
+        ev.calibration_bounds(1.0, 20.0)
+    with pytest.raises(ValueError, match="x1_min"):
+        ev.calibration_bounds(0.5, 10.0)
+
+
+def test_gr4j_baseline_passes_bounds_to_calibrate(monkeypatch):
+    seen = []
+    real = hm.calibrate
+
+    def spy(*a, **k):
+        seen.append(k["bounds"])
+        return real(*a, **k)
+
+    monkeypatch.setattr(hm, "calibrate", spy)
+    b = station_basin(start="2002-01-01", end="2012-12-31")
+    ev.gr4j_baseline(b, "default", **FAST)
+    ev.gr4j_baseline(b, "default", x1_min=80.0, x2_max_abs=3.0, **FAST)
+    assert seen[0] == hm.BOUNDS
+    assert seen[1][0][0] == 80.0 and seen[1][1] == (-3.0, 3.0)
+
+
+def test_gr4j_bands_records_bounds_and_default_results_unchanged(tmp_path, monkeypatch):
+    b = station_basin("12004", "2002-01-01", "2017-12-31")
+    static = {"12004": {"elev_mean_m": 1800.0}}
+    kw = {"maxiter": 2, "popsize": 4, "seeds": (0,)}
+    base = ev.gr4j_bands([b], static, "default", (1,), **kw)
+    same = ev.gr4j_bands([b], static, "default", (1,), x1_min=1.0, x2_max_abs=10.0, **kw)
+    assert base == same
+    assert base["bounds"]["x1_min"] == 1.0 and base["bounds"]["x2_max_abs"] == 10.0
+    assert base["bounds"]["calibration"][1] == [-10.0, 10.0]
+    tight = ev.gr4j_bands([b], static, "default", (1,), x1_min=100.0, x2_max_abs=1.0, **kw)
+    assert tight["bounds"]["calibration"][0][0] == 100.0 and tight["bounds"]["calibration"][1] == [
+        -1.0,
+        1.0,
+    ]
+    p = tight["gr4j"]["12004"]["1"]["params"]
+    assert p["x1"] >= 100.0 and -1.0 <= p["x2"] <= 1.0
+
+    fpath = tmp_path / "forcing.parquet"
+    fpath.write_text("x")
+    fpath.with_suffix(".static.json").write_text(json.dumps({"basins": static}))
+    monkeypatch.setattr(lstm, "neuquen_basins", lambda *a, **k: ([b], {}))
+    out = tmp_path / "o.json"
+    r = CliRunner().invoke(
+        cli.app,
+        ["flow", "gr4j-bands", "--forcing", str(fpath), "--layers", "1", "--seeds", "0",
+         "--maxiter", "2", "--popsize", "4", "--x1-min", "100", "--x2-max-abs", "2.5",
+         "--z-inputs-source", "dem_mean", "--out", str(out)],
+    )  # fmt: skip
+    assert r.exit_code == 0, r.output
+    rec = json.loads(out.read_text())["bounds"]
+    assert rec["x1_min"] == 100.0 and rec["x2_max_abs"] == 2.5

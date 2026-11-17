@@ -46,6 +46,18 @@ def band_coverage(obs, lo, hi) -> float:
     return float(np.mean((obs[ok] >= lo[ok]) & (obs[ok] <= hi[ok])))
 
 
+def calibration_bounds(x1_min: float, x2_max_abs: float) -> tuple:
+    """``hydro_models.BOUNDS`` with the x1 lower bound and the x2 half-width replaced."""
+    if not 0 < x2_max_abs <= hm.BOUNDS[1][1]:
+        raise ValueError(f"x2_max_abs must be in (0, {hm.BOUNDS[1][1]}]")
+    if not hm.BOUNDS[0][0] <= x1_min < hm.BOUNDS[0][1]:
+        raise ValueError(f"x1_min must be in [{hm.BOUNDS[0][0]}, {hm.BOUNDS[0][1]})")
+    b = list(hm.BOUNDS)
+    b[0] = (float(x1_min), b[0][1])
+    b[1] = (-float(x2_max_abs), float(x2_max_abs))
+    return tuple(b)
+
+
 def gr4j_baseline(
     basin: lstm.Basin,
     split: str,
@@ -57,8 +69,13 @@ def gr4j_baseline(
     z_inputs: float | None = None,
     grad_p: float = hm.GRAD_P,
     grad_t: float = hm.GRAD_T,
+    x1_min: float = hm.BOUNDS[0][0],
+    x2_max_abs: float = hm.BOUNDS[1][1],
 ) -> dict:
     """Calibrate GR4J+CemaNeige on the training years and simulate the whole period (mm/d).
+
+    ``x1_min`` and ``x2_max_abs`` tighten the calibration bounds of x1 (lower bound, mm) and x2
+    (``[-x2_max_abs, x2_max_abs]`` mm/d); the defaults are those of ``hydro_models.BOUNDS``.
 
     ``n_layers > 1`` runs CemaNeige on that many equal-area elevation layers (``hydro_models``): the
     layer elevations come from ``hypso`` (101-value hypsometric curve) and the forcing is extrapolated
@@ -91,10 +108,11 @@ def gr4j_baseline(
     qobs[: i0 - start] = np.nan  # warm-up days are not scored
     best = None
     extra = {} if layers is None else {"layers": layers}
+    bounds = calibration_bounds(x1_min, x2_max_abs)
     for seed in seeds:
         cal = hm.calibrate(
             precip[sl], temp[sl], pet[sl], qobs, warmup=i0 - start, seed=seed,
-            maxiter=maxiter, popsize=popsize, **extra,
+            maxiter=maxiter, popsize=popsize, bounds=bounds, **extra,
         )  # fmt: skip
         if best is None or cal.kge > best[1].kge:
             best = (seed, cal)
@@ -305,6 +323,8 @@ def gr4j_bands(
     hist: int = 365,
     workers: int = 1,
     progress=lambda s: None,
+    x1_min: float = hm.BOUNDS[0][0],
+    x2_max_abs: float = hm.BOUNDS[1][1],
 ) -> dict:
     """GR4J+CemaNeige with several layer counts on the test years of ``split`` (no LSTM needed).
 
@@ -325,7 +345,10 @@ def gr4j_bands(
         "popsize": popsize,
         "grad_p": grad_p,
         "grad_t": grad_t,
+        "x1_min": x1_min,
+        "x2_max_abs": x2_max_abs,
     }
+    calibration_bounds(x1_min, x2_max_abs)  # validate before any work
     jobs, used = [], {}
     for b in basins:
         sb = static[str(b.id)]
@@ -378,6 +401,12 @@ def gr4j_bands(
         "grad_t": grad_t,
         "z_threshold": hm.Z_THRESHOLD,
         "z_inputs_source": used,
+        "bounds": {
+            "x1_min": x1_min,
+            "x2_max_abs": x2_max_abs,
+            "calibration": [list(b) for b in calibration_bounds(x1_min, x2_max_abs)],
+            "order": list(hm.Params._fields),
+        },
         "seeds": list(seeds),
         "maxiter": maxiter,
         "popsize": popsize,
