@@ -1,0 +1,66 @@
+{
+  "title": "Static attributes of the gauge basins (HydroBASINS)",
+  "region": "hydrobasins",
+  "source": "HydroBASINS v1c level 12 (Lehner & Grill 2013, Hydrol. Process. 27, 2171-2186; HydroSHEDS licence: free use with citation, https://www.hydrosheds.org); elevation: Copernicus DEM GLO-30 (ESA); forcing: ERA5 (Copernicus Climate Change Service) via ARCO-ERA5 (Google Cloud public dataset)",
+  "license": "CC-BY 4.0 (ERA5); Copernicus DEM licence (free basis for the general public; terms at https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM); HydroSHEDS licence (HydroBASINS)",
+  "units": "area_km2: km2 (polygon, spherical equal-area); elev_*_m: m; hypso_m: 101 elevations (m) at the 0..100 % cos(lat)-weighted area quantiles of the polygon; frac_above_2000m: 0..1; centroid: degrees (polygon centroid); box: polygon bounding box (S, N, W, E)",
+  "box_note": "cuenca delineada de HydroBASINS nivel 12 (Lehner & Grill 2013) aguas arriba del polígono de la estación",
+  "basin_note": "delineated upstream of the level-12 polygon holding the gauge: the polygon extends past the gauge point; upstream polygons with a different NEXT_SINK (endorheic, excluded from UP_AREA) are left out",
+  "elevation_note": "cos(lat)-weighted over the GLO-30 raster decimated to 0.00833 degrees, cells inside the polygon",
+  "basins": {
+    "12004": {
+      "box": [
+        -39.1875,
+        -36.175,
+        -71.22083,
+        -69.34167
+      ],
+      "area_km2": 30393.218287590753,
+      "centroid_lat": -37.81059460641864,
+      "centroid_lon": -70.3976574755783,
+      "elev_mean_m": null,
+      "elev_min_m": null,
+      "elev_max_m": null,
+      "frac_above_2000m": null,
+      "hypso_m": null,
+      "region": "hydrobasins",
+      "basin_digest": "5bb5d78f968dc814"
+    },
+    "12010": {
+      "box": [
+        -38.84583,
+        -37.57027,
+        -71.17083,
+        -69.94965
+      ],
+      "area_km2": 7283.919278783369,
+      "centroid_lat": -38.2375588721041,
+      "centroid_lon": -70.63000420894191,
+      "elev_mean_m": null,
+      "elev_min_m": null,
+      "elev_max_m": null,
+      "frac_above_2000m": null,
+      "hypso_m": null,
+      "region": "hydrobasins",
+      "basin_digest": "06d01aa0d9e24f6f"
+    },
+    "12012": {
+      "box": [
+        -37.37917,
+        -36.65417,
+        -70.57973,
+        -70.025
+      ],
+      "area_km2": 2214.5729432653097,
+      "centroid_lat": -37.06337901454507,
+      "centroid_lon": -70.32960743796814,
+      "elev_mean_m": null,
+      "elev_min_m": null,
+      "elev_max_m": null,
+      "frac_above_2000m": null,
+      "hypso_m": null,
+      "region": "hydrobasins",
+      "basin_digest": "c8b781ad34ec90c5"
+    }
+  }
+}

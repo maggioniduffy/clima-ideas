@@ -1,0 +1,58 @@
+{
+  "title": "Static attributes of the upstream basins",
+  "source": "cuenca aproximada por un rectángulo, sin verificar; elevation: Copernicus DEM GLO-30 (ESA); forcing: ERA5 (Copernicus Climate Change Service) via ARCO-ERA5 (Google Cloud public dataset)",
+  "license": "CC-BY 4.0 (ERA5); Copernicus DEM licence (free basis for the general public; terms at https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM)",
+  "units": "area_km2: km2 (spherical rectangle); elev_*_m: m; hypso_m: 101 elevations (m) at the 0..100 % cos(lat)-weighted area quantiles of the box; frac_above_2000m: 0..1; centroid: degrees (box centre)",
+  "box_note": "cuenca aproximada por un rectángulo, sin verificar",
+  "elevation_note": "cos(lat)-weighted over the GLO-30 raster decimated to 0.00833 degrees",
+  "basins": {
+    "12004": {
+      "box": [
+        -38.8,
+        -36.2,
+        -71.2,
+        -70.0
+      ],
+      "area_km2": 30602.374837407293,
+      "centroid_lat": -37.5,
+      "centroid_lon": -70.6,
+      "elev_mean_m": null,
+      "elev_min_m": null,
+      "elev_max_m": null,
+      "frac_above_2000m": null,
+      "hypso_m": null
+    },
+    "12010": {
+      "box": [
+        -38.8,
+        -37.6,
+        -71.2,
+        -70.2
+      ],
+      "area_km2": 11659.714608243557,
+      "centroid_lat": -38.2,
+      "centroid_lon": -70.7,
+      "elev_mean_m": null,
+      "elev_min_m": null,
+      "elev_max_m": null,
+      "frac_above_2000m": null,
+      "hypso_m": null
+    },
+    "12012": {
+      "box": [
+        -37.3,
+        -36.6,
+        -70.6,
+        -70.1
+      ],
+      "area_km2": 3458.3618983291412,
+      "centroid_lat": -36.95,
+      "centroid_lon": -70.35,
+      "elev_mean_m": null,
+      "elev_min_m": null,
+      "elev_max_m": null,
+      "frac_above_2000m": null,
+      "hypso_m": null
+    }
+  }
+}
