@@ -1,0 +1,47 @@
+# Copies the F1.3 AR event catalog (artifact `ar-events` of an ar-catalog.yml run) to the orphan
+# branch `data/f23-ar-events`, so a machine that cannot reach the artifact storage can `git fetch` it.
+# Used to rerun F2.3 on the HydroBASINS gauge basins (plan/02, "Abierto").
+name: AR events to data branch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fm/f23-basins]
+    paths:
+      - .github/workflows/ar-events-data.yml
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  CATALOG_RUN: "42516927153"
+  OUT_BRANCH: data/f23-ar-events
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: ar-events
+          path: out
+          run-id: ${{ env.CATALOG_RUN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit to the data branch
+        run: |
+          cd out
+          ls -la
+          sha256sum * > SHA256SUMS
+          git init -q -b "$OUT_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cat > README.md <<EOF
+          F1.3 AR event catalog (plan/01), artifact ar-events of ar-catalog.yml run ${CATALOG_RUN},
+          copied by .github/workflows/ar-events-data.yml run ${GITHUB_RUN_ID}.
+          ERA5 via ARCO-ERA5 (Copernicus C3S, CC-BY 4.0) + TECA BARD. Not code; can be deleted after use.
+          EOF
+          git add -A
+          git commit -qm "data: F1.3 AR event catalog from run ${CATALOG_RUN}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$OUT_BRANCH"
