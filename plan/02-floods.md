@@ -62,7 +62,7 @@ como mejora y pide clave de CDS. CAMELS-CL (F2.5): PANGAEA, CC-BY-4.0, solo Chil
   6,5 °C/km sin verificar). Con 5 bandas, NSE 0,49 → 0,61 en 12004 (calibración degenerada: x2 en el límite −10; sin
   gradiente de P, 0,44), 0,50 → 0,54 en 12010 (estable en todas las sensibilidades) y 0,06 → −0,56 en 12012. Se mantiene
   una banda como baseline y la conclusión de F2.5 (`reports/02/F2.5-bands.md`). Con cuencas HydroBASINS y calibración
-  acotada, GR4J 12004 baja a 0,37 (5 bandas 0,40); LSTM sobre cuencas pendiente. Advisor no disponible (pidió créditos);
+  acotada, GR4J 12004 baja a 0,37 (5 bandas 0,40); LSTM sobre cuencas: 0,55 / 0,47 / −0,20 (gana en 12004, GR4J con bandas gana en 12010); la conclusión de F2.5 se mantiene. Advisor no disponible (pidió créditos);
   decidió Opus.
 - Detalle y decisiones: `odd/tasks/floods.md` (F2.1–F2.4, F2.7) y `odd/tasks/streamflow-lstm.md` (F2.5, F2.6).
 
@@ -86,7 +86,7 @@ Períodos de retorno con IC para una estación natural, crecidas etiquetadas por
 - F2.5: Caravan (ERA5-Land) como preentreno si el usuario baja `Caravan-nc.tar.gz` (24,8 GB) desde el navegador.
 - F2.5: área SNIH de 12012 igual a la de 12013 Chos Malal (2131 km²): posible copia en los metadatos, sin verificar.
 - F2.5: bandas de CemaNeige, calibración acotada y cuencas reales HydroBASINS hechas para GR4J
-  (`reports/02/F2.5-bands.md`); falta el LSTM sobre las cuencas reales (`sim-basins`, comando en el informe) y un
+  (`reports/02/F2.5-bands.md`); falta un
   gradiente de temperatura medido en Neuquén (los valores andinos son de ≈ 33°S, sin verificar). F2.3 puede usar
   las mismas cuencas (`io/gauge_basins.geojson`).
 - Fase 6: comprobar si una versión CUDA de torch soporta la GTX 1050 (Pascal, 2 GB) y sumarla como grupo opcional
