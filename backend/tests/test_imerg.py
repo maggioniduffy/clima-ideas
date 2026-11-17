@@ -213,3 +213,114 @@ def test_cli_fetch_runs_months_in_parallel_and_reports_failures(tmp_path, monkey
     assert sorted(seen) == [(2014, m) for m in range(1, 7)]
     assert peak[0] >= 3
     assert "2014-05 failed: boom" in result.output
+
+
+class CancelClient(FakeClient):
+    def __init__(self, states, fail_download=False):
+        super().__init__(None)
+        self.states = iter(states)
+        self.cancelled = []
+        self.fail_download = fail_download
+
+    def cancel(self, job):
+        self.cancelled.append(job)
+
+    def download_all(self, job, directory):
+        if self.fail_download:
+            raise OSError("download broke")
+        return super().download_all(job, directory)
+
+
+def test_fetch_month_deadline_cancels_job_and_raises(tmp_path):
+    client = CancelClient(["running"] * 5)
+    deadline = imerg.time.monotonic() - 1
+    with pytest.raises(TimeoutError, match="job not done by deadline"):
+        imerg.fetch_month(2014, 4, tmp_path, client=client, deadline=deadline)
+    assert client.cancelled == ["job"]
+
+
+def test_fetch_month_download_error_cancels_job_unless_successful(tmp_path):
+    client = CancelClient(["running", "successful"], fail_download=True)
+    # the job finished, so there is nothing to cancel on a download error
+    with pytest.raises(OSError, match="download broke"):
+        imerg.fetch_month(2014, 4, tmp_path, client=client, log_every=0)
+    assert client.cancelled == []
+
+    # an error while still polling (e.g. Ctrl-C) cancels the orphan job
+    class Boom(CancelClient):
+        def status(self, job):
+            raise KeyboardInterrupt
+
+    boom = Boom([])
+    with pytest.raises(KeyboardInterrupt):
+        imerg.fetch_month(2014, 4, tmp_path, client=boom)
+    assert boom.cancelled == ["job"]
+
+
+def test_fetch_month_success_does_not_cancel_and_logs_progress(tmp_path, one_day, capsys):
+    client = CancelClient(["running", "successful"])
+    imerg.fetch_month(2014, 4, tmp_path, client=client, log_every=0)
+    assert client.cancelled == []
+    out = capsys.readouterr().out
+    assert "2014-04: harmony job job submitted" in out
+    assert "2014-04: harmony job job running" in out
+    assert "downloaded 48 granules" in out
+
+
+def test_cancel_running_pages_and_cancels_only_active_jobs():
+    pages = {
+        1: [{"jobID": f"a{i}", "status": "running"} for i in range(100)],
+        2: [
+            {"jobID": "p", "status": "paused"},
+            {"jobID": "ok", "status": "successful"},
+            {"jobID": "bad", "status": "failed"},
+            {"jobID": "acc", "status": "accepted"},
+        ],
+    }
+
+    class Jobs:
+        def __init__(self):
+            self.requests, self.cancelled = [], []
+
+        def submit(self, request):
+            self.requests.append(request)
+            return {"jobs": pages[request.page]}
+
+        def cancel(self, job):
+            if job == "a3":
+                raise RuntimeError("already gone")
+            self.cancelled.append(job)
+
+    client = Jobs()
+    result = imerg.cancel_running(client, "lbl")
+    assert [r.page for r in client.requests] == [1, 2]
+    assert all(r.labels == ["lbl"] for r in client.requests)
+    assert result == client.cancelled
+    assert len(result) == 101 and "a3" not in result
+    assert {"p", "acc"} <= set(result) and not {"ok", "bad"} & set(result)
+
+
+def test_build_request_carries_label():
+    from datetime import datetime
+
+    req = imerg.build_request(datetime(2014, 4, 1), datetime(2014, 4, 30, 23, 59, 59))
+    assert req.labels == [imerg.HARMONY_LABEL]
+
+
+def test_cli_fetch_deadline_skips_unstarted_months(tmp_path, monkeypatch):
+    calls = []
+
+    def fake(y, m, out, **kw):
+        calls.append((m, kw["deadline"]))
+        return Path(out) / f"{y}-{m:02d}.zarr"
+
+    monkeypatch.setattr(imerg, "fetch_month", fake)
+    base = ["imerg", "fetch", "--year", "2014", "--months", "1-2", "--parallel", "1"]
+    base += ["--out", str(tmp_path)]
+    expired = CliRunner().invoke(cli.app, [*base, "--deadline-min", "-1"])
+    assert expired.exit_code == 1
+    assert calls == []
+    assert "2014-01 failed" in expired.output and "months failed" in expired.output
+    ok = CliRunner().invoke(cli.app, [*base, "--deadline-min", "30"])
+    assert ok.exit_code == 0, ok.output
+    assert [m for m, _ in calls] == [1, 2] and all(d is not None for _, d in calls)

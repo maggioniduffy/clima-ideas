@@ -55,3 +55,8 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
   added about 80 more under the same account, so the queue stalled. The lock is unlikely: the parallel CLI test and an
   8-thread stress run both finish with it. `fetch_month` polls without logging, so the run cannot tell which. Harmony
   is not reachable from the Claude container (proxy 403).
+- L9 (2026-11-17) User: "Run again in small chunks ... save progress so the next run starts from the latest advance".
+  imerg.yml is now one job per month (artifact imerg-month-YYYY-MM). plan cancels leftover Harmony jobs, counts done
+  months (month artifacts plus the newest legacy imerg-neuquen-YYYY per year), and picks the next 48 missing months
+  (6 at a time). Each fetch logs Harmony status every minute, cancels its job at 40 min, and never leaves one running.
+  continue dispatches the next run while months remain and the run saved at least one; combine runs when none remain.

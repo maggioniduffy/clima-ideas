@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated
@@ -537,6 +538,12 @@ def imerg_fetch(
     parallel: Annotated[
         int, typer.Option(help="Months processed at once (one Harmony job each).", min=1)
     ] = imerg.DEFAULT_PARALLEL_MONTHS,
+    deadline_min: Annotated[
+        float | None,
+        typer.Option(
+            help="Stop after this many minutes: cancel running jobs, skip unstarted months."
+        ),
+    ] = None,
 ) -> None:
     """Fetch monthly half-hourly IMERG Final data (complete months skipped, others rebuilt)."""
     if (year is None) == (years is None):
@@ -549,10 +556,18 @@ def imerg_fetch(
     start = max(imerg.FIRST_MONTH, (min(selected_years), min(selected_months)))
     requested = [(y, m) for y in selected_years for m in selected_months if (y, m) >= start]
 
+    deadline = None if deadline_min is None else time.monotonic() + 60 * deadline_min
+
     def one(month: tuple[int, int]) -> str | None:
         y, m = month
+        if deadline is not None and time.monotonic() >= deadline:
+            typer.echo(f"{y}-{m:02d} failed: deadline passed before start, not submitted", err=True)
+            return f"{y}-{m:02d}"
         try:
-            imerg.fetch_month(y, m, out, workers=workers)
+            if deadline is None:
+                imerg.fetch_month(y, m, out, workers=workers)
+            else:
+                imerg.fetch_month(y, m, out, workers=workers, deadline=deadline)
         except Exception as exc:  # noqa: BLE001 - continue and summarize failures
             typer.echo(f"{y}-{m:02d} failed: {exc}", err=True)
             return f"{y}-{m:02d}"
@@ -563,6 +578,15 @@ def imerg_fetch(
     if failed:
         typer.echo(f"months failed: {failed}", err=True)
         raise typer.Exit(1)
+
+
+@imerg_app.command("cancel-running")
+def imerg_cancel_running(
+    label: Annotated[str, typer.Option(help="Harmony job label to cancel.")] = imerg.HARMONY_LABEL,
+) -> None:
+    """Cancel this account's active Harmony jobs with the given label."""
+    cancelled = imerg.cancel_running(imerg._client(imerg.DEFAULT_WORKERS), label)
+    typer.echo(f"cancelled {len(cancelled)} job(s) with label {label!r}: {cancelled}")
 
 
 @imerg_app.command("combine")
