@@ -541,7 +541,7 @@ def imerg_fetch(
     deadline_min: Annotated[
         float | None,
         typer.Option(
-            help="Stop after this many minutes: cancel running jobs, skip unstarted months."
+            help="Stop after this many minutes: leave running jobs for the next run, skip unstarted months."
         ),
     ] = None,
 ) -> None:
@@ -583,9 +583,22 @@ def imerg_fetch(
 @imerg_app.command("cancel-running")
 def imerg_cancel_running(
     label: Annotated[str, typer.Option(help="Harmony job label to cancel.")] = imerg.HARMONY_LABEL,
+    keep_months: Annotated[
+        str,
+        typer.Option(help="Comma-separated YYYY-MM months whose jobs are kept (newest per month)."),
+    ] = "",
 ) -> None:
     """Cancel this account's active Harmony jobs with the given label."""
-    cancelled = imerg.cancel_running(imerg._client(imerg.DEFAULT_WORKERS), label)
+    keep = []
+    for tag in (t.strip() for t in keep_months.split(",")):
+        if not tag:
+            continue
+        try:
+            y, m = (int(part) for part in tag.split("-"))
+        except ValueError as exc:
+            raise typer.BadParameter(f"invalid month {tag!r}, expected YYYY-MM") from exc
+        keep.append(imerg.month_label(y, m))
+    cancelled = imerg.cancel_running(imerg._client(imerg.DEFAULT_WORKERS), label, keep=keep)
     typer.echo(f"cancelled {len(cancelled)} job(s) with label {label!r}: {cancelled}")
 
 

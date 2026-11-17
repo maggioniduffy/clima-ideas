@@ -60,3 +60,12 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
   months (month artifacts plus the newest legacy imerg-neuquen-YYYY per year), and picks the next 48 missing months
   (6 at a time). Each fetch logs Harmony status every minute, cancels its job at 40 min, and never leaves one running.
   continue dispatches the next run while months remain and the run saved at least one; combine runs when none remain.
+- L10 (2026-11-17) Run #10 (commit af4d9b2): all 12 month jobs failed with `harmony job ... not done by deadline`. The
+  run log shows each Harmony job advancing about 1 %/min and reaching about 46 % at the 40-min deadline, where
+  `fetch_month` cancelled it, and the next `plan` cancelled the rest; so NASA-side progress was thrown away every run
+  and no month could finish (`continue` correctly refused to chain with 0 artifacts). Total NASA-side time per month:
+  sin verificar (extrapolating the rate gives roughly 90 min). Fix: jobs carry a per-month label
+  `clima-nqn-imerg-YYYY-MM` and outlive the GitHub job; `fetch_month` reuses the newest active or successful job for
+  the month (`find_job`) and on deadline raises without cancelling; `cancel-running --keep-months` spares the batch's
+  jobs and cancels older duplicates; `continue` chains after a run with no month finished, up to 2 in a row (`stalls`
+  input). Harmony is not reachable from the Claude container, so the real check is a dispatch with `max_months=6`.

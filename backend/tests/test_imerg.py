@@ -84,6 +84,8 @@ class FakeClient:
         self.calls = 0
 
     def submit(self, request):
+        if not hasattr(request, "collection"):  # job lookup by label: nothing to reuse
+            return {"jobs": []}
         self.calls += 1
         return "job"
 
@@ -231,12 +233,64 @@ class CancelClient(FakeClient):
         return super().download_all(job, directory)
 
 
-def test_fetch_month_deadline_cancels_job_and_raises(tmp_path):
+def test_fetch_month_deadline_leaves_job_running_and_raises(tmp_path):
     client = CancelClient(["running"] * 5)
     deadline = imerg.time.monotonic() - 1
-    with pytest.raises(TimeoutError, match="job not done by deadline"):
+    with pytest.raises(TimeoutError, match="job still running, left for the next run"):
         imerg.fetch_month(2014, 4, tmp_path, client=client, deadline=deadline)
-    assert client.cancelled == ["job"]
+    assert client.cancelled == []
+
+
+def test_find_job_picks_newest_active_or_successful_and_tolerates_errors():
+    class Jobs:
+        def __init__(self, data):
+            self.data, self.requests = data, []
+
+        def submit(self, request):
+            self.requests.append(request)
+            if isinstance(self.data, Exception):
+                raise self.data
+            return self.data
+
+    jobs = [
+        {"jobID": "old", "status": "running", "createdAt": "2026-11-16T10:00:00Z"},
+        {"jobID": "failed", "status": "failed", "createdAt": "2026-11-17T10:00:00Z"},
+        {"jobID": "new", "status": "successful", "createdAt": "2026-11-17T09:00:00Z"},
+    ]
+    client = Jobs({"jobs": jobs})
+    assert imerg.find_job(client, "lbl") == "new"
+    assert client.requests[0].labels == ["lbl"]
+    assert imerg.find_job(Jobs({"jobs": [jobs[1]]}), "lbl") is None
+    assert imerg.find_job(Jobs("job"), "lbl") is None
+    assert imerg.find_job(Jobs(RuntimeError("down")), "lbl") is None
+
+
+def test_fetch_month_reuses_job_found_by_month_label(tmp_path, one_day):
+    class Reuse(CancelClient):
+        def submit(self, request):
+            if hasattr(request, "collection"):
+                raise AssertionError("must not submit a new request")
+            assert request.labels == [imerg.month_label(2014, 4)]
+            return {
+                "jobs": [{"jobID": "old", "status": "running", "createdAt": "2026-11-17T00:00:00Z"}]
+            }
+
+    client = Reuse(["running", "successful"])
+    assert imerg.fetch_month(2014, 4, tmp_path, client=client, log_every=0)
+    assert client.cancelled == []
+
+    class Done(Reuse):
+        def submit(self, request):
+            data = super().submit(request)
+            data["jobs"][0]["status"] = "successful"
+            return data
+
+    # a successful job from an earlier run is also reused
+    shutil_target = tmp_path / "2014-04.zarr"
+    import shutil
+
+    shutil.rmtree(shutil_target)
+    assert imerg.fetch_month(2014, 4, tmp_path, client=Done(["successful"]), log_every=0)
 
 
 def test_fetch_month_download_error_cancels_job_unless_successful(tmp_path):
@@ -303,8 +357,51 @@ def test_cancel_running_pages_and_cancels_only_active_jobs():
 def test_build_request_carries_label():
     from datetime import datetime
 
-    req = imerg.build_request(datetime(2014, 4, 1), datetime(2014, 4, 30, 23, 59, 59))
-    assert req.labels == [imerg.HARMONY_LABEL]
+    start, stop = datetime(2014, 4, 1), datetime(2014, 4, 30, 23, 59, 59)
+    assert imerg.build_request(start, stop).labels == [imerg.HARMONY_LABEL]
+    tag = imerg.month_label(2014, 4)
+    assert tag == "clima-nqn-imerg-2014-04"
+    assert imerg.build_request(start, stop, tag).labels == [imerg.HARMONY_LABEL, tag]
+
+
+def test_cancel_running_keep_skips_kept_months_and_cancels_older_duplicates():
+    base = imerg.HARMONY_LABEL
+    jobs = [
+        {
+            "jobID": "k-old",
+            "status": "running",
+            "labels": [base, f"{base}-2014-04"],
+            "createdAt": "2026-11-16",
+        },
+        {
+            "jobID": "k-new",
+            "status": "running",
+            "labels": [base, f"{base}-2014-04"],
+            "createdAt": "2026-11-17",
+        },
+        {
+            "jobID": "other",
+            "status": "running",
+            "labels": [base, f"{base}-2014-05"],
+            "createdAt": "2026-11-17",
+        },
+        {"jobID": "legacy", "status": "accepted", "labels": [base]},
+        {"jobID": "done", "status": "successful", "labels": [base, f"{base}-2014-04"]},
+    ]
+
+    class Jobs:
+        def __init__(self):
+            self.cancelled = []
+
+        def submit(self, request):
+            return {"jobs": jobs}
+
+        def cancel(self, job):
+            self.cancelled.append(job)
+
+    client = Jobs()
+    result = imerg.cancel_running(client, base, keep=[f"{base}-2014-04"])
+    assert sorted(result) == ["k-old", "legacy", "other"]
 
 
 def test_cli_fetch_deadline_skips_unstarted_months(tmp_path, monkeypatch):

@@ -124,7 +124,12 @@ def _client(workers: int):
     return harmony.Client(auth=(username, password))
 
 
-def build_request(start, stop):
+def month_label(year: int, month: int) -> str:
+    """Per-month Harmony job label, so a later run can find and reuse the job."""
+    return f"{HARMONY_LABEL}-{year:04d}-{month:02d}"
+
+
+def build_request(start, stop, month_tag: str | None = None):
     """Harmony request for the box, one variable, no preview pause (UTC naive datetimes)."""
     import harmony
 
@@ -135,7 +140,7 @@ def build_request(start, stop):
         temporal={"start": start.replace(**utc), "stop": stop.replace(**utc)},
         variables=[VARIABLE],
         skip_preview=True,
-        labels=[HARMONY_LABEL],
+        labels=[HARMONY_LABEL] if month_tag is None else [HARMONY_LABEL, month_tag],
     )
 
 
@@ -146,27 +151,75 @@ def _cancel_quietly(client, job) -> None:
         print(f"could not cancel harmony job {job}: {exc}", flush=True)
 
 
-def cancel_running(client, label: str = HARMONY_LABEL) -> list[str]:
-    """Cancel this account's active Harmony jobs carrying ``label``; return the cancelled job ids."""
+def _list_jobs(client, label: str):
+    """Yield this account's Harmony job summaries carrying ``label`` (all pages)."""
     import harmony
 
-    limit, page, cancelled = 100, 1, []
+    limit, page = 100, 1
     while True:
         data = client.submit(harmony.JobsRequest(page=page, limit=limit, labels=[label]))
         jobs = data.get("jobs", []) if isinstance(data, dict) else []
-        for item in jobs:
-            job_id = item.get("jobID")
-            if item.get("status") not in ACTIVE_STATES or not job_id:
-                continue
-            try:
-                client.cancel(job_id)
-            except Exception as exc:  # noqa: BLE001 - log and skip
-                print(f"could not cancel harmony job {job_id}: {exc}", flush=True)
-                continue
-            cancelled.append(job_id)
+        yield from jobs
         if len(jobs) < limit:
-            return cancelled
+            return
         page += 1
+
+
+def find_job(client, label: str) -> str | None:
+    """Newest job with ``label`` that is active or successful (results stay downloadable), else None."""
+    try:
+        import harmony
+
+        data = client.submit(harmony.JobsRequest(labels=[label], limit=100))
+        jobs = data.get("jobs", []) if isinstance(data, dict) else []
+        usable = [
+            j
+            for j in jobs
+            if j.get("jobID")
+            and (j.get("status") in ACTIVE_STATES or j.get("status") == "successful")
+        ]
+        if not usable:
+            return None
+        return max(usable, key=lambda j: j.get("createdAt") or "")["jobID"]
+    except Exception as exc:  # noqa: BLE001 - fall back to submitting a new job
+        print(f"could not look up harmony jobs for {label}: {exc}", flush=True)
+        return None
+
+
+def cancel_running(client, label: str = HARMONY_LABEL, keep: Iterable[str] = ()) -> list[str]:
+    """Cancel this account's active Harmony jobs carrying ``label``; return the cancelled job ids.
+
+    Jobs carrying any label in ``keep`` (month labels) survive, except older duplicates: only the newest
+    active job per month label is kept, so the queue never holds two jobs for one month.
+    """
+    keep = set(keep)
+    prefix = f"{HARMONY_LABEL}-"
+    active = [
+        item
+        for item in _list_jobs(client, label)
+        if item.get("status") in ACTIVE_STATES and item.get("jobID")
+    ]
+    newest: dict[str, tuple[str, str]] = {}
+    for item in active:
+        created = item.get("createdAt") or ""
+        for lbl in item.get("labels") or []:
+            if lbl.startswith(prefix) and (lbl not in newest or created > newest[lbl][0]):
+                newest[lbl] = (created, item["jobID"])
+    cancelled = []
+    for item in active:
+        job_id = item["jobID"]
+        labels = set(item.get("labels") or [])
+        month_labels = {lbl for lbl in labels if lbl.startswith(prefix)}
+        duplicate = any(newest[lbl][1] != job_id for lbl in month_labels)
+        if labels & keep and not duplicate:
+            continue
+        try:
+            client.cancel(job_id)
+        except Exception as exc:  # noqa: BLE001 - log and skip
+            print(f"could not cancel harmony job {job_id}: {exc}", flush=True)
+            continue
+        cancelled.append(job_id)
+    return cancelled
 
 
 def fetch_month(
@@ -180,8 +233,9 @@ def fetch_month(
 ) -> Path | None:
     """Fetch and atomically store one complete month; return None if unavailable as Final.
 
-    ``deadline`` is a ``time.monotonic()`` value; a job still polling then is cancelled and TimeoutError raised.
-    The Harmony job is also cancelled on any error or interrupt before its downloads complete.
+    ``deadline`` is a ``time.monotonic()`` value; a job still polling then is left running on NASA's side for the
+    next run to reuse (see ``find_job``) and TimeoutError is raised. Any other error or interrupt before the
+    downloads complete cancels the job.
     """
     out_dir = Path(out_dir)
     tag = f"{year:04d}-{month:02d}"
@@ -198,12 +252,20 @@ def fetch_month(
     raw_dir = out_dir / f"{tag}-raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     start, stop = expected_times(year, month)[[0, -1]]
-    request = build_request(
-        start.to_pydatetime(), (stop + pd.Timedelta(minutes=29, seconds=59)).to_pydatetime()
-    )
-    job = client.submit(request)
-    print(f"{tag}: harmony job {job} submitted", flush=True)
+    label = month_label(year, month)
+    job = find_job(client, label)
+    if job:
+        print(f"{tag}: reusing harmony job {job}", flush=True)
+    else:
+        request = build_request(
+            start.to_pydatetime(),
+            (stop + pd.Timedelta(minutes=29, seconds=59)).to_pydatetime(),
+            label,
+        )
+        job = client.submit(request)
+        print(f"{tag}: harmony job {job} submitted", flush=True)
     successful = False
+    timed_out = False
     try:
         last_log = None
         while True:
@@ -225,7 +287,8 @@ def fetch_month(
                 successful = True  # terminal: nothing left to cancel
                 raise RuntimeError(f"Harmony job {job} {state}: {message}")
             elif deadline is not None and now >= deadline:
-                raise TimeoutError(f"{tag}: harmony job {job} not done by deadline")
+                timed_out = True  # leave the job running for the next run
+                raise TimeoutError(f"{tag}: harmony job {job} still running, left for the next run")
             else:
                 time.sleep(10)
         print(f"{tag}: downloads starting", flush=True)
@@ -233,7 +296,7 @@ def fetch_month(
         paths = [future.result() for future in futures]
         print(f"{tag}: downloaded {len(paths)} granules", flush=True)
     except BaseException:
-        if not successful:
+        if not successful and not timed_out:
             _cancel_quietly(client, job)
         raise
     if not paths:
