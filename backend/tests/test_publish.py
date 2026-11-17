@@ -199,3 +199,18 @@ def test_cli_real_run_uses_fake_client(tree: Path, monkeypatch: pytest.MonkeyPat
     assert {c["Key"] for c in s3.calls} == set(_by_key(tree))
     assert "9 objects" in r.output
     assert ENV["R2_SECRET_ACCESS_KEY"] not in r.output
+
+
+def test_content_type_ignores_host_mime_table(tmp_path: Path) -> None:
+    import mimetypes
+
+    from clima_nqn.publish import content_type
+
+    table = tmp_path / "mime.types"
+    table.write_text("application/vnd.apache.parquet\tparquet\n")
+    mimetypes.init([str(table)])
+    try:
+        assert mimetypes.guess_type("a.parquet")[0] == "application/vnd.apache.parquet"
+        assert content_type("a.parquet") == "application/octet-stream"
+    finally:
+        mimetypes.init()

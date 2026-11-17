@@ -20,6 +20,7 @@ dependencies = [
     "pyextremes>=2.6.1",
     "boto3>=1.44.1",
     "harmony-py>=1.8.0",
+    "shapely>=2.2.0",
 ]
 
 [project.scripts]

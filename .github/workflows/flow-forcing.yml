@@ -1,0 +1,89 @@
+# Daily basin forcing for the streamflow models (F2.5) built on GitHub from the stored ERA5 artifacts.
+# Downloads the per-year stores of the phase-1 run (tp, deg0l) and of the t2m run, runs
+# `clima-nqn flow forcing` twice (approximate boxes -> forcing.parquet; HydroBASINS gauge basins ->
+# forcing-basins.parquet), and commits both (+ static JSONs) to the orphan branch
+# `data/f25-forcing`, so a machine that cannot reach the artifact storage can `git fetch` it.
+# Used for the CemaNeige elevation-band re-evaluation (plan/02, F2.5 "Abierto").
+name: Flow forcing from ERA5 artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fm/f25-cemaneige-bands]
+    paths:
+      - .github/workflows/flow-forcing.yml
+      - backend/src/clima_nqn/io/gauge_basins.geojson
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  PHASE1_RUN: "42437929137"
+  T2M_RUN: "43326516635"
+  OUT_BRANCH: data/f25-forcing
+
+jobs:
+  forcing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: era5-neuquen-*
+          path: backend/dl/neuquen
+          run-id: ${{ env.PHASE1_RUN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: era5-t2m-*
+          path: backend/dl/t2m
+          run-id: ${{ env.T2M_RUN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Arrange stores as <dir>/<year>.zarr
+        run: |
+          for name in neuquen t2m; do
+            mkdir -p "data/raw/era5/$name"
+            for d in dl/$name/era5-$name-*; do
+              mv "$d" "data/raw/era5/$name/${d##*-}.zarr"
+            done
+            ls "data/raw/era5/$name" | wc -l
+          done
+          rm -rf dl
+      - name: Build forcing (approximate boxes)
+        run: |
+          uv run clima-nqn flow forcing --era5-dir data/raw/era5/neuquen \
+            --t2m-dir data/raw/era5/t2m --t2m-run-id "$T2M_RUN" --out out/forcing.parquet
+          uv run python -c "import pandas as pd; d=pd.read_parquet('out/forcing.parquet'); print(d.shape); print(d.groupby('station_id')[['precip_mm','tmean_c','pet_mm']].mean())"
+      - name: Build forcing (HydroBASINS gauge basins)
+        run: |
+          uv run clima-nqn flow forcing --era5-dir data/raw/era5/neuquen \
+            --t2m-dir data/raw/era5/t2m --t2m-run-id "$T2M_RUN" \
+            --basins src/clima_nqn/io/gauge_basins.geojson --out out/forcing-basins.parquet
+          uv run python -c "import pandas as pd; d=pd.read_parquet('out/forcing-basins.parquet'); print(d.shape); print(d.groupby('station_id')[['precip_mm','tmean_c','pet_mm']].mean())"
+      - name: Commit to the data branch
+        run: |
+          cd out
+          git init -q -b "$OUT_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cat > README.md <<EOF
+          Forcing for F2.5 (plan/02-floods.md), built by .github/workflows/flow-forcing.yml
+          run ${GITHUB_RUN_ID} from ERA5 artifacts of runs ${PHASE1_RUN} (tp, deg0l) and ${T2M_RUN} (t2m).
+          Files: forcing.parquet (+ .static.json) averaged over approximate boxes (sin verificar);
+          forcing-basins.parquet (+ .static.json) averaged over gauge basins delineated from HydroBASINS
+          level 12 (Lehner & Grill 2013, HydroSHEDS licence: free use with citation,
+          https://www.hydrosheds.org; polygons in backend/src/clima_nqn/io/gauge_basins.geojson).
+          ERA5: Copernicus C3S, CC-BY 4.0, via ARCO-ERA5. Not code; can be deleted after use.
+          EOF
+          git add -A
+          git commit -qm "data: F2.5 box and basin forcing from ERA5 artifacts"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$OUT_BRANCH"

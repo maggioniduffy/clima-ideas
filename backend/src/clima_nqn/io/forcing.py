@@ -27,6 +27,7 @@ eq. 21).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import warnings
@@ -35,8 +36,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import shapely
 import xarray as xr
 
+from clima_nqn.io import basins as basins_io
 from clima_nqn.io import dem, era5, flow, snow
 
 DEFAULT_ERA5_DIR = era5.DEFAULT_OUT
@@ -55,6 +58,12 @@ BOX_AVERAGE_NOTE = (
     "Box mean over the ERA5 0.25 degree cells whose centre is inside the box (edges included), "
     "weighted by cos(latitude)."
 )
+BASIN_AVERAGE_NOTE = (
+    "Basin mean over the ERA5 0.25 degree cells: weight = cos(latitude) x fraction of the cell "
+    "(centred on the grid point, +-0.125 degrees) inside the basin polygon (planar fraction in degrees)."
+)
+BASIN_NOTE = "cuenca delineada de HydroBASINS nivel 12 (Lehner & Grill 2013) aguas arriba del polígono de la estación"
+ERA5_CELL = 0.25  # degrees
 STATIC_SUFFIX = ".static.json"
 
 Box = snow.Box
@@ -107,6 +116,109 @@ def box_mean(da: xr.DataArray, box: Box) -> np.ndarray:
         return np.where(den > 0, num / den, np.nan)
 
 
+def cell_weights(
+    lat: np.ndarray, lon: np.ndarray, geom, cell: float = ERA5_CELL
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """ERA5 cell weights over a polygon: ``(ilat, ilon, w)`` of the cells with a positive weight.
+
+    ``w = cos(lat) x`` the fraction of the cell (a square of side ``cell`` centred on the grid point)
+    inside ``geom`` (planar intersection area in degrees / cell area). ``ilat`` and ``ilon`` are
+    index arrays into the axes and ``w`` has shape ``(len(ilat), len(ilon))``.
+    """
+    lat, lon = np.asarray(lat, dtype=float), np.asarray(lon, dtype=float)
+    h = cell / 2
+    minx, miny, maxx, maxy = geom.bounds
+    ilat = np.flatnonzero((lat + h > miny) & (lat - h < maxy))
+    ilon = np.flatnonzero((lon + h > minx) & (lon - h < maxx))
+    if len(ilat) == 0 or len(ilon) == 0:
+        raise ValueError("the polygon overlaps no ERA5 cell")
+    glat, glon = np.meshgrid(lat[ilat], lon[ilon], indexing="ij")
+    cells = shapely.box(glon - h, glat - h, glon + h, glat + h)
+    frac = shapely.area(shapely.intersection(cells, geom)) / (cell * cell)
+    w = np.cos(np.radians(glat)) * np.clip(frac, 0.0, 1.0)
+    keep_lat, keep_lon = (w > 0).any(axis=1), (w > 0).any(axis=0)
+    if not keep_lat.any():
+        raise ValueError("the polygon overlaps no ERA5 cell")
+    return ilat[keep_lat], ilon[keep_lon], w[np.ix_(keep_lat, keep_lon)]
+
+
+def weighted_mean(da: xr.DataArray, ilat, ilon, w: np.ndarray) -> np.ndarray:
+    """Hourly weighted mean over the selected cells (NaN cells are left out): a ``time`` series."""
+    values = np.asarray(da.isel(lat=ilat, lon=ilon).transpose("time", "lat", "lon").values, float)
+    wb = np.broadcast_to(w[None, :, :], values.shape)
+    ok = ~np.isnan(values)
+    num = np.where(ok, values * wb, 0.0).sum(axis=(1, 2))
+    den = np.where(ok, wb, 0.0).sum(axis=(1, 2))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(den > 0, num / den, np.nan)
+
+
+class BoxRegion:
+    """Rectangle averaged over the cells whose centre is inside it (the original behaviour)."""
+
+    kind = "box"
+
+    def __init__(self, box: Box):
+        self.box = tuple(box)
+
+    @property
+    def lat_c(self) -> float:
+        return (self.box[0] + self.box[1]) / 2
+
+    def mean(self, da: xr.DataArray) -> np.ndarray:
+        return box_mean(da, self.box)
+
+
+class PolygonRegion:
+    """Basin polygon averaged with ``cos(lat) x`` cell fraction weights (:func:`cell_weights`)."""
+
+    kind = "hydrobasins"
+
+    def __init__(self, geom):
+        self.geom = geom
+        self._cache: dict[tuple, tuple] = {}
+
+    @property
+    def lat_c(self) -> float:
+        return float(self.geom.centroid.y)
+
+    @property
+    def bbox(self) -> Box:
+        minx, miny, maxx, maxy = self.geom.bounds
+        return (miny, maxy, minx, maxx)
+
+    def weights(self, da: xr.DataArray) -> tuple:
+        lat, lon = da["lat"].values, da["lon"].values
+        key = (lat.tobytes(), lon.tobytes())
+        if key not in self._cache:
+            self._cache[key] = cell_weights(lat, lon, self.geom)
+        return self._cache[key]
+
+    def mean(self, da: xr.DataArray) -> np.ndarray:
+        return weighted_mean(da, *self.weights(da))
+
+
+Region = BoxRegion | PolygonRegion
+
+
+def as_region(x) -> Region:
+    """A box tuple becomes a :class:`BoxRegion`; a region is returned as it is."""
+    return x if isinstance(x, BoxRegion | PolygonRegion) else BoxRegion(x)
+
+
+def field_mean(da: xr.DataArray, region) -> float:
+    """Mean of a 2-D (lat, lon) field over a region (e.g. ERA5 orography in m)."""
+    r = as_region(region)
+    out = r.mean(da.expand_dims(time=1).transpose("time", "lat", "lon"))
+    return float(out[0])
+
+
+def basin_digest(geom) -> str:
+    """Short hash of a basin geometry (rounded to 5 decimals) to detect a changed polygon."""
+    rounded = shapely.transform(geom, lambda c: np.round(c, basins_io.COORD_DECIMALS))
+    return hashlib.sha1(shapely.to_wkb(rounded)).hexdigest()[:16]
+
+
 def box_area_km2(box: Box) -> float:
     """Area of a lat/lon rectangle on a sphere (km2)."""
     south, north, west, east = box
@@ -144,7 +256,7 @@ def _year_times(era5_dir: Path, year: int) -> pd.DatetimeIndex:
 
 
 def _hourly(
-    store_dir: Path, year: int, var: str, boxes: dict[int, Box], extra_hour: bool
+    store_dir: Path, year: int, var: str, boxes: dict[int, Box | Region], extra_hour: bool
 ) -> tuple[pd.DatetimeIndex, dict[int, np.ndarray]]:
     """Box-mean hourly series of ``var`` for the year, plus (``extra_hour``) the next 00:00 if stored."""
     store_dir = Path(store_dir)
@@ -158,16 +270,19 @@ def _hourly(
                 parts.append(first)
     ds = xr.concat(parts, dim="time") if len(parts) > 1 else parts[0]
     times = pd.DatetimeIndex(ds["time"].values)
-    return times, {sid: box_mean(ds[var], box) for sid, box in boxes.items()}
+    return times, {sid: as_region(box).mean(ds[var]) for sid, box in boxes.items()}
 
 
 def year_frame(
     year: int,
     era5_dir: Path,
     t2m_dir: Path | None,
-    boxes: dict[int, Box],
+    boxes: dict[int, Box | Region],
 ) -> tuple[pd.DataFrame, bool]:
-    """Daily forcing of every station for one year, and whether temperature was available."""
+    """Daily forcing of every station for one year, and whether temperature was available.
+
+    Each value of ``boxes`` is a box tuple or a :class:`Region` (box or basin polygon).
+    """
     era5_dir = Path(era5_dir)
     t_p, tp = _hourly(era5_dir, year, "tp", boxes, extra_hour=True)
     t_z, z = _hourly(era5_dir, year, "deg0l", boxes, extra_hour=False)
@@ -190,7 +305,7 @@ def year_frame(
                 df[col] = _daily(t2[sid] - 273.15, t_t, how).reindex(days).to_numpy()
             else:
                 df[col] = np.nan
-        lat_c = (box[0] + box[1]) / 2
+        lat_c = as_region(box).lat_c
         df["pet_mm"] = oudin_pet(df["tmean_c"].to_numpy(), lat_c, days.day_of_year.to_numpy())
         df.insert(0, "station_id", np.int32(sid))
         frames.append(df)
@@ -232,9 +347,13 @@ def _year_done(
 
 
 def _meta(
-    df: pd.DataFrame, boxes: dict[int, Box], tp_run: str, t2m_run: str | None
+    df: pd.DataFrame,
+    boxes: dict[int, Box],
+    tp_run: str,
+    t2m_run: str | None,
+    basin_meta: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    return {
+    meta = {
         "title": "Daily ERA5 forcing per upstream basin",
         "source": era5.SOURCE,
         "license": era5.LICENSE,
@@ -249,6 +368,31 @@ def _meta(
         "pet": "Oudin et al. 2005 with FAO-56 eq. 21 extraterrestrial radiation; 0 where T + 5 <= 0",
         "boxes": json.dumps({str(k): list(v) for k, v in sorted(boxes.items())}),
     }
+    if basin_meta:  # basin run: the "boxes" are the polygon bounding boxes
+        meta.update(basin_meta)
+    return meta
+
+
+def _basin_meta(
+    geoms: dict[int, object], source: str | None, stored: dict[int, str] | None = None
+) -> dict[str, str]:
+    digests = {**(stored or {}), **{str(k): basin_digest(g) for k, g in geoms.items()}}
+    return {
+        "region": "hydrobasins",
+        "basin_source": source or basins_io.SOURCE,
+        "basin_note": basins_io.NOTE,
+        "basin_digests": json.dumps(dict(sorted(digests.items()))),
+        "box_average": BASIN_AVERAGE_NOTE,
+        "box_note": f"boxes are the bounding boxes of the basin polygons; {BASIN_NOTE}",
+    }
+
+
+def stored_digests(path: Path | str) -> dict[str, str] | None:
+    """Basin digests recorded in a forcing Parquet, or ``None``."""
+    import pyarrow.parquet as pq
+
+    raw = (pq.read_schema(path).metadata or {}).get(b"basin_digests")
+    return None if raw is None else json.loads(raw.decode())
 
 
 def build_forcing(
@@ -261,8 +405,15 @@ def build_forcing(
     years: Iterable[int] | None = None,
     year_fn: Callable = year_frame,
     progress=print,
+    basins: dict[int, object] | None = None,
+    basins_source: str | None = None,
 ) -> dict:
     """Write the forcing Parquet; returns ``{"path", "years", "computed", "missing_t2m_years"}``.
+
+    With ``basins`` (``{station_id: polygon}``) the stations are averaged over the polygons with
+    cell-fraction weights instead of the boxes (``boxes`` is then ignored): the file records
+    ``region = hydrobasins`` and the polygon bounding boxes as its boxes, so write it to its own
+    output file.
 
     A year already stored for every requested station is skipped, unless temperature or the next
     year's first hour became available since (then it is recomputed). The file is rewritten
@@ -270,11 +421,17 @@ def build_forcing(
     """
     era5_dir, out_path = Path(era5_dir), Path(out_path)
     t2m_dir = None if t2m_dir is None else Path(t2m_dir)
+    regions: dict[int, Region] | None = None
+    if basins is not None:
+        regions = {s: PolygonRegion(g) for s, g in basins.items()}
+        boxes = {s: r.bbox for s, r in regions.items()}
     chosen = sorted(set(stations)) if stations is not None else sorted(boxes)
     unknown = [s for s in chosen if s not in boxes]
     if unknown:
-        raise KeyError(f"no upstream box for station(s) {unknown}; valid: {sorted(boxes)}")
-    use = {s: boxes[s] for s in chosen}
+        what = "basin polygon" if regions is not None else "upstream box"
+        raise KeyError(f"no {what} for station(s) {unknown}; valid: {sorted(boxes)}")
+    use = {s: boxes[s] for s in chosen}  # boxes as recorded in the file
+    run = use if regions is None else {s: regions[s] for s in chosen}  # what year_fn receives
     all_years = sorted(set(years)) if years is not None else discover_years(era5_dir)
     if not all_years:
         raise FileNotFoundError(f"no <year>.zarr stores in {era5_dir}")
@@ -288,6 +445,14 @@ def build_forcing(
                     f"station {sid}: the box recorded in {out_path} differs from the requested one "
                     "(or is unknown). Write to a new output file (--out)."
                 )
+        if basins is not None:
+            old = stored_digests(out_path) or {}
+            for sid in set(chosen) & set(stored["station_id"].unique().tolist()):
+                if old.get(str(sid)) != basin_digest(basins[sid]):
+                    raise ValueError(
+                        f"station {sid}: the basin polygon recorded in {out_path} differs from the "
+                        "requested one (or is unknown). Write to a new output file (--out)."
+                    )
     all_boxes = {**(snow.stored_boxes(out_path) or {} if stored is not None else {}), **use}
 
     computed, missing_t = [], []
@@ -300,7 +465,7 @@ def build_forcing(
             if not _has_t(stored, year, chosen):
                 missing_t.append(year)
             continue
-        frame, have_t = year_fn(year, era5_dir, t2m_dir, use)
+        frame, have_t = year_fn(year, era5_dir, t2m_dir, run)
         if not have_t:
             missing_t.append(year)
         keep = (
@@ -311,11 +476,20 @@ def build_forcing(
         stored = frame if keep is None else pd.concat([keep, frame], ignore_index=True)
         stored = stored.sort_values(["station_id", "date"], ignore_index=True)
         stored["station_id"] = stored["station_id"].astype("int32")
+        basin_meta = (
+            None
+            if basins is None
+            else _basin_meta(
+                {s: basins[s] for s in chosen},
+                basins_source,
+                stored_digests(out_path) if out_path.exists() else None,
+            )
+        )
         snow._write(
             stored,
             out_path,
             _meta(stored, {s: b for s, b in all_boxes.items() if s in set(stored["station_id"])},
-                  PHASE1_RUN_ID, t2m_run_id),
+                  PHASE1_RUN_ID, t2m_run_id, basin_meta),
         )  # fmt: skip
         computed.append(year)
         progress(f"{year}: computed" + ("" if have_t else " (no temperature)"))
@@ -340,30 +514,51 @@ def read_forcing(path: Path | str) -> pd.DataFrame:
 # --- static attributes ----------------------------------------------------------------------
 
 
-def dem_stats(dem_dir: Path | str, box: Box, step: float = DEM_STEP) -> dict[str, float]:
+def _dem_points(
+    dem_dir: Path | str, box: Box, step: float, what: str, geom=None
+) -> np.ndarray | None:
+    """GLO-30 cells ``(lon, lat, elev)`` inside the box decimated to ``step`` degrees, or ``None``
+    (with a warning) if a tile is missing or no cell falls inside the box. With ``geom`` (a basin
+    polygon) only the cells inside the polygon are kept (``box`` is then its bounding box)."""
+    import rasterio
+
+    south, north, west, east = box
+    chunks = []
+    for lat, lon in dem.tiles_for_bbox((west, south, east, north)):
+        if geom is not None and not shapely.intersects(
+            geom, shapely.box(lon, lat, lon + 1, lat + 1)
+        ):
+            continue  # the polygon does not reach this tile of its bounding box
+        path = Path(dem_dir) / f"{dem.tile_name(lat, lon)}.tif"
+        if not path.exists():
+            if dem._absent_marker(path).exists():
+                continue
+            warnings.warn(f"missing DEM tile {path}: {what} are NaN", stacklevel=3)
+            return None
+        with rasterio.open(path) as ds:
+            chunks.append(dem.clip_bbox(dem.decimate_tile(ds, step), (west, south, east, north)))
+    pts = np.concatenate(chunks) if chunks else np.empty((0, 3), dtype=np.float32)
+    if geom is not None and len(pts):
+        pts = pts[shapely.contains_xy(geom, pts[:, 0].astype(float), pts[:, 1].astype(float))]
+    if len(pts) == 0:
+        warnings.warn(
+            f"no DEM cells inside the {'basin' if geom is not None else 'box'} {list(box)}",
+            stacklevel=3,
+        )
+        return None
+    return pts
+
+
+def dem_stats(dem_dir: Path | str, box: Box, step: float = DEM_STEP, geom=None) -> dict[str, float]:
     """Mean/min/max elevation (m) and fraction of area above 2000 m over the box, from GLO-30.
 
     Cells are the DEM raster decimated to ``step`` degrees, weighted by cos(latitude). If a tile is
     missing the values are NaN and a warning is issued (the statistics would be biased).
     """
-    import rasterio
-
     nan = {"elev_mean_m": math.nan, "elev_min_m": math.nan, "elev_max_m": math.nan,
            "frac_above_2000m": math.nan}  # fmt: skip
-    south, north, west, east = box
-    chunks = []
-    for lat, lon in dem.tiles_for_bbox((west, south, east, north)):
-        path = Path(dem_dir) / f"{dem.tile_name(lat, lon)}.tif"
-        if not path.exists():
-            if dem._absent_marker(path).exists():
-                continue
-            warnings.warn(f"missing DEM tile {path}: elevation statistics are NaN", stacklevel=2)
-            return nan
-        with rasterio.open(path) as ds:
-            chunks.append(dem.clip_bbox(dem.decimate_tile(ds, step), (west, south, east, north)))
-    pts = np.concatenate(chunks) if chunks else np.empty((0, 3), dtype=np.float32)
-    if len(pts) == 0:
-        warnings.warn(f"no DEM cells inside the box {list(box)}", stacklevel=2)
+    pts = _dem_points(dem_dir, box, step, "elevation statistics", geom)
+    if pts is None:
         return nan
     w = np.cos(np.radians(pts[:, 1].astype(float)))
     elev = pts[:, 2].astype(float)
@@ -375,9 +570,38 @@ def dem_stats(dem_dir: Path | str, box: Box, step: float = DEM_STEP) -> dict[str
     }
 
 
+def weighted_quantiles(values: np.ndarray, weights: np.ndarray, probs: np.ndarray) -> np.ndarray:
+    """Weighted quantiles (Hazen-type): the sorted value ``i`` sits at ``(cum_w_i - w_i / 2) / sum(w)``
+    and quantiles are linearly interpolated, clamped to the minimum and the maximum."""
+    v = np.asarray(values, dtype=float)
+    w = np.asarray(weights, dtype=float)
+    order = np.argsort(v, kind="stable")
+    v, w = v[order], w[order]
+    pos = (np.cumsum(w) - 0.5 * w) / w.sum()
+    return np.interp(np.asarray(probs, dtype=float), pos, v)
+
+
+def dem_hypsometry(dem_dir: Path | str, box: Box, step: float = DEM_STEP, geom=None) -> np.ndarray:
+    """Hypsometric curve of the box: 101 elevations (m) at the 0, 1, ..., 100 % area quantiles.
+
+    Same GLO-30 cells and cos(latitude) weights as :func:`dem_stats`. The box is an approximate
+    rectangle, not the basin (sin verificar). NaN array and a warning if a tile is missing.
+    """
+    pts = _dem_points(dem_dir, box, step, "the hypsometric curve", geom)
+    if pts is None:
+        return np.full(101, np.nan)
+    w = np.cos(np.radians(pts[:, 1].astype(float)))
+    return weighted_quantiles(pts[:, 2].astype(float), w, np.linspace(0.0, 1.0, 101))
+
+
 def static_path(out_path: Path | str) -> Path:
     out_path = Path(out_path)
     return out_path.with_name(out_path.stem + STATIC_SUFFIX)
+
+
+def _hypso_json(dem_dir, box: Box, step: float, geom=None) -> list[float] | None:
+    h = dem_hypsometry(dem_dir, box, step, geom)
+    return None if np.isnan(h).any() else [float(v) for v in h]
 
 
 def build_static(
@@ -386,34 +610,99 @@ def build_static(
     stations: Iterable[int] | None = None,
     boxes: dict[int, Box] = snow.UPSTREAM_BOXES,
     step: float = DEM_STEP,
+    basins: dict[int, object] | None = None,
+    basins_source: str | None = None,
+    orog: xr.DataArray | None = None,
 ) -> Path:
-    """Write the static attributes JSON next to the Parquet (reuses stations already computed)."""
+    """Write the static attributes JSON next to the Parquet (reuses stations already computed).
+
+    With ``basins`` the attributes are those of the polygons: ``area_km2`` is the geodesic polygon
+    area, the centroid is the polygon centroid, ``box`` its bounding box and the DEM statistics and
+    ``hypso_m`` use only the GLO-30 cells inside the polygon. ``orog`` (optional, a 2-D ``lat`` x
+    ``lon`` ERA5 orography DataArray in m) adds ``era5_orog_m``, the region mean with the forcing
+    weights; without it a stored value is kept.
+    """
     path = static_path(out_path)
-    chosen = sorted(set(stations)) if stations is not None else sorted(boxes)
+    regions: dict[int, Region] = (
+        {s: PolygonRegion(g) for s, g in basins.items()}
+        if basins is not None
+        else {s: BoxRegion(b) for s, b in boxes.items()}
+    )
+    chosen = sorted(set(stations)) if stations is not None else sorted(regions)
     old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-    basins = dict(old.get("basins", {}))
+    stored = dict(old.get("basins", {}))
+    out = dict(stored)
     for sid in chosen:
-        prev = basins.get(str(sid))
-        if prev and prev["box"] == list(boxes[sid]) and prev.get("elev_mean_m") is not None:
+        prev = stored.get(str(sid))
+        reg = regions[sid]
+        box = reg.bbox if basins is not None else reg.box
+        geom = reg.geom if basins is not None else None
+        digest = basin_digest(geom) if geom is not None else None
+        same = (
+            bool(prev)
+            and prev["box"] == list(box)
+            and prev.get("elev_mean_m") is not None
+            and prev.get("basin_digest") == digest
+        )
+        orog_m = None if orog is None else field_mean(orog, reg)
+        if same and prev.get("hypso_m") is not None:
+            out[str(sid)] = prev if orog_m is None else {**prev, "era5_orog_m": orog_m}
             continue
-        box = boxes[sid]
-        basins[str(sid)] = {
+        if same:  # keep every field (also unknown ones, e.g. era5_orog_m) and add the curve
+            out[str(sid)] = {**prev, "hypso_m": _hypso_json(dem_dir, box, step, geom)}
+            if orog_m is not None:
+                out[str(sid)]["era5_orog_m"] = orog_m
+            continue
+        keep = (
+            prev
+            if prev and prev.get("box") == list(box) and prev.get("basin_digest") == digest
+            else {}
+        )
+        entry = {
+            **keep,
             "box": list(box),
-            "area_km2": box_area_km2(box),
-            "centroid_lat": (box[0] + box[1]) / 2,
-            "centroid_lon": (box[2] + box[3]) / 2,
-            **{k: (None if math.isnan(v) else v) for k, v in dem_stats(dem_dir, box, step).items()},
+            "area_km2": basins_io.area_km2(geom) if geom is not None else box_area_km2(box),
+            "centroid_lat": float(geom.centroid.y) if geom is not None else (box[0] + box[1]) / 2,
+            "centroid_lon": float(geom.centroid.x) if geom is not None else (box[2] + box[3]) / 2,
+            **{
+                k: (None if math.isnan(v) else v)
+                for k, v in dem_stats(dem_dir, box, step, geom).items()
+            },
+            "hypso_m": _hypso_json(dem_dir, box, step, geom),
         }
-    doc = {
-        "title": "Static attributes of the upstream basins",
-        "source": f"{snow.BOX_NOTE}; elevation: {dem.SOURCE}; forcing: {era5.SOURCE}",
-        "license": f"{era5.LICENSE} (ERA5); {dem.LICENSE}",
-        "units": "area_km2: km2 (spherical rectangle); elev_*_m: m; frac_above_2000m: 0..1; "
-        "centroid: degrees (box centre)",
-        "box_note": snow.BOX_NOTE,
-        "elevation_note": f"cos(lat)-weighted over the GLO-30 raster decimated to {step:.5f} degrees",
-        "basins": basins,
-    }
+        if geom is not None:
+            entry["region"] = "hydrobasins"
+            entry["basin_digest"] = digest
+        if orog_m is not None:
+            entry["era5_orog_m"] = orog_m
+        out[str(sid)] = entry
+    if basins is not None:
+        doc = {
+            "title": "Static attributes of the gauge basins (HydroBASINS)",
+            "region": "hydrobasins",
+            "source": f"{basins_source or basins_io.SOURCE}; elevation: {dem.SOURCE}; forcing: {era5.SOURCE}",
+            "license": f"{era5.LICENSE} (ERA5); {dem.LICENSE}; HydroSHEDS licence (HydroBASINS)",
+            "units": "area_km2: km2 (polygon, spherical equal-area); elev_*_m: m; hypso_m: 101 elevations "
+            "(m) at the 0..100 % cos(lat)-weighted area quantiles of the polygon; frac_above_2000m: "
+            "0..1; centroid: degrees (polygon centroid); box: polygon bounding box (S, N, W, E)",
+            "box_note": BASIN_NOTE,
+            "basin_note": basins_io.NOTE,
+            "elevation_note": f"cos(lat)-weighted over the GLO-30 raster decimated to {step:.5f} degrees, "
+            "cells inside the polygon",
+            "basins": out,
+        }
+    else:
+        doc = {
+            "title": "Static attributes of the upstream basins",
+            "source": f"{snow.BOX_NOTE}; elevation: {dem.SOURCE}; forcing: {era5.SOURCE}",
+            "license": f"{era5.LICENSE} (ERA5); {dem.LICENSE}",
+            "units": "area_km2: km2 (spherical rectangle); elev_*_m: m; hypso_m: 101 elevations (m) at the "
+            "0..100 % cos(lat)-weighted area quantiles of the box; frac_above_2000m: 0..1; "
+            "centroid: degrees (box centre)",
+            "box_note": snow.BOX_NOTE,
+            "elevation_note": f"cos(lat)-weighted over the GLO-30 raster decimated to {step:.5f} degrees",
+            "basins": out,
+        }
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(json.dumps(doc, indent=2, ensure_ascii=False, allow_nan=False), encoding="utf-8")
