@@ -27,7 +27,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from clima_nqn.io import era5, flow
+from clima_nqn.io import era5, flow, forcing
 
 VARIABLE = "snow_depth"
 UNITS = "m of water equivalent"
@@ -47,6 +47,12 @@ UPSTREAM_BOXES: dict[int, tuple[float, float, float, float]] = {
     12012: (-37.3, -36.6, -70.6, -70.1),  # Los Maitenes (Curi Leuvú)
 }
 BOX_NOTE = "cuenca aproximada por un rectángulo, sin verificar"
+BASIN_NOTE = (
+    "ERA5 at 0.25 degrees (via ARCO-ERA5), not ERA5-Land; cells are coarse for these basins. "
+    "Upstream basins are HydroBASINS level 12 polygons (Lehner & Grill 2013); column w = cos(lat) x "
+    "fraction of the cell inside the basin."
+)
+GEOMETRY_BASINS = "hydrobasins"
 
 Window = tuple[int, pd.Timestamp]
 Box = tuple[float, float, float, float]
@@ -128,8 +134,55 @@ def _check_boxes(
             )
 
 
-def _meta(df: pd.DataFrame, units: str, boxes: dict[int, Box]) -> dict[str, str]:
-    return {
+def stored_basins(path: Path | str) -> dict[int, str] | None:
+    """Basin digests recorded in the file (``{station_id: digest}``), or ``None`` if it has none."""
+    raw = (pq.read_schema(path).metadata or {}).get(b"basins")
+    if raw is None:
+        return None
+    try:
+        return {int(k): str(v) for k, v in json.loads(raw.decode()).items()}
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def _check_geometry(
+    path: Path,
+    pending: Iterable[Window],
+    boxes: dict[int, Box],
+    digests: dict[int, str],
+    stored_b: dict[int, Box] | None,
+    stored_d: dict[int, str] | None,
+) -> None:
+    """Refuse to append to a file whose geometry (box or basin digest) for a station differs or is unknown."""
+    in_file = {s for s, _ in stored_windows(path)}
+    for sid in sorted({s for s, _ in pending} & in_file):
+        if sid in digests:
+            if stored_d is None or sid not in stored_d:
+                raise ValueError(
+                    f"{path} has no stored basin for station {sid} (unknown or stored as a box): "
+                    "it cannot be checked against the requested one. Write to a new output file (--out)."
+                )
+            if stored_d[sid] != digests[sid]:
+                raise ValueError(
+                    f"station {sid}: the basin in {path} (digest {stored_d[sid]}) differs from the "
+                    f"requested one ({digests[sid]}). Write to a new output file (--out) instead of appending."
+                )
+        else:
+            if stored_b is None or sid not in stored_b:
+                raise ValueError(
+                    f"{path} has no stored box for station {sid} (unknown or stored as a basin): "
+                    "it cannot be checked against the requested one. Write to a new output file (--out)."
+                )
+            _check_boxes(path, [w for w in pending if w[0] == sid], boxes, stored_b)
+
+
+def _meta(
+    df: pd.DataFrame,
+    units: str,
+    boxes: dict[int, Box],
+    digests: dict[int, str] | None = None,
+) -> dict[str, str]:
+    meta = {
         "title": "ERA5 snow water equivalent around flood peaks",
         "source": era5.SOURCE,
         "license": era5.LICENSE,
@@ -141,12 +194,20 @@ def _meta(df: pd.DataFrame, units: str, boxes: dict[int, Box]) -> dict[str, str]
         "boxes": json.dumps({str(k): list(v) for k, v in sorted(boxes.items())}),
         "note": NOTE,
     }
+    if digests:
+        meta["basins"] = json.dumps({str(k): v for k, v in sorted(digests.items())})
+        meta["geometry"] = GEOMETRY_BASINS if not boxes else f"mixed ({GEOMETRY_BASINS} + boxes)"
+        meta["note"] = BASIN_NOTE if not boxes else f"{NOTE} {BASIN_NOTE}"
+        if not boxes:
+            del meta["boxes"]
+    return meta
 
 
 def fetch_snow(
     windows: Iterable[Window],
     out_path: Path | str = DEFAULT_OUT,
     boxes: dict[int, tuple[float, float, float, float]] = UPSTREAM_BOXES,
+    basins: dict[int, object] | None = None,
     opener: era5.Opener = era5.open_arco,
     retries: int = 3,
     retry_wait: float = 60,
@@ -159,19 +220,29 @@ def fetch_snow(
     A unique day is read once per batch whatever the number of stations that need it (one ARCO chunk
     is the global field). Each read retries on its own. After every batch the file is rewritten
     atomically, so a failure leaves the finished batches stored.
+
+    With ``basins`` (``{station_id: shapely geometry}``) the stations listed there are read over the
+    polygon instead of the box: the cells with a positive :func:`forcing.cell_weights` weight are kept
+    and the extra column ``w`` (float32) holds that weight. Stations not in ``basins`` use ``boxes``.
     """
     out_path = Path(out_path)
     wanted = sorted(
         {(int(s), pd.Timestamp(p).normalize()) for s, p in windows}, key=lambda w: (w[1], w[0])
     )
-    unknown = {s for s, _ in wanted} - set(boxes)
+    basins = basins or {}
+    unknown = {s for s, _ in wanted} - set(boxes) - set(basins)
     if unknown:
         raise KeyError(f"no upstream box for station(s) {sorted(unknown)}")
+    digests = {int(s): forcing.basin_digest(g) for s, g in basins.items()}
     done = stored_windows(out_path)
     pending = [w for w in wanted if w not in done]
     stored = stored_boxes(out_path) if out_path.exists() else None
+    stored_d = stored_basins(out_path) if out_path.exists() else None
     if pending and out_path.exists():
-        _check_boxes(out_path, pending, boxes, stored)
+        if basins or stored_d:
+            _check_geometry(out_path, pending, boxes, digests, stored, stored_d)
+        else:
+            _check_boxes(out_path, pending, boxes, stored)
     skipped = len(wanted) - len(pending)
     progress(f"{len(wanted)} windows: {skipped} stored, {len(pending)} to read")
     if not pending:
@@ -188,6 +259,18 @@ def fetch_snow(
     lon180 = ((np.asarray(raw["longitude"].values) + 180.0) % 360.0) - 180.0
     frames = [pd.read_parquet(out_path)] if out_path.exists() else []
     started = time.monotonic()
+    grids: dict[int, tuple] = {}  # station -> (index, lat, lon, w) of the cells with weight > 0
+    for sid in sorted({s for s, _ in pending} & set(basins)):
+        ilat, ilon, wgt = forcing.cell_weights(lat, lon180, basins[sid])
+        glat, glon = np.meshgrid(lat[ilat], lon180[ilon], indexing="ij")
+        keep = wgt > 0
+        grids[sid] = (
+            np.ix_(ilat, ilon),
+            keep,
+            glat[keep].astype("float32"),
+            glon[keep].astype("float32"),
+            wgt[keep].astype("float32"),
+        )
 
     for i in range(0, len(pending), batch):
         part = pending[i : i + batch]
@@ -207,24 +290,39 @@ def fetch_snow(
         rows = []
         for sid, peak in part:
             for day in window_days(peak):
-                glat, glon, vals = _crop(fields[day], lat, lon180, boxes[sid])
+                if sid in grids:
+                    ix, keep, glat, glon, wgt = grids[sid]
+                    cols = {
+                        "lat": glat,
+                        "lon": glon,
+                        "swe_m": fields[day][ix][keep].astype("float32"),
+                        "w": wgt,
+                    }
+                else:
+                    glat, glon, vals = _crop(fields[day], lat, lon180, boxes[sid])
+                    cols = {
+                        "lat": glat.astype("float32"),
+                        "lon": glon.astype("float32"),
+                        "swe_m": vals.astype("float32"),
+                    }
                 rows.append(
-                    pd.DataFrame(
-                        {
-                            "station_id": np.int32(sid),
-                            "peak": peak,
-                            "date": day,
-                            "lat": glat.astype("float32"),
-                            "lon": glon.astype("float32"),
-                            "swe_m": vals.astype("float32"),
-                        }
-                    )
+                    pd.DataFrame({"station_id": np.int32(sid), "peak": peak, "date": day, **cols})
                 )
         frames.append(pd.concat(rows, ignore_index=True))
         full = pd.concat(frames, ignore_index=True)
-        used = {**(stored or {}), **{s: boxes[s] for s, _ in wanted}}
+        used = {**(stored or {}), **{s: boxes[s] for s, _ in wanted if s not in basins}}
+        used_d = {**(stored_d or {}), **{s: digests[s] for s, _ in wanted if s in basins}}
         in_file = {int(s) for s in full["station_id"].unique()}
-        _write(full, out_path, _meta(full, units, {s: b for s, b in used.items() if s in in_file}))
+        _write(
+            full,
+            out_path,
+            _meta(
+                full,
+                units,
+                {s: b for s, b in used.items() if s in in_file and s not in used_d},
+                {s: d for s, d in used_d.items() if s in in_file},
+            ),
+        )
         frames = [full]
         progress(
             f"{min(i + batch, len(pending))}/{len(pending)} windows, {time.monotonic() - started:.0f}s"
@@ -245,4 +343,9 @@ def read_metadata(path: Path | str) -> dict:
     boxes = stored_boxes(path)
     if boxes is not None:
         meta["boxes"] = boxes
+    digests = stored_basins(path)
+    if digests is not None:
+        meta["basins"] = digests
+    if b"geometry" in raw:
+        meta["geometry"] = raw[b"geometry"].decode()
     return meta
