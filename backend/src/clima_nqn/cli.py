@@ -25,6 +25,7 @@ from clima_nqn.stages.flood import causes as flood_causes
 from clima_nqn.stages.flood import enso as flood_enso
 from clima_nqn.stages.flood import extremes as flood_extremes
 from clima_nqn.stages.flood import hindcast as flood_hindcast
+from clima_nqn.stages.flood import hydro_models as flood_hydro
 from clima_nqn.stages.flood import lstm as flood_lstm
 from clima_nqn.stages.flood import streamflow_eval
 
@@ -346,6 +347,70 @@ def flow_streamflow_eval(
     path = streamflow_eval.write_metrics(metrics, out_dir / run_name)
     typer.echo(streamflow_eval.metrics_table(metrics))
     typer.echo(f"metrics -> {path}")
+
+
+@flow_app.command("gr4j-bands")
+def flow_gr4j_bands(
+    layers: Annotated[
+        list[int] | None, typer.Option(help="CemaNeige layer count (repeatable); default 1 and 5.")
+    ] = None,
+    split: Annotated[
+        str, typer.Option(help="default: test 2014-2025; alt: test 1980-1991 (hydrological years).")
+    ] = "default",
+    grad_p: Annotated[
+        float, typer.Option(help="Precipitation gradient, 1/m (Valéry 2010).")
+    ] = flood_hydro.GRAD_P,
+    grad_t: Annotated[
+        float, typer.Option(help="Temperature lapse rate, degC/m (constant; sin verificar).")
+    ] = flood_hydro.GRAD_T,
+    z_inputs_source: Annotated[
+        str, typer.Option(help="Elevation the forcing represents: era5_orog or dem_mean.")
+    ] = "era5_orog",
+    seeds: Annotated[str, typer.Option(help="Calibration seeds, comma separated.")] = "0,1,2",
+    maxiter: Annotated[int, typer.Option(help="Differential evolution generations.")] = 50,
+    popsize: Annotated[int, typer.Option(help="Differential evolution population factor.")] = 8,
+    workers: Annotated[int, typer.Option(help="Parallel processes (station x layer count).")] = 1,
+    station: Annotated[
+        list[int] | None, typer.Option(help="Station ID (repeatable); default: all in the forcing.")
+    ] = None,
+    forcing_path: Annotated[
+        Path, typer.Option("--forcing", help="Forcing Parquet (clima-nqn flow forcing).")
+    ] = forcing.DEFAULT_OUT,
+    flow_dir: Annotated[Path, typer.Option(help="Parquet directory of F2.1.")] = flow.OUT_DIR,
+    name: Annotated[
+        str | None, typer.Option(help="Output name; default <split>-L<layers>.")
+    ] = None,
+    out: Annotated[
+        Path | None, typer.Option(help="Output JSON; default data/flow/gr4j-bands/<name>.json.")
+    ] = None,
+) -> None:
+    """GR4J+CemaNeige with elevation bands on the test years, no LSTM needed (F2.5)."""
+    counts = sorted(set(layers or [1, 5]))
+    if split not in flood_lstm.SPLITS:
+        raise typer.BadParameter(
+            f"split must be one of {sorted(flood_lstm.SPLITS)}", param_hint="--split"
+        )
+    if z_inputs_source not in streamflow_eval.Z_INPUT_SOURCES:
+        raise typer.BadParameter(
+            f"must be one of {sorted(streamflow_eval.Z_INPUT_SOURCES)}",
+            param_hint="--z-inputs-source",
+        )
+    try:
+        seed_list = tuple(int(s) for s in seeds.split(",") if s.strip())
+        basins, _ = flood_lstm.neuquen_basins(forcing_path, flow_dir, station)
+        static = json.loads(forcing_path.with_suffix(forcing.STATIC_SUFFIX).read_text())["basins"]
+        result = streamflow_eval.gr4j_bands(
+            basins, static, split, counts, seed_list, maxiter, popsize, grad_p, grad_t,
+            z_inputs_source, workers=workers, progress=typer.echo,
+        )  # fmt: skip
+    except (FileNotFoundError, ValueError, KeyError) as e:
+        raise typer.BadParameter(str(e)) from e
+    stem = name or f"{split}-L{'-'.join(str(n) for n in counts)}"
+    path = out or flow.OUT_DIR / "gr4j-bands" / f"{stem}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=True))
+    typer.echo(streamflow_eval.bands_table(result))
+    typer.echo(f"gr4j-bands -> {path}")
 
 
 @flow_app.command("lstm-hindcast")

@@ -340,16 +340,11 @@ def read_forcing(path: Path | str) -> pd.DataFrame:
 # --- static attributes ----------------------------------------------------------------------
 
 
-def dem_stats(dem_dir: Path | str, box: Box, step: float = DEM_STEP) -> dict[str, float]:
-    """Mean/min/max elevation (m) and fraction of area above 2000 m over the box, from GLO-30.
-
-    Cells are the DEM raster decimated to ``step`` degrees, weighted by cos(latitude). If a tile is
-    missing the values are NaN and a warning is issued (the statistics would be biased).
-    """
+def _dem_points(dem_dir: Path | str, box: Box, step: float, what: str) -> np.ndarray | None:
+    """GLO-30 cells ``(lon, lat, elev)`` inside the box decimated to ``step`` degrees, or ``None``
+    (with a warning) if a tile is missing or no cell falls inside the box."""
     import rasterio
 
-    nan = {"elev_mean_m": math.nan, "elev_min_m": math.nan, "elev_max_m": math.nan,
-           "frac_above_2000m": math.nan}  # fmt: skip
     south, north, west, east = box
     chunks = []
     for lat, lon in dem.tiles_for_bbox((west, south, east, north)):
@@ -357,13 +352,27 @@ def dem_stats(dem_dir: Path | str, box: Box, step: float = DEM_STEP) -> dict[str
         if not path.exists():
             if dem._absent_marker(path).exists():
                 continue
-            warnings.warn(f"missing DEM tile {path}: elevation statistics are NaN", stacklevel=2)
-            return nan
+            warnings.warn(f"missing DEM tile {path}: {what} are NaN", stacklevel=3)
+            return None
         with rasterio.open(path) as ds:
             chunks.append(dem.clip_bbox(dem.decimate_tile(ds, step), (west, south, east, north)))
     pts = np.concatenate(chunks) if chunks else np.empty((0, 3), dtype=np.float32)
     if len(pts) == 0:
-        warnings.warn(f"no DEM cells inside the box {list(box)}", stacklevel=2)
+        warnings.warn(f"no DEM cells inside the box {list(box)}", stacklevel=3)
+        return None
+    return pts
+
+
+def dem_stats(dem_dir: Path | str, box: Box, step: float = DEM_STEP) -> dict[str, float]:
+    """Mean/min/max elevation (m) and fraction of area above 2000 m over the box, from GLO-30.
+
+    Cells are the DEM raster decimated to ``step`` degrees, weighted by cos(latitude). If a tile is
+    missing the values are NaN and a warning is issued (the statistics would be biased).
+    """
+    nan = {"elev_mean_m": math.nan, "elev_min_m": math.nan, "elev_max_m": math.nan,
+           "frac_above_2000m": math.nan}  # fmt: skip
+    pts = _dem_points(dem_dir, box, step, "elevation statistics")
+    if pts is None:
         return nan
     w = np.cos(np.radians(pts[:, 1].astype(float)))
     elev = pts[:, 2].astype(float)
@@ -375,9 +384,38 @@ def dem_stats(dem_dir: Path | str, box: Box, step: float = DEM_STEP) -> dict[str
     }
 
 
+def weighted_quantiles(values: np.ndarray, weights: np.ndarray, probs: np.ndarray) -> np.ndarray:
+    """Weighted quantiles (Hazen-type): the sorted value ``i`` sits at ``(cum_w_i - w_i / 2) / sum(w)``
+    and quantiles are linearly interpolated, clamped to the minimum and the maximum."""
+    v = np.asarray(values, dtype=float)
+    w = np.asarray(weights, dtype=float)
+    order = np.argsort(v, kind="stable")
+    v, w = v[order], w[order]
+    pos = (np.cumsum(w) - 0.5 * w) / w.sum()
+    return np.interp(np.asarray(probs, dtype=float), pos, v)
+
+
+def dem_hypsometry(dem_dir: Path | str, box: Box, step: float = DEM_STEP) -> np.ndarray:
+    """Hypsometric curve of the box: 101 elevations (m) at the 0, 1, ..., 100 % area quantiles.
+
+    Same GLO-30 cells and cos(latitude) weights as :func:`dem_stats`. The box is an approximate
+    rectangle, not the basin (sin verificar). NaN array and a warning if a tile is missing.
+    """
+    pts = _dem_points(dem_dir, box, step, "the hypsometric curve")
+    if pts is None:
+        return np.full(101, np.nan)
+    w = np.cos(np.radians(pts[:, 1].astype(float)))
+    return weighted_quantiles(pts[:, 2].astype(float), w, np.linspace(0.0, 1.0, 101))
+
+
 def static_path(out_path: Path | str) -> Path:
     out_path = Path(out_path)
     return out_path.with_name(out_path.stem + STATIC_SUFFIX)
+
+
+def _hypso_json(dem_dir, box: Box, step: float) -> list[float] | None:
+    h = dem_hypsometry(dem_dir, box, step)
+    return None if np.isnan(h).any() else [float(v) for v in h]
 
 
 def build_static(
@@ -394,21 +432,28 @@ def build_static(
     basins = dict(old.get("basins", {}))
     for sid in chosen:
         prev = basins.get(str(sid))
-        if prev and prev["box"] == list(boxes[sid]) and prev.get("elev_mean_m") is not None:
-            continue
         box = boxes[sid]
+        same = bool(prev) and prev["box"] == list(box) and prev.get("elev_mean_m") is not None
+        if same and prev.get("hypso_m") is not None:
+            continue
+        if same:  # keep every field (also unknown ones, e.g. era5_orog_m) and add the curve
+            basins[str(sid)] = {**prev, "hypso_m": _hypso_json(dem_dir, box, step)}
+            continue
         basins[str(sid)] = {
+            **(prev if prev and prev.get("box") == list(box) else {}),
             "box": list(box),
             "area_km2": box_area_km2(box),
             "centroid_lat": (box[0] + box[1]) / 2,
             "centroid_lon": (box[2] + box[3]) / 2,
             **{k: (None if math.isnan(v) else v) for k, v in dem_stats(dem_dir, box, step).items()},
+            "hypso_m": _hypso_json(dem_dir, box, step),
         }
     doc = {
         "title": "Static attributes of the upstream basins",
         "source": f"{snow.BOX_NOTE}; elevation: {dem.SOURCE}; forcing: {era5.SOURCE}",
         "license": f"{era5.LICENSE} (ERA5); {dem.LICENSE}",
-        "units": "area_km2: km2 (spherical rectangle); elev_*_m: m; frac_above_2000m: 0..1; "
+        "units": "area_km2: km2 (spherical rectangle); elev_*_m: m; hypso_m: 101 elevations (m) at the "
+        "0..100 % cos(lat)-weighted area quantiles of the box; frac_above_2000m: 0..1; "
         "centroid: degrees (box centre)",
         "box_note": snow.BOX_NOTE,
         "elevation_note": f"cos(lat)-weighted over the GLO-30 raster decimated to {step:.5f} degrees",
