@@ -21,6 +21,9 @@ DATA_CACHE = "public, max-age=86400"
 ENV_VARS = ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET")
 
 _CONTENT_TYPES = {".json": "application/json", ".geojson": "application/geo+json"}
+# Python's built-in table only: the global ``mimetypes`` also reads the host's /etc/mime.types, so the
+# same file got a different Content-Type on machines whose system table knows it (e.g. .parquet).
+_MIME = mimetypes.MimeTypes(filenames=())
 
 
 @dataclass(frozen=True)
@@ -44,7 +47,7 @@ def content_type(name: str) -> str:
     suffix = Path(name).suffix.lower()
     if suffix in _CONTENT_TYPES:
         return _CONTENT_TYPES[suffix]
-    guessed, _ = mimetypes.guess_type(name)
+    guessed, _ = _MIME.guess_type(name)
     return guessed or "application/octet-stream"
 
 
