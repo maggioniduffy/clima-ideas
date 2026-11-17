@@ -7,9 +7,6 @@ name: Flow forcing from ERA5 artifacts
 
 on:
   workflow_dispatch:
-  push:
-    branches: [fm/f25-cemaneige-bands]
-    paths: [.github/workflows/flow-forcing.yml]
 
 permissions:
   contents: write
