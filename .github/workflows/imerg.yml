@@ -9,7 +9,7 @@
 #    (90 days). A month takes longer on NASA's side than one run: the fetch stops itself after 40 min but leaves its
 #    Harmony job running (labelled clima-nqn-imerg-<YYYY-MM>); the next run reuses it instead of resubmitting.
 #  - continue: if months remain, dispatches the next run (chain=false disables it) with stalls=0 after a run that
-#    finished a month, or stalls+1 after one that did not; after 2 stalled runs in a row it stops and fails.
+#    finished a month, or stalls+1 after one that did not; after 6 runs in a row without one (~5 h) it stops and fails.
 #  - combine: when nothing is missing, joins every month artifact into neuquen.zarr (artifact imerg-neuquen);
 #    months that are absent are listed in its `missing_months` attribute.
 # Legacy per-year artifacts imerg-neuquen-<year> (newest non-expired one per year) count as done months too.
@@ -238,8 +238,8 @@ jobs:
             next=0
           else
             next=$((STALLS + 1))
-            # Harmony jobs keep running on NASA's side between runs, so one idle run is expected; two in a row is a stall
-            if [ "$STALLS" -ge 2 ]; then
+            # Harmony jobs keep running between runs and a month can take ~3 h, so allow 6 idle runs (~5 h) in a row
+            if [ "$STALLS" -ge 6 ]; then
               echo "no month finished in $((STALLS + 1)) consecutive runs, not chaining"
               exit 1
             fi

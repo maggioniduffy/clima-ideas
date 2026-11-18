@@ -77,3 +77,7 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
 - L12 (2026-11-18) Run 44212694407 (commit 5a2016d): plan cancelled 0 jobs; fetch logged `reusing harmony job`
   (2004-11 resumed at 87 %, reached 98 % at the deadline). Months done so far: 2004-05..10 and 2005-05. Throughput
   is about 1-3 months per ~50-min run with 6 jobs; the last ~10 % of a job is slow (sin verificar por qué).
+- L13 (2026-11-18) Chain stopped after run 44235849670: runs 15 (2004-11, 2004-12), then 16-18 finished no month, so
+  the stall rule (3 idle runs) ended it. Jobs were still advancing (2005-06 69→92 %, 2005-11 43→67 % in 40 min); a
+  month now takes ~3 h on Harmony. Stall limit raised to 6 idle runs (~5 h); relaunched with stalls=0.
+  Done: 2004-05..12, 2005-05.
