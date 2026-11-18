@@ -69,3 +69,8 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
   the month (`find_job`) and on deadline raises without cancelling; `cancel-running --keep-months` spares the batch's
   jobs and cancels older duplicates; `continue` chains after a run with no month finished, up to 2 in a row (`stalls`
   input). Harmony is not reachable from the Claude container, so the real check is a dispatch with `max_months=6`.
+- L11 (2026-11-18) Runs 44191824663 / 44199224540: the second run cancelled the first run's jobs anyway. harmony-py
+  adds label `harmony-py` to every job it submits, and the `cancel-running --label harmony-py` call had no
+  `--keep-months`. Even resubmitted from zero, 3 of 6 months (2004-08/09/10) finished inside 40 min (1488 granules
+  each) and the other 3 reached ~92 %. Fix: pass `--keep-months "$BATCH"` to the harmony-py cancel too. Run 13 had
+  already planned on the old commit.

@@ -165,7 +165,8 @@ jobs:
           done
           # jobs of the months about to be fetched survive (the fetch reuses them); older duplicates and other months go
           uv run clima-nqn imerg cancel-running --keep-months "$BATCH" || true
-          uv run clima-nqn imerg cancel-running --label harmony-py || true
+          # harmony-py labels every job it submits, ours included: keep the batch months here too
+          uv run clima-nqn imerg cancel-running --label harmony-py --keep-months "$BATCH" || true
 
   fetch:
     needs: plan
