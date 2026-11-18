@@ -74,3 +74,6 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
   `--keep-months`. Even resubmitted from zero, 3 of 6 months (2004-08/09/10) finished inside 40 min (1488 granules
   each) and the other 3 reached ~92 %. Fix: pass `--keep-months "$BATCH"` to the harmony-py cancel too. Run 13 had
   already planned on the old commit.
+- L12 (2026-11-18) Run 44212694407 (commit 5a2016d): plan cancelled 0 jobs; fetch logged `reusing harmony job`
+  (2004-11 resumed at 87 %, reached 98 % at the deadline). Months done so far: 2004-05..10 and 2005-05. Throughput
+  is about 1-3 months per ~50-min run with 6 jobs; the last ~10 % of a job is slow (sin verificar por qué).
