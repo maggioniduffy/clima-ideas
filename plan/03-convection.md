@@ -55,3 +55,7 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   Harmony: la variable está en el grupo `Grid` y el tiempo viene con calendario "julian" (se conservan las etiquetas).
   Benchmark de 32 hilos descartado por el usuario. Corrida completa en GitHub Actions (`.github/workflows/imerg.yml`,
   un job por año).
+- 2026-11-19 F3.1 hecha. Corrida encadenada en Actions (`odd/tasks/imerg-ingest.md`, L9–L15): artifact `imerg-neuquen`
+  (run 44455941236, retención 90 días, no está en el repo), IMERG V07 Final semihorario 2000-06-01 a 2025-09-30,
+  444 144 pasos × 25 lat × 31 lon, `missing_months` vacío. 2025-10 en adelante todavía no existe como Final en Harmony
+  ("No matching granules"); la latencia real de Final es mayor que los 4 meses asumidos (sin verificar cuánto).

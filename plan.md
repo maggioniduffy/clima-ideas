@@ -11,7 +11,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 | 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | hecha, salvo F0.11 (publicar en línea) |
 | 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | hecha (F1.7 solo 2023; 3 estudios de F1.5 sin verificar; F1.9: ENSO sin diferencia sostenida en extremos); rediseño del visor V5–V8 hecho, capa real sin regenerar |
 | 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | tareas hechas (F2.5: el LSTM empata o gana a GR4J y gana a la persistencia desde 2 días; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa); cierra al publicar la capa |
-| 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | en curso (F3.0: ISD sin lluvia horaria utilizable; IDF solo con IMERG) |
+| 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | en curso (F3.0: ISD sin lluvia horaria utilizable; IDF solo con IMERG; F3.1 hecha: IMERG 2000-06 a 2025-09) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | pendiente |
 | 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | pendiente |
 | 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | pendiente |
@@ -63,7 +63,7 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 ## Próximo
 
 1. F0.11: capas subidas a R2 y probadas con la web local; falta la web en línea con `VITE_DATA_URL` (`odd/tasks/publish.md`).
-2. F3.1: ingesta IMERG recortada a la Confluencia (F3.0 hecha: `reports/03/F3.0.md`).
+2. F3.3: curvas IDF con IMERG (F3.1 hecha: artifact `imerg-neuquen`, 2000-06 a 2025-09).
 3. Fase 5, mitad ríos atmosféricos (F2.5 hecha: `reports/02/F2.5.md`).
 
 ## Advisor (hasta 2026-11-17)

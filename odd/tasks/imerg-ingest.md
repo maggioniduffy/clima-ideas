@@ -84,3 +84,9 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
 - L14 (2026-11-18) User: "Metele mas paralelismo y que siga". Relaunched with jobs=12, max_months=12. Runs 20, 22,
   23 each finished all 12 months in ~20 min (plan ~7 min + fetch ~10 min): 36 months in 1 h, vs ~1-3 per 50-min run
   before. Whether the gain is the parallelism or a lighter Harmony queue at this hour is sin verificar.
+- L15 (2026-11-19) Chain finished at run 44455941236 (runs 24-37 at 12 parallel, ~30-40 min each). combine uploaded
+  artifact `imerg-neuquen` (37 MB zip, 90 days): 2000-06-01..2025-09-30, time 444144 × lat 25 × lon 31, float32,
+  `missing_months` empty. The 10 months 2025-10..2026-07 failed in seconds with Harmony "No matching granules": not yet
+  published as Final, so the default last_month (today minus 4) is too recent (real Final latency sin verificar).
+  F3.1 closed. Open: the plan's harmony-py cancel takes ~10 min per run (pages the whole job history); the Zarr lives
+  only as an Actions artifact (expires 2027-02-16).
