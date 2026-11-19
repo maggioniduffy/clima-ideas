@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import threading
 import time
 from calendar import monthrange
 from collections.abc import Iterable
@@ -35,8 +36,16 @@ SOURCE = "GPM IMERG Final Run V07 half-hourly (GPM_3IMERGHH), NASA GES DISC via 
 LICENSE = "CC BY 4.0"
 DOI = "https://doi.org/10.5067/GPM/IMERG/3B-HH/07"
 PRODUCT = "GPM IMERG Final Run V07 half-hourly (GPM_3IMERGHH)"
-DEFAULT_WORKERS = 32
+DEFAULT_WORKERS = 32  # download threads per Harmony job
+DEFAULT_PARALLEL_MONTHS = 4  # Harmony jobs in flight at once
 COMBINED_CHUNKS = (17520, 5, 5)
+# The HDF5 library in the netCDF4 wheels is not thread-safe. With --parallel, several months merge granules at
+# once, and concurrent reads crashed the process (SIGBUS, exit 135). Downloads stay parallel; only reads take turns.
+_HDF5_LOCK = threading.Lock()
+_TIME_CODER = xr.coders.CFDatetimeCoder(use_cftime=True)
+HARMONY_LABEL = "clima-nqn-imerg"
+ACTIVE_STATES = frozenset({"accepted", "running", "running_with_errors", "paused", "previewing"})
+_monotonic = time.monotonic  # bound here so tests can stub the module's `time` for sleep only
 
 
 def month_list(first: tuple[int, int], last: tuple[int, int]) -> list[tuple[int, int]]:
@@ -65,7 +74,10 @@ def merge_granules(paths: Iterable[Path]) -> xr.Dataset:
     pieces = []
     for path in paths:
         # Harmony keeps the HDF5 layout: the variable sits in group "Grid"
-        with xr.open_dataset(path, engine="netcdf4", group="Grid", use_cftime=True) as raw:
+        with (
+            _HDF5_LOCK,
+            xr.open_dataset(path, engine="netcdf4", group="Grid", decode_times=_TIME_CODER) as raw,
+        ):
             var = raw["precipitation"].astype("float32").transpose("time", "lat", "lon").load()
         # IMERG labels time with a "julian" calendar; keep the date labels as naive UTC datetimes
         stamps = pd.DatetimeIndex([pd.Timestamp(t.isoformat()) for t in var.time.values])
@@ -112,7 +124,12 @@ def _client(workers: int):
     return harmony.Client(auth=(username, password))
 
 
-def build_request(start, stop):
+def month_label(year: int, month: int) -> str:
+    """Per-month Harmony job label, so a later run can find and reuse the job."""
+    return f"{HARMONY_LABEL}-{year:04d}-{month:02d}"
+
+
+def build_request(start, stop, month_tag: str | None = None):
     """Harmony request for the box, one variable, no preview pause (UTC naive datetimes)."""
     import harmony
 
@@ -123,7 +140,86 @@ def build_request(start, stop):
         temporal={"start": start.replace(**utc), "stop": stop.replace(**utc)},
         variables=[VARIABLE],
         skip_preview=True,
+        labels=[HARMONY_LABEL] if month_tag is None else [HARMONY_LABEL, month_tag],
     )
+
+
+def _cancel_quietly(client, job) -> None:
+    try:
+        client.cancel(job)
+    except Exception as exc:  # noqa: BLE001 - best effort, never mask the original error
+        print(f"could not cancel harmony job {job}: {exc}", flush=True)
+
+
+def _list_jobs(client, label: str):
+    """Yield this account's Harmony job summaries carrying ``label`` (all pages)."""
+    import harmony
+
+    limit, page = 100, 1
+    while True:
+        data = client.submit(harmony.JobsRequest(page=page, limit=limit, labels=[label]))
+        jobs = data.get("jobs", []) if isinstance(data, dict) else []
+        yield from jobs
+        if len(jobs) < limit:
+            return
+        page += 1
+
+
+def find_job(client, label: str) -> str | None:
+    """Newest job with ``label`` that is active or successful (results stay downloadable), else None."""
+    try:
+        import harmony
+
+        data = client.submit(harmony.JobsRequest(labels=[label], limit=100))
+        jobs = data.get("jobs", []) if isinstance(data, dict) else []
+        usable = [
+            j
+            for j in jobs
+            if j.get("jobID")
+            and (j.get("status") in ACTIVE_STATES or j.get("status") == "successful")
+        ]
+        if not usable:
+            return None
+        return max(usable, key=lambda j: j.get("createdAt") or "")["jobID"]
+    except Exception as exc:  # noqa: BLE001 - fall back to submitting a new job
+        print(f"could not look up harmony jobs for {label}: {exc}", flush=True)
+        return None
+
+
+def cancel_running(client, label: str = HARMONY_LABEL, keep: Iterable[str] = ()) -> list[str]:
+    """Cancel this account's active Harmony jobs carrying ``label``; return the cancelled job ids.
+
+    Jobs carrying any label in ``keep`` (month labels) survive, except older duplicates: only the newest
+    active job per month label is kept, so the queue never holds two jobs for one month.
+    """
+    keep = set(keep)
+    prefix = f"{HARMONY_LABEL}-"
+    active = [
+        item
+        for item in _list_jobs(client, label)
+        if item.get("status") in ACTIVE_STATES and item.get("jobID")
+    ]
+    newest: dict[str, tuple[str, str]] = {}
+    for item in active:
+        created = item.get("createdAt") or ""
+        for lbl in item.get("labels") or []:
+            if lbl.startswith(prefix) and (lbl not in newest or created > newest[lbl][0]):
+                newest[lbl] = (created, item["jobID"])
+    cancelled = []
+    for item in active:
+        job_id = item["jobID"]
+        labels = set(item.get("labels") or [])
+        month_labels = {lbl for lbl in labels if lbl.startswith(prefix)}
+        duplicate = any(newest[lbl][1] != job_id for lbl in month_labels)
+        if labels & keep and not duplicate:
+            continue
+        try:
+            client.cancel(job_id)
+        except Exception as exc:  # noqa: BLE001 - log and skip
+            print(f"could not cancel harmony job {job_id}: {exc}", flush=True)
+            continue
+        cancelled.append(job_id)
+    return cancelled
 
 
 def fetch_month(
@@ -132,10 +228,18 @@ def fetch_month(
     out_dir: Path = DEFAULT_OUT,
     client=None,
     workers: int = DEFAULT_WORKERS,
+    deadline: float | None = None,
+    log_every: float = 60,
 ) -> Path | None:
-    """Fetch and atomically store one complete month; return None if unavailable as Final."""
+    """Fetch and atomically store one complete month; return None if unavailable as Final.
+
+    ``deadline`` is a ``time.monotonic()`` value; a job still polling then is left running on NASA's side for the
+    next run to reuse (see ``find_job``) and TimeoutError is raised. Any other error or interrupt before the
+    downloads complete cancels the job.
+    """
     out_dir = Path(out_dir)
-    target = out_dir / f"{year:04d}-{month:02d}.zarr"
+    tag = f"{year:04d}-{month:02d}"
+    target = out_dir / f"{tag}.zarr"
     if is_complete(target, year, month):
         print(f"skip {target} (complete)", flush=True)
         return target
@@ -145,30 +249,59 @@ def fetch_month(
         shutil.rmtree(tmp)
     if client is None:
         client = _client(workers)
-    raw_dir = out_dir / f"{year:04d}-{month:02d}-raw"
+    raw_dir = out_dir / f"{tag}-raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     start, stop = expected_times(year, month)[[0, -1]]
-    request = build_request(
-        start.to_pydatetime(), (stop + pd.Timedelta(minutes=29, seconds=59)).to_pydatetime()
-    )
-    job = client.submit(request)
-    while True:
-        status = client.status(job)
-        state = status["status"] if isinstance(status, dict) else status
-        if state == "paused":
-            client.resume(job)
-        elif state == "successful":
-            break
-        elif state in {"failed", "canceled", "complete_with_errors"}:
-            message = status.get("message", "") if isinstance(status, dict) else ""
-            raise RuntimeError(f"Harmony job {job} {state}: {message}")
-        else:
-            time.sleep(10)
-    futures = list(client.download_all(job, directory=raw_dir))
-    paths = [future.result() for future in futures]
+    label = month_label(year, month)
+    job = find_job(client, label)
+    if job:
+        print(f"{tag}: reusing harmony job {job}", flush=True)
+    else:
+        request = build_request(
+            start.to_pydatetime(),
+            (stop + pd.Timedelta(minutes=29, seconds=59)).to_pydatetime(),
+            label,
+        )
+        job = client.submit(request)
+        print(f"{tag}: harmony job {job} submitted", flush=True)
+    successful = False
+    timed_out = False
+    try:
+        last_log = None
+        while True:
+            status = client.status(job)
+            state = status["status"] if isinstance(status, dict) else status
+            now = _monotonic()
+            if last_log is None or now - last_log >= log_every:
+                progress = status.get("progress") if isinstance(status, dict) else None
+                suffix = f" {progress}%" if progress is not None else ""
+                print(f"{tag}: harmony job {job} {state}{suffix}", flush=True)
+                last_log = now
+            if state == "paused":
+                client.resume(job)
+            elif state == "successful":
+                successful = True
+                break
+            elif state in {"failed", "canceled", "complete_with_errors"}:
+                message = status.get("message", "") if isinstance(status, dict) else ""
+                successful = True  # terminal: nothing left to cancel
+                raise RuntimeError(f"Harmony job {job} {state}: {message}")
+            elif deadline is not None and now >= deadline:
+                timed_out = True  # leave the job running for the next run
+                raise TimeoutError(f"{tag}: harmony job {job} still running, left for the next run")
+            else:
+                time.sleep(10)
+        print(f"{tag}: downloads starting", flush=True)
+        futures = list(client.download_all(job, directory=raw_dir))
+        paths = [future.result() for future in futures]
+        print(f"{tag}: downloaded {len(paths)} granules", flush=True)
+    except BaseException:
+        if not successful and not timed_out:
+            _cancel_quietly(client, job)
+        raise
     if not paths:
         shutil.rmtree(raw_dir, ignore_errors=True)
-        print(f"{year}-{month:02d}: not available", flush=True)
+        print(f"{tag}: not available", flush=True)
         return None
     ds = merge_granules(paths)
     check_complete(ds, year, month)

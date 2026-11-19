@@ -1,5 +1,7 @@
 import json
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated
 
@@ -682,8 +684,17 @@ def imerg_fetch(
     workers: Annotated[
         int, typer.Option(help="Harmony download worker count.")
     ] = imerg.DEFAULT_WORKERS,
+    parallel: Annotated[
+        int, typer.Option(help="Months processed at once (one Harmony job each).", min=1)
+    ] = imerg.DEFAULT_PARALLEL_MONTHS,
+    deadline_min: Annotated[
+        float | None,
+        typer.Option(
+            help="Stop after this many minutes: leave running jobs for the next run, skip unstarted months."
+        ),
+    ] = None,
 ) -> None:
-    """Fetch monthly half-hourly IMERG Final data."""
+    """Fetch monthly half-hourly IMERG Final data (complete months skipped, others rebuilt)."""
     if (year is None) == (years is None):
         raise typer.BadParameter("give exactly one of --year or --years")
     try:
@@ -693,16 +704,51 @@ def imerg_fetch(
         raise typer.BadParameter(str(exc)) from exc
     start = max(imerg.FIRST_MONTH, (min(selected_years), min(selected_months)))
     requested = [(y, m) for y in selected_years for m in selected_months if (y, m) >= start]
-    failed = []
-    for y, m in requested:
+
+    deadline = None if deadline_min is None else time.monotonic() + 60 * deadline_min
+
+    def one(month: tuple[int, int]) -> str | None:
+        y, m = month
+        if deadline is not None and time.monotonic() >= deadline:
+            typer.echo(f"{y}-{m:02d} failed: deadline passed before start, not submitted", err=True)
+            return f"{y}-{m:02d}"
         try:
-            imerg.fetch_month(y, m, out, workers=workers)
+            if deadline is None:
+                imerg.fetch_month(y, m, out, workers=workers)
+            else:
+                imerg.fetch_month(y, m, out, workers=workers, deadline=deadline)
         except Exception as exc:  # noqa: BLE001 - continue and summarize failures
             typer.echo(f"{y}-{m:02d} failed: {exc}", err=True)
-            failed.append(f"{y}-{m:02d}")
+            return f"{y}-{m:02d}"
+        return None
+
+    with ThreadPoolExecutor(max_workers=parallel) as pool:
+        failed = [f for f in pool.map(one, requested) if f]
     if failed:
         typer.echo(f"months failed: {failed}", err=True)
         raise typer.Exit(1)
+
+
+@imerg_app.command("cancel-running")
+def imerg_cancel_running(
+    label: Annotated[str, typer.Option(help="Harmony job label to cancel.")] = imerg.HARMONY_LABEL,
+    keep_months: Annotated[
+        str,
+        typer.Option(help="Comma-separated YYYY-MM months whose jobs are kept (newest per month)."),
+    ] = "",
+) -> None:
+    """Cancel this account's active Harmony jobs with the given label."""
+    keep = []
+    for tag in (t.strip() for t in keep_months.split(",")):
+        if not tag:
+            continue
+        try:
+            y, m = (int(part) for part in tag.split("-"))
+        except ValueError as exc:
+            raise typer.BadParameter(f"invalid month {tag!r}, expected YYYY-MM") from exc
+        keep.append(imerg.month_label(y, m))
+    cancelled = imerg.cancel_running(imerg._client(imerg.DEFAULT_WORKERS), label, keep=keep)
+    typer.echo(f"cancelled {len(cancelled)} job(s) with label {label!r}: {cancelled}")
 
 
 @imerg_app.command("combine")
