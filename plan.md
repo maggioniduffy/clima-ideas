@@ -63,7 +63,7 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 ## Próximo
 
 1. F0.11: capas subidas a R2 y probadas con la web local; falta la web en línea con `VITE_DATA_URL` (`odd/tasks/publish.md`).
-2. F3.1: ingesta IMERG recortada a la Confluencia (F3.0 hecha: `reports/03/F3.0.md`).
+2. F3.3: curvas IDF con IMERG (F3.1 hecha: artifact `imerg-neuquen`, 2000-06 a 2025-09).
 3. Fase 5, mitad ríos atmosféricos (F2.5 hecha: `reports/02/F2.5.md`).
 
 ## Advisor (hasta 2026-11-17)
