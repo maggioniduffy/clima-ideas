@@ -789,6 +789,40 @@ def imerg_combine(
     )
 
 
+convection_app = typer.Typer(help="Convection and IDF in the Confluencia (phase 3).")
+app.add_typer(convection_app, name="convection")
+
+
+@convection_app.command("idf")
+def convection_idf(
+    zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(
+        "data/raw/imerg/neuquen.zarr"
+    ),
+    out: Annotated[Path, typer.Option(help="IDF Parquet.")] = Path(
+        "data/processed/idf/imerg_neuquen_idf.parquet"
+    ),
+) -> None:
+    """IMERG-only IDF curves for Neuquén Aero, without bias correction (F3.3)."""
+    from clima_nqn.stages.convection import idf
+
+    res = idf.run(zarr, out)
+    typer.echo(res["main"].query("method == 'gev_lmom'").round(2).to_string(index=False))
+    typer.echo(f"wrote {out}")
+
+
+@convection_app.command("bias")
+def convection_bias(
+    zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(
+        "data/raw/imerg/neuquen.zarr"
+    ),
+    isd_dir: Annotated[Path, typer.Option(help="NOAA ISD cache directory.")] = Path("data/raw/isd"),
+) -> None:
+    """IMERG vs Neuquén Aero (NOAA ISD) bias tables for reports/03/F3.4.md."""
+    from clima_nqn.stages.convection import bias
+
+    typer.echo(bias.run(zarr, isd_dir))
+
+
 ar_app = typer.Typer(help="Atmospheric rivers in the Neuquén cordillera (phase 1).")
 app.add_typer(ar_app, name="ar")
 

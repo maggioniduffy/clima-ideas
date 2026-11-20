@@ -19,8 +19,8 @@ IMERG 30 min (2000–hoy), SMN Neuquén Aero, estaciones AIC (Plottier). Acceso 
 | F3.0 | Comprobar lluvia horaria de Neuquén Aero en NOAA ISD 877150 (S3 anónimo): período, huecos y licencia. SMN horario sigue sin verificar y AIC es restringido | opencode | Informe en `reports/03/F3.0.md` con sí o no y por qué |
 | F3.1 | Ingesta IMERG recortado a la Confluencia y meseta | Sonnet escribe, opencode corre | Zarr 2000–hoy |
 | F3.2 | Ingesta de estaciones con control de calidad | Sonnet | Parquet + unit de QC |
-| F3.3 | Curvas IDF (duraciones 30 min–24 h) estación vs. IMERG | Sonnet | Unit con serie sintética de cuantiles conocidos |
-| F3.4 | Sesgo de IMERG en eventos conocidos; corrección por cuantiles | opencode analiza, Sonnet implementa | Informe de sesgo + función QM testeada |
+| F3.3 ✅ | Curvas IDF (duraciones 30 min–24 h) estación vs. IMERG | Sonnet | Unit con serie sintética de cuantiles conocidos |
+| F3.4 ✅ | Sesgo de IMERG en eventos conocidos; corrección por cuantiles | opencode analiza, Sonnet implementa | Informe de sesgo + función QM testeada |
 | F3.5 | Capa: curva IDF lado a lado + replay del temporal de abril de 2014 | Sonnet | e2e: replay y comparación |
 | F3.6 | Frecuencia de días convectivos extremos por fase ENSO (F0.10), primavera y verano | opencode analiza | Tabla con n de años, test de permutación y "sin verificar" donde no alcance; conteos en el formato de F1.9 ("5 de 7 primaveras Niño"), nunca "de cada 10" |
 
@@ -67,3 +67,9 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   corrección de sesgo, celda de Neuquén Aero, 25 años hidrológicos 2000/01–2024/25, GEV por L-momentos con Gumbel y
   empírico al lado. T 10: 17,9 mm/h a 1 h (IC 90 % 15,0–19,8) y 78,7 mm a 24 h (59–97); Gumbel dentro del IC de la GEV
   en todos los casos. Abril de 2014 en IMERG: 108 mm en 24 h, T ≈ 25 años (14–100). Falta aplicar la corrección de F3.4.
+- 2026-11-20 F3.4 hecha (`reports/03/F3.4.md`, `io/isd.py`, `stages/convection/bias.py`): IMERG/estación a 24 h 0,92
+  (IC90 0,82–1,02; n = 350 pares húmedos, 2000–2025) y 0,88 a 6 h (0,81–0,97); en 16 extremos ≥ 20 mm comprobables
+  0,67 (0,12–1,53 por evento); abril de 2014 12Z–12Z: 97,6 contra 118 mm. Muchos p24 grandes de ISD son imposibles
+  (> 150 mm repetidos) y se filtran. Corrección por cuantiles probada con validación dejando un año afuera: no mejora a un
+  factor único y no sirve en extremos. Decisión (Opus; advisor vencido el 2026-11-17): la IDF de F3.3 queda sin
+  corregir y muestra los factores 0,92 y 0,67 como sensibilidad. Comandos: `clima-nqn convection idf|bias`.
