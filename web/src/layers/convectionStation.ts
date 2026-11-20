@@ -6,6 +6,7 @@ import type { Theme } from "../theme/themeStore";
 import { tokens } from "../theme/tokens";
 import type { ReplayData } from "./convectionIdf";
 import type { MapMarker } from "../app/MapCanvas";
+import { NEUQUEN_CITY } from "./referenceLayers";
 
 type LonLat = [number, number];
 
@@ -51,6 +52,13 @@ export function buildCellLayers(replay: ReplayData, step: number, theme: Theme):
   return [path("convection-cell-halo", hex(t.bg, 220), 5), path("convection-cell", hex(t.text, 255), 2)];
 }
 
+/**
+ * The basemap city label (`ref-labels` in referenceLayers) is drawn to the RIGHT of the city dot (text anchor
+ * "start", pixel offset +6 px) and above it. A marker at or west of the city can therefore keep clear of that label by
+ * sitting to its own left; the other markers keep the plain above/below placement.
+ */
+export const labelsLeftOfCity = (lon: number): boolean => lon <= NEUQUEN_CITY.lon;
+
 const coord = (v: number) => v.toFixed(3).replace(".", ",");
 
 /** Map markers (HTML, so they are labelled and hoverable): the station and the IMERG cell, with their source in the tooltip. */
@@ -64,7 +72,7 @@ export function convectionMarkers(replay: ReplayData, step: number): MapMarker[]
       lat: st.lat,
       label: es.convection.markerStation(st.name),
       tooltip: es.convection.markerStationTip(st.name, st.source, coord(st.lat), coord(st.lon)),
-      placement: "up",
+      placement: labelsLeftOfCity(st.lon) ? "left-up" : "up",
     },
     {
       id: "convection-cell",
@@ -78,7 +86,7 @@ export function convectionMarkers(replay: ReplayData, step: number): MapMarker[]
         coord(replay.cell.lat),
         coord(replay.cell.lon),
       ),
-      placement: "down",
+      placement: labelsLeftOfCity(replay.cell.lon) ? "left-down" : "down",
     },
   ];
 }

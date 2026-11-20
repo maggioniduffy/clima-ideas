@@ -20,8 +20,12 @@ export interface MapMarker {
   label: string;
   /** Hover text (native tooltip, also the accessible description). */
   tooltip: string;
-  /** Where the label sits relative to the point. */
-  placement: "up" | "down";
+  /**
+   * Where the label sits relative to the point. `left-up` / `left-down` put it to the left of the dot, above /
+   * below the point's row, joined by a short leader line (so two labels on nearly the same point stack, and
+   * neither covers what lies to the right of the point, such as a city label).
+   */
+  placement: "up" | "down" | "left-up" | "left-down";
 }
 
 const MAP_VIEW = new MapView({ repeat: false });

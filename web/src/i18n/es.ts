@@ -50,7 +50,8 @@ export const es = {
     returnLabel: "Período de retorno con banda de incertidumbre",
     t: (t: number, extrapolated: boolean) => `T ${t}${extrapolated ? "†" : ""}`,
     tTitle: (t: number) => `Período de retorno de ${t} años`,
-    scenarios: "Sensibilidad al sesgo de IMERG (÷ 0,92 y ÷ 0,67)",
+    scenarios: "Sensibilidad al sesgo",
+    scenariosTitle: "Sensibilidad al sesgo de IMERG (÷ 0,92 y ÷ 0,67)",
     legendGev: "Línea continua: GEV (curva principal)",
     legendGumbel: "Línea de trazos: Gumbel (referencia)",
     legendScenario: (labels: string) => `Línea de puntos: curva con los máximos anuales ${labels} (mismo T elegido)`,
@@ -61,6 +62,7 @@ export const es = {
     biasCaveat: (imerg: string, station: string) =>
       `Solo IMERG, sin corrección de sesgo: IMERG subestima la lluvia puntual intensa (7/4/2014: ${imerg} mm contra ${station} mm de la estación), así que estas curvas son un piso, lo que IMERG ve, no la lluvia de un pluviómetro.`,
     notAlert: "Análisis retrospectivo con datos históricos. No es un sistema de alerta oficial.",
+    notesSummary: "Ver notas",
     replayTitle: "Replay del temporal",
     replayCaption: "Lluvia IMERG cada 30 minutos (mm/h) en celdas de ≈ 11 km: cada celda promedia un área, la estación mide un punto.",
     play: "Reproducir",

@@ -277,6 +277,7 @@ export function Shell() {
             selectedEventId={ar.selectedEventId}
             onSelectEvent={selectEvent}
             replay={ar.selectedEvent ? ar : null}
+            convection={convActive ? conv : null}
           />
         </div>
       </div>

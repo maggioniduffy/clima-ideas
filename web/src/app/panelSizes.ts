@@ -11,7 +11,7 @@ export interface Viewport {
 /** `panels` is the width of the right column (layers, inspector, detail, events); `timeline` is the height of the bottom strip. */
 export const PANEL_LIMITS: Record<PanelId, { min: number; max: number; def: number }> = {
   panels: { min: 320, max: 640, def: 440 },
-  timeline: { min: 80, max: 480, def: 136 },
+  timeline: { min: 80, max: 480, def: 148 },
 };
 export const DEFAULT_SIZES: PanelSizes = {
   panels: PANEL_LIMITS.panels.def,

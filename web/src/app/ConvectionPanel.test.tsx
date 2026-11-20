@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import type { IdfData, ReplayData } from "../layers/convectionIdf";
 import type { ConvectionState } from "../layers/useConvectionIdf";
 import { ConvectionPanel } from "./ConvectionPanel";
+import { ConvectionReplay } from "./ConvectionReplay";
 import { RainClock, RainLegend } from "./RainLegend";
 
 const dir = "e2e/fixtures/processed/convection-idf/";
@@ -39,19 +40,35 @@ test("scenarios toggle and the selected return period move the band", () => {
   expect(screen.getByTestId("idf-t-100")).toHaveTextContent("T 100†");
 });
 
+test("long notes sit in a closed 'Ver notas' disclosure; source, period and the one-line caveat stay visible", () => {
+  render(<ConvectionPanel state={state()} source="Fuente X" period="2000-07-01/2025-06-30" />);
+  const notes = screen.getByTestId("conv-notes") as HTMLDetailsElement;
+  expect(notes).toHaveTextContent("Ver notas");
+  expect(notes.open).toBe(false);
+  // always visible: source and period row, caveat label, T 100 mark
+  expect(notes).not.toContainElement(screen.getByTestId("idf-source"));
+  expect(notes).not.toContainElement(screen.getByTestId("idf-label"));
+  expect(screen.getByTestId("idf-source")).toHaveTextContent("2000-07-01/2025-06-30");
+  // the notes are inside and keep their text
+  for (const id of ["idf-legend", "idf-extrapolation", "conv-bias-caveat", "compare-station-note"]) expect(notes).toContainElement(screen.getByTestId(id));
+  expect(screen.getByTestId("idf-extrapolation")).toHaveTextContent("Extrapolación (T > 50 años");
+  fireEvent.click(notes.querySelector("summary")!);
+  expect(notes.open).toBe(true);
+});
+
 test("comparison shows the station value, IMERG, the ratio and the cumulative at the frame", () => {
-  const { rerender } = render(<ConvectionPanel state={state()} source="s" period="p" />);
+  const { rerender } = render(<ConvectionReplay state={state()} />);
   expect(screen.getByTestId("compare-station")).toHaveTextContent("118 mm");
   expect(screen.getByTestId("compare-imerg")).toHaveTextContent("97,6 mm");
   expect(screen.getByTestId("compare-ratio")).toHaveTextContent("0,83");
   expect(screen.getByTestId("compare-current")).toHaveTextContent("antes de la ventana");
-  rerender(<ConvectionPanel state={state({ frame: 8, cursorMs: Date.parse("2014-04-06T14:00:00Z") })} source="s" period="p" />);
+  rerender(<ConvectionReplay state={state({ frame: 8, cursorMs: Date.parse("2014-04-06T14:00:00Z") })} />);
   expect(screen.getByTestId("compare-current")).toHaveTextContent("97,6 mm");
 });
 
 test("replay controls call the state", () => {
   const s = state();
-  render(<ConvectionPanel state={s} source="s" period="p" />);
+  render(<ConvectionReplay state={s} />);
   fireEvent.click(screen.getByTestId("rain-play"));
   expect(s.toggle).toHaveBeenCalled();
   fireEvent.click(screen.getByTestId("rain-forward"));

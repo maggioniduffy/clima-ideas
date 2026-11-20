@@ -21,7 +21,14 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
   await expect(page.getByTestId("idf-curve-100")).toHaveAttribute("data-extrapolated", "true");
   await expect(page.getByTestId("idf-curve-10")).toHaveAttribute("data-extrapolated", "false");
   await expect(page.getByTestId("idf-label-100")).toHaveText("T 100†");
+  // notes are collapsed by default and readable once opened
+  const notes = page.getByTestId("conv-notes");
+  await expect(notes).not.toHaveAttribute("open", "");
+  await expect(page.getByTestId("idf-extrapolation")).toBeHidden();
+  await expect(page.getByTestId("conv-bias-caveat")).toBeHidden();
+  await notes.locator("summary").click();
   await expect(page.getByTestId("idf-extrapolation")).toContainText("Extrapolación (T > 50 años");
+  await expect(page.getByTestId("idf-legend")).toBeVisible();
   await expect(page.getByTestId("idf-band")).toHaveAttribute("data-t", "10");
   await page.getByTestId("idf-t-25").click();
   await expect(page.getByTestId("idf-band")).toHaveAttribute("data-t", "25");
@@ -38,6 +45,13 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
   await expect(page.getByTestId("idf-chart")).toBeVisible();
 
   // replay: the time label advances while playing and ends on the last frame
+  // the replay (controls and cumulative chart) lives in the timeline strip, not in the right column
+  const timeline = page.getByTestId("timeline");
+  await expect(timeline).toContainText("Replay del temporal");
+  await expect(timeline.getByTestId("compare-chart")).toBeVisible();
+  await expect(timeline.getByTestId("rain-controls")).toBeVisible();
+  await expect(page.getByTestId("panels-slot").getByTestId("compare-chart")).toHaveCount(0);
+  await expect(timeline).not.toContainText("Sin serie temporal");
   const controls = page.getByTestId("rain-controls");
   await expect(controls).toHaveAttribute("data-frame", "0");
   await expect(page.getByTestId("rain-time")).toHaveText("2014-04-06 10:00 UTC");
@@ -73,6 +87,25 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
   await expect(page.getByTestId("convection-panel")).toHaveCount(0);
   await expect(page.getByTestId("map-canvas")).not.toHaveAttribute("data-deck-layers", /rain-convection-idf/);
   expect(errors).toEqual([]);
+});
+
+test("convection: the right column fits at 1440x900 without scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-convection-idf").check();
+  await expect(page.getByTestId("idf-chart")).toBeVisible();
+  await expect(page.getByTestId("compare-chart")).toBeVisible();
+  const col = page.getByTestId("panels-slot");
+  const m = await col.evaluate((el) => ({ sh: el.scrollHeight, ch: el.clientHeight }));
+  expect(m.sh).toBeLessThanOrEqual(m.ch + 1);
+  // the replay chart sits inside the timeline region
+  const tl = (await page.getByTestId("timeline-slot").boundingBox())!;
+  const ch = (await page.getByTestId("compare-chart").boundingBox())!;
+  expect(ch.y).toBeGreaterThanOrEqual(tl.y);
+  expect(ch.y + ch.height).toBeLessThanOrEqual(tl.y + tl.height + 1);
+  // opening the notes may scroll the column, but nothing is cut horizontally
+  await page.getByTestId("conv-notes").locator("summary").click();
+  await expect(page.getByTestId("conv-bias-caveat")).toBeVisible();
 });
 
 test("convection: station marker and IMERG cell outline, with source tooltips", async ({ page }) => {

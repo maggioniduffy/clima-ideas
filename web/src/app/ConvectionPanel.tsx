@@ -1,48 +1,32 @@
 import { useState } from "react";
 import { es } from "../i18n/es";
-import { formatUtc } from "../layers/arEvents";
 import {
   curveFor,
-  cumulativeAt,
   metricHi,
   metricLo,
   metricValue,
   type IdfData,
   type IdfMetric,
   type IdfRow,
-  type ReplayData,
 } from "../layers/convectionIdf";
 import type { ConvectionState } from "../layers/useConvectionIdf";
 import {
   bandPath,
   CHART_MARGIN,
   linePath,
-  linearScale,
-  linearTicks,
   logScale,
-  niceMax,
   tickAnchor,
   type Pt,
 } from "./floodCharts";
-import { durationLabel, logDomain, logTicks, utcTickLabel } from "./idfChart";
+import { durationLabel, logDomain, logTicks } from "./idfChart";
 import { useWidth } from "./useWidth";
 
 const num1 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
-const num2 = new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtMm = (v: number) => num1.format(v);
 const M = { ...CHART_MARGIN, r: 56 };
 const DEFAULT_T = 10;
 
-const chartHeight = (w: number) => Math.round(Math.min(260, Math.max(190, w * 0.5)));
-
-const ICONS = { play: "M4 2.5 V13.5 L13 8 Z", pause: "M4 3h3v10H4zM9 3h3v10H9z", prev: "M12 3 V13 L5 8 Z M3 3 V13", next: "M4 3 V13 L11 8 Z M13 3 V13" };
-function Icon({ d, stroke = false }: { d: string; stroke?: boolean }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-      <path d={d} fill="currentColor" stroke={stroke ? "currentColor" : undefined} strokeWidth={stroke ? 1.6 : undefined} />
-    </svg>
-  );
-}
+const chartHeight = (w: number) => Math.round(Math.min(220, Math.max(132, w * 0.34)));
 
 function IdfChart({ idf, w, metric, t, showScenarios }: { idf: IdfData; w: number; metric: IdfMetric; t: number; showScenarios: boolean }) {
   const H = chartHeight(w);
@@ -79,6 +63,11 @@ function IdfChart({ idf, w, metric, t, showScenarios }: { idf: IdfData; w: numbe
     .filter((e) => !Number.isNaN(e.y))
     .sort((a, b) => a.y - b.y);
   ends.forEach((e, i) => labelY.set(e.t, i === 0 ? e.y : Math.max(e.y, labelY.get(ends[i - 1]!.t)! + 13)));
+  // keep the stack inside the chart: whatever the push-apart moved below the bottom edge is shifted back up
+  for (let i = ends.length - 1; i >= 0; i--) {
+    const cap = i === ends.length - 1 ? H - 6 : labelY.get(ends[i + 1]!.t)! - 13;
+    labelY.set(ends[i]!.t, Math.min(labelY.get(ends[i]!.t)!, cap));
+  }
   return (
     <svg viewBox={`0 0 ${w} ${H}`} className="flood-chart" role="img" aria-label={es.convection.idfLabel} data-testid="idf-chart" data-curves={curves.length}>
       {yTicks.map((v) => (
@@ -141,92 +130,6 @@ function IdfChart({ idf, w, metric, t, showScenarios }: { idf: IdfData; w: numbe
   );
 }
 
-function CompareChart({ replay, w, cursorMs }: { replay: ReplayData; w: number; cursorMs: number | null }) {
-  const H = Math.round(Math.min(200, Math.max(130, w * 0.4)));
-  const { cumulative: c, compare } = replay;
-  const t0 = Date.parse(c.start);
-  const stepMs = c.step_minutes * 60_000;
-  const t1 = t0 + (c.mm.length - 1) * stepMs;
-  const endMs = Date.parse(compare.end);
-  const station = compare.station.value_mm;
-  const yMax = niceMax(Math.max(station, ...c.mm));
-  const x = linearScale(t0, t1, M.l, w - 18);
-  const y = linearScale(0, yMax, H - M.b, M.t);
-  const line = linePath(c.mm.map((v, k) => ({ x: x(t0 + k * stepMs), y: y(v) })));
-  const dayTicks: number[] = [];
-  for (let t = t0; t <= t1; t += 24 * 3_600_000) dayTicks.push(t);
-  const cursorOn = cursorMs != null && cursorMs >= t0 && cursorMs <= t1;
-  const cursorV = cursorMs != null ? cumulativeAt(c, cursorMs) : null;
-  return (
-    <svg viewBox={`0 0 ${w} ${H}`} className="flood-chart" role="img" aria-label={es.convection.compareLabel} data-testid="compare-chart">
-      {linearTicks(yMax, 4).map((v) => (
-        <g key={v}>
-          <line x1={M.l} x2={w - 18} y1={y(v)} y2={y(v)} className="flood-grid" />
-          <text x={M.l - 6} y={y(v) + 4} textAnchor="end" className="flood-tick">
-            {fmtMm(v)}
-          </text>
-        </g>
-      ))}
-      {dayTicks.map((t) => (
-        <text key={t} x={x(t)} y={H - M.b + 15} textAnchor={tickAnchor(x(t), w, utcTickLabel(t))} className="flood-tick">
-          {utcTickLabel(t)}
-        </text>
-      ))}
-      <text x={(M.l + w - 18) / 2} y={H - 3} textAnchor="middle" className="flood-axis">
-        {es.convection.axisTime}
-      </text>
-      <text x={4} y={12} className="flood-axis">
-        {es.convection.axisAccum}
-      </text>
-      <line x1={x(endMs)} x2={x(endMs)} y1={M.t} y2={H - M.b} className="idf-window-end" />
-      <path d={line} className="flood-curve" data-testid="compare-imerg-line" />
-      <circle cx={x(endMs)} cy={y(compare.imerg_mm)} r={4} className="flood-dot" data-testid="compare-imerg-point" />
-      <circle cx={x(endMs)} cy={y(station)} r={5} className="flood-dot flood-dot-top" data-testid="compare-station-point" />
-      {cursorOn && (
-        <g data-testid="compare-cursor">
-          <line x1={x(cursorMs)} x2={x(cursorMs)} y1={M.t} y2={H - M.b} className="idf-cursor" />
-          {cursorV != null && <circle cx={x(cursorMs)} cy={y(cursorV)} r={3} className="idf-cursor-dot" />}
-        </g>
-      )}
-    </svg>
-  );
-}
-
-function Controls({ s }: { s: ConvectionState }) {
-  return (
-    <div className="replay-controls rain-controls" data-testid="rain-controls" data-frame={s.frame} data-playing={s.playing}>
-      <button type="button" className="replay-step" data-testid="rain-back" aria-label={es.convection.stepBack} onClick={() => s.step(-1)}>
-        <Icon d={ICONS.prev} stroke />
-      </button>
-      <button
-        type="button"
-        className="replay-play"
-        data-testid="rain-play"
-        aria-label={s.playing ? es.convection.pause : es.convection.play}
-        aria-pressed={s.playing}
-        onClick={s.toggle}
-      >
-        <Icon d={s.playing ? ICONS.pause : ICONS.play} />
-      </button>
-      <button type="button" className="replay-step" data-testid="rain-forward" aria-label={es.convection.stepForward} onClick={() => s.step(1)}>
-        <Icon d={ICONS.next} stroke />
-      </button>
-      <input
-        type="range"
-        data-testid="rain-slider"
-        aria-label={es.convection.frame}
-        min={0}
-        max={Math.max(s.nFrames - 1, 0)}
-        value={s.frame}
-        onChange={(e) => s.seek(Number(e.target.value))}
-      />
-      <span className="num replay-time" data-testid="rain-time">
-        {s.cursorMs != null && formatUtc(s.cursorMs)}
-      </span>
-    </div>
-  );
-}
-
 export interface ConvectionPanelProps {
   state: ConvectionState;
   /** Layer manifest values: source and period of the data shown. */
@@ -234,20 +137,20 @@ export interface ConvectionPanelProps {
   period: string;
 }
 
-/** Detail-card content of the `convection-idf` layer: IDF chart, replay controls and the cumulative-vs-station chart. */
+/**
+ * Detail-card content of the `convection-idf` layer: the IDF chart with its source rows. The storm replay lives in the
+ * timeline strip (ConvectionReplay); the long explanatory notes sit in a closed "Ver notas" disclosure.
+ */
 export function ConvectionPanel({ state, source, period }: ConvectionPanelProps) {
   const [metric, setMetric] = useState<IdfMetric>("intensity");
   const [t, setT] = useState(DEFAULT_T);
   const [showScenarios, setShowScenarios] = useState(false);
   const [idfRef, idfW] = useWidth();
-  const [cmpRef, cmpW] = useWidth();
   const { status, idf, replay } = state;
   if (status === "loading" || status === "idle") return <p className="empty">{es.convection.loading}</p>;
   if (status === "error" || !idf || !replay) return <p className="empty">{es.convection.error}</p>;
   const sc = idf.scenarios.filter((s) => s.id !== "main");
   const cmp = replay.compare;
-  const cur = cumulativeAt(replay.cumulative, state.cursorMs ?? NaN);
-  const stationMm = cmp.station.value_mm;
   const legend = `${[
     es.convection.legendGev,
     es.convection.legendGumbel,
@@ -256,15 +159,25 @@ export function ConvectionPanel({ state, source, period }: ConvectionPanelProps)
   ]
     .filter(Boolean)
     .join(". ")}.`;
+  const scenariosNote = `${es.convection.scenariosTitle}.`;
+  const cellNote = `${es.convection.cell(idf.cell.lat.toFixed(2).replace(".", ","), idf.cell.lon.toFixed(2).replace(".", ","))}.`;
   const stationNote = `${es.convection.stationSource(cmp.station.source)}. ${cmp.station.note}.`;
   return (
     <div className="conv-panel" data-testid="convection-panel">
       <p className="conv-label" data-testid="idf-label">
         {idf.label}
       </p>
-      <div className="conv-grid">
-        <div className="conv-col" ref={idfRef} role="group" aria-labelledby="idf-title">
-          <h4 id="idf-title">{es.convection.idfTitle}</h4>
+      <div className="conv-col" ref={idfRef} role="group" aria-labelledby="idf-title">
+        <h4 id="idf-title" className="sr-only">
+          {es.convection.idfTitle}
+        </h4>
+        <div className="conv-head">
+          {sc.length > 0 && (
+            <label className="conv-check" title={es.convection.scenariosTitle}>
+              <input type="checkbox" data-testid="idf-scenarios" checked={showScenarios} onChange={(e) => setShowScenarios(e.target.checked)} />
+              {es.convection.scenarios}
+            </label>
+          )}
           <div className="conv-seg" role="group" aria-label={es.convection.metricLabel}>
             {(["intensity", "depth"] as const).map((m) => (
               <button key={m} type="button" data-testid={`idf-metric-${m}`} aria-pressed={metric === m} onClick={() => setMetric(m)}>
@@ -272,84 +185,60 @@ export function ConvectionPanel({ state, source, period }: ConvectionPanelProps)
               </button>
             ))}
           </div>
-          <div className="conv-seg" role="group" aria-label={es.convection.returnLabel}>
-            {idf.return_periods.map((rt) => {
-              const extrap = rt > idf.extrapolation_above_t;
-              return (
-                <button
-                  key={rt}
-                  type="button"
-                  data-testid={`idf-t-${rt}`}
-                  aria-pressed={t === rt}
-                  aria-label={es.convection.tTitle(rt)}
-                  onClick={() => setT(rt)}
-                >
-                  {es.convection.t(rt, extrap)}
-                </button>
-              );
-            })}
-          </div>
-          {sc.length > 0 && (
-            <label className="conv-check">
-              <input type="checkbox" data-testid="idf-scenarios" checked={showScenarios} onChange={(e) => setShowScenarios(e.target.checked)} />
-              {es.convection.scenarios}
-            </label>
-          )}
-          <figure className="flood-figure">
-            <IdfChart idf={idf} w={idfW} metric={metric} t={t} showScenarios={showScenarios} />
-            <figcaption data-testid="idf-legend">
-              {legend}
-            </figcaption>
-            <figcaption data-testid="idf-extrapolation">
-              {es.convection.extrapolation(idf.extrapolation_above_t, idf.n_years)}
-            </figcaption>
-          </figure>
         </div>
-        <div className="conv-col" ref={cmpRef} role="group" aria-labelledby="replay-title">
-          <h4 id="replay-title">{es.convection.replayTitle}</h4>
-          <Controls s={state} />
-          <h4>{es.convection.compareTitle}</h4>
-          <figure className="flood-figure">
-            <CompareChart replay={replay} w={cmpW} cursorMs={state.cursorMs} />
-          </figure>
-          <dl className="kv conv-readout" data-testid="compare-readout">
-            <dt>{es.convection.imerg(cmp.window)}</dt>
-            <dd className="num" data-testid="compare-imerg">
-              {fmtMm(cmp.imerg_mm)} {es.convection.mm}
-            </dd>
-            <dt>{es.convection.station(cmp.station.name)}</dt>
-            <dd className="num" data-testid="compare-station">
-              {fmtMm(stationMm)} {es.convection.mm}
-            </dd>
-            <dt>{es.convection.ratio}</dt>
-            <dd className="num" data-testid="compare-ratio">
-              {num2.format(cmp.imerg_mm / stationMm)}
-            </dd>
-            <dt>{es.convection.current}</dt>
-            <dd className="num" data-testid="compare-current">
-              {cur == null ? es.convection.beforeWindow : `${fmtMm(cur)} ${es.convection.mm}`}
-            </dd>
-          </dl>
-          <p className="conv-note" data-testid="compare-source">
-            {stationNote}
-          </p>
+        <div className="conv-seg" role="group" aria-label={es.convection.returnLabel}>
+          {idf.return_periods.map((rt) => {
+            const extrap = rt > idf.extrapolation_above_t;
+            return (
+              <button
+                key={rt}
+                type="button"
+                data-testid={`idf-t-${rt}`}
+                aria-pressed={t === rt}
+                aria-label={es.convection.tTitle(rt)}
+                onClick={() => setT(rt)}
+              >
+                {es.convection.t(rt, extrap)}
+              </button>
+            );
+          })}
         </div>
+        <figure className="flood-figure">
+          <IdfChart idf={idf} w={idfW} metric={metric} t={t} showScenarios={showScenarios} />
+        </figure>
       </div>
       <p className="conv-note" data-testid="idf-source">
         {[
           source,
           es.convection.periodLabel(idf.period),
           period,
-          es.convection.cell(idf.cell.lat.toFixed(2).replace(".", ","), idf.cell.lon.toFixed(2).replace(".", ",")),
         ].join(es.events.sep)}
       </p>
-      <p className="flood-warn" data-testid="conv-bias-caveat">
-        {es.convection.biasCaveat(fmtMm(cmp.imerg_mm), fmtMm(stationMm))}
-      </p>
-      <p className="conv-note">{es.convection.replayCaption}</p>
       <p className="flood-warn" data-testid="conv-not-alert">
         {es.convection.notAlert}
       </p>
+      <details className="conv-notes" data-testid="conv-notes">
+        <summary>{es.convection.notesSummary}</summary>
+        <p className="conv-note" data-testid="idf-legend">
+          {legend}
+        </p>
+        <p className="conv-note" data-testid="idf-scenarios-note">
+          {scenariosNote}
+        </p>
+        <p className="conv-note" data-testid="idf-cell">
+          {cellNote}
+        </p>
+        <p className="conv-note" data-testid="idf-extrapolation">
+          {es.convection.extrapolation(idf.extrapolation_above_t, idf.n_years)}
+        </p>
+        <p className="conv-note" data-testid="conv-bias-caveat">
+          {es.convection.biasCaveat(fmtMm(cmp.imerg_mm), fmtMm(cmp.station.value_mm))}
+        </p>
+        <p className="conv-note">{es.convection.replayCaption}</p>
+        <p className="conv-note" data-testid="compare-station-note">
+          {stationNote}
+        </p>
+      </details>
     </div>
   );
 }
