@@ -5,6 +5,11 @@ name: Deploy web
 # reuses R2_ACCOUNT_ID as the Cloudflare account id.
 
 on:
+  # workflow_dispatch only works once this file is on the default branch; until then, a push to the
+  # working branch that touches web/ or this file deploys.
+  push:
+    branches: [main, fm/epic-babbage-gwli3b]
+    paths: ["web/**", ".github/workflows/deploy-web.yml"]
   workflow_dispatch:
     inputs:
       data_url:
@@ -39,7 +44,7 @@ jobs:
       - run: pnpm test
       - name: Build
         env:
-          VITE_DATA_URL: ${{ inputs.data_url }}
+          VITE_DATA_URL: ${{ inputs.data_url || 'https://pub-89e22e4a31da4ba2bde9dd24522147a9.r2.dev' }}
         run: pnpm build
       - name: Deploy
         env:
