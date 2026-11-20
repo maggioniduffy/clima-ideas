@@ -22,7 +22,7 @@ IMERG 30 min (2000–hoy), SMN Neuquén Aero, estaciones AIC (Plottier). Acceso 
 | F3.3 ✅ | Curvas IDF (duraciones 30 min–24 h) estación vs. IMERG | Sonnet | Unit con serie sintética de cuantiles conocidos |
 | F3.4 ✅ | Sesgo de IMERG en eventos conocidos; corrección por cuantiles | opencode analiza, Sonnet implementa | Informe de sesgo + función QM testeada |
 | F3.5 | Capa: curva IDF lado a lado + replay del temporal de abril de 2014 | Sonnet | e2e: replay y comparación |
-| F3.6 | Frecuencia de días convectivos extremos por fase ENSO (F0.10), primavera y verano | opencode analiza | Tabla con n de años, test de permutación y "sin verificar" donde no alcance; conteos en el formato de F1.9 ("5 de 7 primaveras Niño"), nunca "de cada 10" |
+| F3.6 ✅ | Frecuencia de días convectivos extremos por fase ENSO (F0.10), primavera y verano | opencode analiza | Tabla con n de años, test de permutación y "sin verificar" donde no alcance; conteos en el formato de F1.9 ("5 de 7 primaveras Niño"), nunca "de cada 10" |
 
 ## Entregable
 
@@ -73,3 +73,8 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   (> 150 mm repetidos) y se filtran. Corrección por cuantiles probada con validación dejando un año afuera: no mejora a un
   factor único y no sirve en extremos. Decisión (Opus; advisor vencido el 2026-11-17): la IDF de F3.3 queda sin
   corregir y muestra los factores 0,92 y 0,67 como sensibilidad. Comandos: `clima-nqn convection idf|bias`.
+- 2026-11-20 F3.6 hecha (`reports/03/F3.6.md`, `stages/convection/enso.py`): sin señal de ENSO en días convectivos
+  extremos (IMERG Final, celda de Neuquén Aero, SON 2000–2024 y DJF 2000/01–2024/25, ONI ±0,5). Umbral principal p99
+  conjunto 12,6 mm/h: solo 5 días, todos en primavera (1 de 8 primaveras Niño, 2 de 10 neutras, 0 de 7 Niña). Ningún
+  test pasa BH < 0,05 en la principal ni en 4 sensibilidades (p95, regional, p99 y p95 por estación). Con tan pocos
+  días la prueba no tiene potencia: ausencia de señal no es ausencia de efecto.
