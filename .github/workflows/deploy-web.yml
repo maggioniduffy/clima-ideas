@@ -50,4 +50,4 @@ jobs:
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN secret is not set"; exit 1
           fi
-          pnpm exec wrangler deploy
+          npx -y wrangler@4.166.0 deploy
