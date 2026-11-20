@@ -1,5 +1,7 @@
 import json
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated
 
@@ -669,8 +671,17 @@ def era5_combine(
     era5.combine(src, out)
 
 
-imerg_app = typer.Typer(help="Regional GPM IMERG Final V07 precipitation for Neuquén.")
+imerg_app = typer.Typer(
+    help="Regional GPM IMERG V07 (Final or Late Run) precipitation for Neuquén."
+)
 app.add_typer(imerg_app, name="imerg")
+
+
+def _imerg_product(product: str) -> imerg.Product:
+    try:
+        return imerg.get_product(product)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 @imerg_app.command("fetch")
@@ -678,12 +689,26 @@ def imerg_fetch(
     year: Annotated[int | None, typer.Option(help="Calendar year.")] = None,
     years: Annotated[str | None, typer.Option(help='Year range, e.g. "2000-2026".')] = None,
     months: Annotated[str, typer.Option(help='Months, e.g. "1-12", "4".')] = "1-12",
-    out: Annotated[Path, typer.Option(help="Per-month Zarr directory.")] = imerg.DEFAULT_OUT,
+    out: Annotated[
+        Path | None, typer.Option(help="Per-month Zarr directory (default: the product's).")
+    ] = None,
+    product: Annotated[str, typer.Option(help="IMERG product: final or late.")] = "final",
     workers: Annotated[
         int, typer.Option(help="Harmony download worker count.")
     ] = imerg.DEFAULT_WORKERS,
+    parallel: Annotated[
+        int, typer.Option(help="Months processed at once (one Harmony job each).", min=1)
+    ] = imerg.DEFAULT_PARALLEL_MONTHS,
+    deadline_min: Annotated[
+        float | None,
+        typer.Option(
+            help="Stop after this many minutes: leave running jobs for the next run, skip unstarted months."
+        ),
+    ] = None,
 ) -> None:
-    """Fetch monthly half-hourly IMERG Final data."""
+    """Fetch monthly half-hourly IMERG data (complete months skipped, others rebuilt)."""
+    prod = _imerg_product(product)
+    out = prod.out_dir if out is None else out
     if (year is None) == (years is None):
         raise typer.BadParameter("give exactly one of --year or --years")
     try:
@@ -693,25 +718,109 @@ def imerg_fetch(
         raise typer.BadParameter(str(exc)) from exc
     start = max(imerg.FIRST_MONTH, (min(selected_years), min(selected_months)))
     requested = [(y, m) for y in selected_years for m in selected_months if (y, m) >= start]
-    failed = []
-    for y, m in requested:
+
+    deadline = None if deadline_min is None else time.monotonic() + 60 * deadline_min
+
+    def one(month: tuple[int, int]) -> str | None:
+        y, m = month
+        if deadline is not None and time.monotonic() >= deadline:
+            typer.echo(f"{y}-{m:02d} failed: deadline passed before start, not submitted", err=True)
+            return f"{y}-{m:02d}"
         try:
-            imerg.fetch_month(y, m, out, workers=workers)
+            if deadline is None:
+                imerg.fetch_month(y, m, out, workers=workers, product=product)
+            else:
+                imerg.fetch_month(y, m, out, workers=workers, deadline=deadline, product=product)
         except Exception as exc:  # noqa: BLE001 - continue and summarize failures
             typer.echo(f"{y}-{m:02d} failed: {exc}", err=True)
-            failed.append(f"{y}-{m:02d}")
+            return f"{y}-{m:02d}"
+        return None
+
+    with ThreadPoolExecutor(max_workers=parallel) as pool:
+        failed = [f for f in pool.map(one, requested) if f]
     if failed:
         typer.echo(f"months failed: {failed}", err=True)
         raise typer.Exit(1)
 
 
+@imerg_app.command("cancel-running")
+def imerg_cancel_running(
+    label: Annotated[
+        str | None, typer.Option(help="Harmony job label to cancel (default: the product's).")
+    ] = None,
+    product: Annotated[str, typer.Option(help="IMERG product: final or late.")] = "final",
+    keep_months: Annotated[
+        str,
+        typer.Option(help="Comma-separated YYYY-MM months whose jobs are kept (newest per month)."),
+    ] = "",
+) -> None:
+    """Cancel this account's active Harmony jobs with the given label."""
+    prod = _imerg_product(product)
+    label = prod.label if label is None else label
+    keep = []
+    for tag in (t.strip() for t in keep_months.split(",")):
+        if not tag:
+            continue
+        try:
+            y, m = (int(part) for part in tag.split("-"))
+        except ValueError as exc:
+            raise typer.BadParameter(f"invalid month {tag!r}, expected YYYY-MM") from exc
+        keep.append(imerg.month_label(y, m, product))
+    cancelled = imerg.cancel_running(
+        imerg._client(imerg.DEFAULT_WORKERS), label, keep=keep, product=product
+    )
+    typer.echo(f"cancelled {len(cancelled)} job(s) with label {label!r}: {cancelled}")
+
+
 @imerg_app.command("combine")
 def imerg_combine(
-    src: Annotated[Path, typer.Option(help="Per-month store directory.")] = imerg.DEFAULT_OUT,
-    out: Annotated[Path, typer.Option(help="Combined Zarr store.")] = imerg.COMBINED,
+    src: Annotated[
+        Path | None, typer.Option(help="Per-month store directory (default: the product's).")
+    ] = None,
+    out: Annotated[
+        Path | None, typer.Option(help="Combined Zarr store (default: the product's).")
+    ] = None,
+    product: Annotated[str, typer.Option(help="IMERG product: final or late.")] = "final",
 ) -> None:
     """Concatenate available per-month stores."""
-    imerg.combine(src, out)
+    prod = _imerg_product(product)
+    imerg.combine(
+        prod.out_dir if src is None else src, prod.combined if out is None else out, product=product
+    )
+
+
+convection_app = typer.Typer(help="Convection and IDF in the Confluencia (phase 3).")
+app.add_typer(convection_app, name="convection")
+
+
+@convection_app.command("idf")
+def convection_idf(
+    zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(
+        "data/raw/imerg/neuquen.zarr"
+    ),
+    out: Annotated[Path, typer.Option(help="IDF Parquet.")] = Path(
+        "data/processed/idf/imerg_neuquen_idf.parquet"
+    ),
+) -> None:
+    """IMERG-only IDF curves for Neuquén Aero, without bias correction (F3.3)."""
+    from clima_nqn.stages.convection import idf
+
+    res = idf.run(zarr, out)
+    typer.echo(res["main"].query("method == 'gev_lmom'").round(2).to_string(index=False))
+    typer.echo(f"wrote {out}")
+
+
+@convection_app.command("bias")
+def convection_bias(
+    zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(
+        "data/raw/imerg/neuquen.zarr"
+    ),
+    isd_dir: Annotated[Path, typer.Option(help="NOAA ISD cache directory.")] = Path("data/raw/isd"),
+) -> None:
+    """IMERG vs Neuquén Aero (NOAA ISD) bias tables for reports/03/F3.4.md."""
+    from clima_nqn.stages.convection import bias
+
+    typer.echo(bias.run(zarr, isd_dir))
 
 
 ar_app = typer.Typer(help="Atmospheric rivers in the Neuquén cordillera (phase 1).")
