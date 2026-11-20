@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import pytest
+import shapely
 import xarray as xr
 from typer.testing import CliRunner
 
 from clima_nqn.cli import app
-from clima_nqn.io import snow
+from clima_nqn.io import forcing, snow
 
 PLAIN = {
     "NO_COLOR": "1",
@@ -221,3 +222,103 @@ def test_flow_snow_fetch_help_lists_options():
     assert res.exit_code == 0
     for opt in ("--flow-dir", "--catalog", "--out", "--station"):
         assert opt in res.output
+
+
+# --- basins (HydroBASINS polygons) -------------------------------------------------------------------
+
+POLY_A = shapely.box(-70.9, -37.6, -70.3, -37.1)
+POLY_B = shapely.box(-70.8, -37.5, -70.4, -37.2)
+
+
+def _expected_weights(geom):
+    lats = np.arange(-30.0, -45.01, -0.25)
+    lons = np.arange(270.0, 300.01, 0.25)
+    lon180 = ((lons + 180.0) % 360.0) - 180.0
+    ilat, ilon, w = forcing.cell_weights(lats, lon180, geom)
+    out = {}
+    for a, i in enumerate(ilat):
+        for b, j in enumerate(ilon):
+            if w[a, b] > 0:
+                out[(float(lats[i]), float(lon180[j]))] = float(w[a, b])
+    return out
+
+
+def test_fetch_on_a_polygon_keeps_positive_weight_cells_and_writes_w(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow(
+        [(12004, pd.Timestamp("2000-03-10"))], out, basins={12004: POLY_A}, opener=Opener(), **KW
+    )
+    df = pd.read_parquet(out)
+    assert df["w"].dtype == np.float32 and (df["w"] > 0).all()
+    expected = _expected_weights(POLY_A)
+    day = df[df["date"] == pd.Timestamp("2000-03-03")]
+    assert len(day) == len(expected) and len(df) == 10 * len(expected)
+    got = {(float(a), float(b)): float(w) for a, b, w in zip(day["lat"], day["lon"], day["w"])}
+    assert got.keys() == expected.keys()
+    for k, v in expected.items():
+        assert got[k] == pytest.approx(v, rel=1e-5)
+    assert day["swe_m"].iloc[0] == pytest.approx(0.003)  # same day encoding as on a box
+    meta = {k.decode(): v.decode() for k, v in pq.read_schema(out).metadata.items()}
+    assert meta["geometry"] == "hydrobasins" and "boxes" not in meta
+    assert "rectángulos" not in meta["note"] and "HydroBASINS" in meta["note"]
+    assert snow.read_metadata(out)["basins"] == {12004: forcing.basin_digest(POLY_A)}
+
+
+def test_box_path_has_no_w_column_and_no_basin_metadata(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-10"))], out, opener=Opener(), **KW)
+    assert "w" not in pd.read_parquet(out).columns
+    meta = snow.read_metadata(out)
+    assert "basins" not in meta and "geometry" not in meta and "boxes" in meta
+
+
+def test_same_basin_resumes_but_other_polygon_or_geometry_kind_is_refused(tmp_path):
+    out = tmp_path / "s.parquet"
+    kw = {"opener": Opener(), **KW}
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-10"))], out, basins={12004: POLY_A}, **kw)
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-14"))], out, basins={12004: POLY_A}, **kw)
+    assert len(snow.stored_windows(out)) == 2
+    before = _file_bytes(out)
+    later = [(12004, pd.Timestamp("2000-03-18"))]
+    with pytest.raises(ValueError, match="differs"):
+        snow.fetch_snow(later, out, basins={12004: POLY_B}, **kw)
+    with pytest.raises(ValueError, match="stored as a basin"):
+        snow.fetch_snow(later, out, **kw)  # a box for a station stored as a basin
+    assert _file_bytes(out) == before
+    boxed = tmp_path / "b.parquet"
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-10"))], boxed, **kw)
+    with pytest.raises(ValueError, match="stored as a box"):
+        snow.fetch_snow(later, boxed, basins={12004: POLY_A}, **kw)
+
+
+def test_basin_file_without_digests_is_refused_for_appending(tmp_path):
+    out = tmp_path / "s.parquet"
+    snow.fetch_snow(
+        [(12004, pd.Timestamp("2000-03-10"))], out, basins={12004: POLY_A}, opener=Opener(), **KW
+    )
+    table = pq.read_table(out)
+    meta = {k: v for k, v in table.schema.metadata.items() if k != b"basins"}
+    pq.write_table(table.replace_schema_metadata(meta), out)
+    with pytest.raises(ValueError, match="unknown"):
+        snow.fetch_snow(
+            [(12004, pd.Timestamp("2000-03-14"))],
+            out,
+            basins={12004: POLY_A},
+            opener=Opener(),
+            **KW,
+        )
+
+
+def test_basin_and_box_stations_can_share_a_file(tmp_path):
+    out = tmp_path / "s.parquet"
+    kw = {"opener": Opener(), **KW}
+    snow.fetch_snow([(12004, pd.Timestamp("2000-03-10"))], out, basins={12004: POLY_A}, **kw)
+    snow.fetch_snow([(12012, pd.Timestamp("2000-03-12"))], out, **kw)
+    meta = snow.read_metadata(out)
+    assert set(meta["basins"]) == {12004} and set(meta["boxes"]) == {12012}
+    assert "mixed" in meta["geometry"]
+
+
+def test_flow_snow_fetch_help_lists_basins_option():
+    res = CliRunner().invoke(app, ["flow", "snow-fetch", "--help"], env=PLAIN)
+    assert "--basins" in res.output

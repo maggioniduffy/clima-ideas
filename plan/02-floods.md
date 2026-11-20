@@ -64,6 +64,10 @@ como mejora y pide clave de CDS. CAMELS-CL (F2.5): PANGAEA, CC-BY-4.0, solo Chil
   una banda como baseline y la conclusión de F2.5 (`reports/02/F2.5-bands.md`). Con cuencas HydroBASINS y calibración
   acotada, GR4J 12004 baja a 0,37 (5 bandas 0,40); LSTM sobre cuencas: 0,55 / 0,47 / −0,20 (gana en 12004, GR4J con bandas gana en 12010); la conclusión de F2.5 se mantiene. Advisor no disponible (pidió créditos);
   decidió Opus.
+- F2.3 cuencas (2026-11-17): nieve sobre las cuencas HydroBASINS (ponderación cos(lat) × fracción de celda) en lugar de
+  rectángulos. 5 de 114 crecidas cambian de etiqueta, todas cerca de los umbrales; río atmosférico + lluvia sobre nieve
+  6 / 13 / 3 como antes; 2023-06-26 sigue «río atmosférico». La parte de río atmosférico es idéntica y la reproducción con
+  rectángulos da F2.3. Conclusión sin cambio (`reports/02/F2.3-basins.md`). Advisor no disponible; decidió Opus.
 - Detalle y decisiones: `odd/tasks/floods.md` (F2.1–F2.4, F2.7) y `odd/tasks/streamflow-lstm.md` (F2.5, F2.6).
 
 ## Entregable
@@ -76,8 +80,8 @@ Períodos de retorno con IC para una estación natural, crecidas etiquetadas por
 - Calificador `D` en 336 filas de 12010: significado sin verificar.
 - El bootstrap de F2.2 no cuenta ni registra los remuestreos que quedan en el límite xi = 0,99.
 - F2.4: tema claro sin revisar a ojo.
-- F2.3: cuencas aproximadas por rectángulos y nieve de ERA5 a 0,25° sin contrastar con observaciones; delinear
-  las cuencas con el DEM y repetir con ERA5-Land (pide clave de CDS del usuario).
+- F2.3: cuencas delineadas hechas (HydroBASINS, `reports/02/F2.3-basins.md`). Falta: nieve de ERA5 a 0,25° sin
+  contrastar con observaciones; repetir con ERA5-Land (pide clave de CDS del usuario).
 - F2.3: el caudal diario está en hora local (UTC−3) y el catálogo en UTC; la coincidencia por día es aproximada.
 - F2.7: el mecanismo entre ENSO y los picos queda sin verificar (F1.8 no halló señal en los ríos atmosféricos).
   El umbral de la regla se fijó en el encargo de la tarea, sin registro previo en la especificación.
@@ -87,8 +91,7 @@ Períodos de retorno con IC para una estación natural, crecidas etiquetadas por
 - F2.5: área SNIH de 12012 igual a la de 12013 Chos Malal (2131 km²): posible copia en los metadatos, sin verificar.
 - F2.5: bandas de CemaNeige, calibración acotada y cuencas reales HydroBASINS hechas para GR4J
   (`reports/02/F2.5-bands.md`); falta un
-  gradiente de temperatura medido en Neuquén (los valores andinos son de ≈ 33°S, sin verificar). F2.3 puede usar
-  las mismas cuencas (`io/gauge_basins.geojson`).
+  gradiente de temperatura medido en Neuquén (los valores andinos son de ≈ 33°S, sin verificar).
 - Fase 6: comprobar si una versión CUDA de torch soporta la GTX 1050 (Pascal, 2 GB) y sumarla como grupo opcional
   aparte, sin tocar la CI.
 - Efecto de presas: usar solo estaciones aguas arriba para la GEV.
