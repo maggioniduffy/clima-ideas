@@ -71,6 +71,9 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 Opus consulta a Fable (subagente `advisor`) cuando se traba al resolver o decidir. Cuándo y cómo: `CLAUDE.md`;
 plantilla: `docs/agents.md`. El advisor juzga contra la sección "Rumbo".
 
+Proyecto aparte, fuera del alcance de Neuquén: calendario de fuego para NASA Space Apps 2026 en
+[space-apps/plan.md](space-apps/plan.md).
+
 ## Referencias
 
 | Archivo | Cuándo leerlo |
