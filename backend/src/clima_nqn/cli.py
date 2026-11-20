@@ -183,19 +183,36 @@ def flow_snow_fetch(
     workers: Annotated[int, typer.Option(help="Concurrent day reads.")] = 16,
     retries: Annotated[int, typer.Option(help="Attempts per read.")] = 3,
     retry_wait: Annotated[float, typer.Option(help="Seconds of linear backoff.")] = 30,
+    basins: Annotated[
+        Path | None,
+        typer.Option(
+            "--basins",
+            help="HydroBASINS GeoJSON (io/gauge_basins.geojson): read the snow over the basin "
+            "polygons (cells weighted by cos(lat) x fraction) instead of the approximate boxes.",
+        ),
+    ] = None,
 ) -> None:
     """Download ERA5 snow water equivalent around the flood peaks (ARCO-ERA5, anonymous; F2.3)."""
     if not catalog.is_file():
         raise typer.BadParameter(f"AR catalog not found: {catalog}")
+    if basins is not None and not basins.is_file():
+        raise typer.BadParameter(f"basins file not found: {basins}")
+    geoms = basins_io.read_geojson(basins) if basins is not None else None
     try:
-        flood_causes.validate_stations(station)
+        flood_causes.validate_stations(station, geoms)
     except ValueError as e:
         raise typer.BadParameter(str(e)) from e
     _, period = flood_causes.load_catalog(catalog)
-    floods = flood_causes.collect_floods(flow_dir, station, period)
+    floods = flood_causes.collect_floods(flow_dir, station, period, geoms)
     windows = [(sid, d) for sid, df in floods.items() for d in df["date"]]
     path = snow.fetch_snow(
-        windows, out, workers=workers, retries=retries, retry_wait=retry_wait, progress=typer.echo
+        windows,
+        out,
+        basins={sid: geoms[sid] for sid in floods} if geoms is not None else None,
+        workers=workers,
+        retries=retries,
+        retry_wait=retry_wait,
+        progress=typer.echo,
     )
     typer.echo(f"snow -> {path}")
 
@@ -558,21 +575,64 @@ def flow_causes(
     n_perm: Annotated[
         int, typer.Option(help="Draws of the chance baseline.")
     ] = flood_causes.N_PERM,
+    basins: Annotated[
+        Path | None,
+        typer.Option(
+            "--basins",
+            help="HydroBASINS GeoJSON; the snow file must come from snow-fetch --basins.",
+        ),
+    ] = None,
+    forcing_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--forcing",
+            help="forcing-basins.parquet: adds the basin 0 degC level and precipitation per flood "
+            "(reported only).",
+        ),
+    ] = None,
+    compare_with: Annotated[
+        Path | None,
+        typer.Option(
+            "--compare-with", help="causes.json of the box run: adds the comparison section."
+        ),
+    ] = None,
 ) -> None:
     """Label the annual floods by probable cause: AR window, chance baseline and snow (F2.3)."""
     if not catalog.is_file():
         raise typer.BadParameter(f"AR catalog not found: {catalog} (run clima-nqn ar catalog)")
+    for opt, path in (
+        ("basins", basins),
+        ("forcing", forcing_path),
+        ("compare-with", compare_with),
+    ):
+        if path is not None and not path.is_file():
+            raise typer.BadParameter(f"--{opt} file not found: {path}")
     try:
-        flood_causes.validate_stations(station)
+        flood_causes.validate_stations(
+            station, basins_io.read_geojson(basins) if basins is not None else None
+        )
     except ValueError as e:
         raise typer.BadParameter(str(e)) from e
     if not snow_path.is_file():
         typer.echo(
             f"warning: no snow file {snow_path}; snow is 'sin dato' (run clima-nqn flow snow-fetch)"
         )
-    res = flood_causes.run(
-        flow_dir, gev_dir, catalog, snow_path, out, report, stations=station, n_perm=n_perm
-    )
+    try:
+        res = flood_causes.run(
+            flow_dir,
+            gev_dir,
+            catalog,
+            snow_path,
+            out,
+            report,
+            stations=station,
+            n_perm=n_perm,
+            basins=basins,
+            forcing=forcing_path,
+            compare_with=compare_with,
+        )
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
     for s in res["stations"]:
         typer.echo(f"{s['station_id']}: {s['n_floods']} floods, {s['label_counts']}")
     typer.echo(f"-> {out}, {report}")
