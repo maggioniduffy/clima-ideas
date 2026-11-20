@@ -1,6 +1,6 @@
 # Fase 3 — Convección en la meseta y la Confluencia
 
-Estado: en curso (F3.0 hecha: sin lluvia horaria de estación; la pregunta va reformulada) · Depende de: 0 · Refs: `docs/architecture.md`
+Estado: hecha (F3.0: sin lluvia horaria de estación, pregunta reformulada; capa publicada el 2026-11-20) · Depende de: 0 · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -88,3 +88,6 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   17 p24 > 150 mm; 5 p24 inconsistente con los p6; 3.090 de períodos que no se usan), más huecos por año y mes.
   Cobertura casi completa solo en 2003, 2004, 2023 y 2024; 2006–2021 con 32–101 días válidos por año. F3.4 lee el
   producto y da los mismos números.
+- 2026-11-20 Capa `convection-idf` publicada en R2 (`nqn`): sus 5 objetos y `layers.json` fusionado a mano con las
+  capas en vivo (ar-events, flood-stations, relief). `make publish` desde un `data/processed` parcial reescribiría
+  `layers.json` solo con lo local y bajaría las otras capas: publicar siempre desde un árbol completo o fusionar el índice.
