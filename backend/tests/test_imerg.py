@@ -606,10 +606,53 @@ def _workflow():
     return yaml.safe_load(WORKFLOW.read_text())
 
 
-def _run_plan(tmp_path, **env):
-    """Run the workflow's plan python snippet with a fake today (2026-11-20) and no artifacts."""
+class _FakeCmr:
+    """Tiny local CMR: answers every request with a granule list whose newest granule starts at `latest`."""
+
+    def __init__(self, latest):
+        import http.server
+        import json
+        import threading
+
+        body = json.dumps({"feed": {"entry": [{"time_start": latest}]}}).encode()
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        self.server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_port}/search/granules.json"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+def _run_plan(tmp_path, cmr_latest="2025-09-30T23:30:00.000Z", **env):
+    """Run the workflow's plan python snippet with a fake today (2026-11-20) and no artifacts.
+
+    No real network: CMR is a local fake whose newest granule starts at `cmr_latest`;
+    `cmr_latest=None` points it at a closed port (CMR unreachable).
+    """
+    import socket
     import subprocess
     import sys
+
+    if cmr_latest is None:
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        fake, cmr_url = None, f"http://127.0.0.1:{port}/search/granules.json"
+    else:
+        fake = _FakeCmr(cmr_latest)
+        cmr_url = fake.url
 
     steps = _workflow()["jobs"]["plan"]["steps"]
     script = next(s for s in steps if s.get("id") == "plan")["run"]
@@ -634,16 +677,21 @@ def _run_plan(tmp_path, **env):
         "RUNNER_TEMP": str(tmp_path),
         "GITHUB_OUTPUT": str(output),
         "GITHUB_REPOSITORY": "x/y",
+        "IMERG_CMR_URL": cmr_url,
         "PATH": os.environ["PATH"],
         **env,
     }
-    proc = subprocess.run(
-        [sys.executable, "-c", prelude + code],
-        check=False,
-        env=full,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-c", prelude + code],
+            check=False,
+            env=full,
+            capture_output=True,
+            text=True,
+        )
+    finally:
+        if fake:
+            fake.close()
     outputs = dict(line.split("=", 1) for line in output.read_text().splitlines())
     return proc, outputs
 
@@ -662,21 +710,51 @@ def test_workflow_parses_with_product_and_first_month_inputs():
 
 
 def test_workflow_plan_late_wants_2025_10_to_2026_10(tmp_path):
-    proc, out = _run_plan(tmp_path, PRODUCT="late", FIRST="2025-10")
+    proc, out = _run_plan(
+        tmp_path, cmr_latest="2026-11-19T12:00:00.000Z", PRODUCT="late", FIRST="2025-10"
+    )
     assert proc.returncode == 0, proc.stderr
+    assert "from NASA CMR" in proc.stdout
     batch = out["batch"].split(",")
     assert batch[0] == "2025-10" and batch[-1] == "2026-10" and len(batch) == 13
     assert "wanted: 13" in proc.stdout
 
 
+def test_workflow_plan_final_last_month_from_cmr(tmp_path):
+    proc, out = _run_plan(tmp_path, YEARS="2025-2026")
+    assert proc.returncode == 0, proc.stderr
+    assert (
+        out["batch"].split(",")[-1] == "2025-09"
+    )  # newest granule 2025-09-30 23:30 completes September
+    assert "from NASA CMR" in proc.stdout
+    proc, out = _run_plan(tmp_path, cmr_latest="2025-09-30T23:00:00.000Z", YEARS="2025-2026")
+    assert out["batch"].split(",")[-1] == "2025-08"  # September is partial
+
+
+def test_workflow_plan_falls_back_when_cmr_is_unreachable(tmp_path):
+    proc, out = _run_plan(tmp_path, cmr_latest=None, YEARS="2025-2026")
+    assert proc.returncode == 0, proc.stderr
+    assert out["batch"].split(",")[-1] == "2026-07"  # today minus 4 months
+    assert "WARNING: NASA CMR unreachable" in proc.stdout
+    proc, out = _run_plan(tmp_path, cmr_latest=None, PRODUCT="late", YEARS="2026")
+    assert out["batch"].split(",")[-1] == "2026-10"  # today minus 1 month
+
+
+def test_workflow_plan_explicit_last_month_skips_cmr(tmp_path):
+    proc, out = _run_plan(tmp_path, cmr_latest=None, LAST="2025-03", YEARS="2025")
+    assert proc.returncode == 0, proc.stderr
+    assert out["batch"].split(",")[-1] == "2025-03"
+    assert "CMR" not in proc.stdout
+
+
 def test_workflow_plan_final_default_is_unchanged(tmp_path):
-    proc, out = _run_plan(tmp_path, YEARS="2000-2026")
+    proc, out = _run_plan(tmp_path, cmr_latest=None, YEARS="2000-2026")
     assert proc.returncode == 0, proc.stderr
     batch = out["batch"].split(",")
     assert batch[0] == "2000-06"  # first month; 48 per run
     assert len(batch) == 48
-    proc, out = _run_plan(tmp_path, YEARS="2025-2026")
-    assert out["batch"].split(",")[-1] == "2026-07"  # today minus 4 months
+    proc, out = _run_plan(tmp_path, cmr_latest=None, YEARS="2025-2026")
+    assert out["batch"].split(",")[-1] == "2026-07"  # today minus 4 months (CMR fallback)
     assert out["batch"].split(",")[0] == "2025-01"
     for bad in ({"PRODUCT": "early"}, {"FIRST": "2025-13"}):
         proc, _ = _run_plan(tmp_path, **bad)

@@ -6,8 +6,8 @@
 # empty = 2000-06) drops earlier months from the plan.
 # Work is split in small per-month chunks that save progress and resume:
 #  - plan: lists which months already exist as artifacts and picks the next `max_months` missing ones (months after
-#    `last_month`, default today minus 4 months for final (latency ~3.5 months) and minus 1 month for late, are not
-#    requested). Then it cancels leftover Harmony jobs of this account (labels of the product and harmony-py; safe
+#    `last_month`, default = newest complete month in NASA CMR for the product, are not requested; if CMR cannot be
+#    reached it falls back to today minus 4 months for final and minus 1 month for late). Then it cancels leftover Harmony jobs of this account (labels of the product and harmony-py; safe
 #    because the concurrency group allows one IMERG run at a time), except the newest job of each month in the batch.
 #  - fetch: one job per month (max `jobs` at once) writes <YYYY-MM>.zarr and uploads artifact imerg-month-<YYYY-MM>
 #    (late: imerg-late-month-<YYYY-MM>, 90 days). A month takes longer on NASA's side than one run: the fetch stops
@@ -30,7 +30,7 @@ on:
         description: 'Years, e.g. "2000-2026", "2014" or "2000-2005,2014"'
         default: "2000-2026"
       last_month:
-        description: 'Last month to request, "YYYY-MM"; empty = today minus 4 months (final) or 1 month (late)'
+        description: 'Last month to request, "YYYY-MM"; empty = newest complete month in NASA CMR'
         default: ""
       product:
         description: '"final" (GPM_3IMERGHH) or "late" (Late Run, GPM_3IMERGHHL); stored separately, never mixed'
@@ -100,7 +100,7 @@ jobs:
           MAX_MONTHS: ${{ inputs.max_months || '48' }}
         run: |
           python3 - <<'PY'
-          import datetime as dt, json, os, re, subprocess, sys, zipfile
+          import datetime as dt, json, os, re, subprocess, sys, time, urllib.request, zipfile
           years, last = os.environ["YEARS"].replace(" ", ""), os.environ["LAST"].strip()
           if not re.fullmatch(r"\d{4}(-\d{4})?(,\d{4}(-\d{4})?)*", years):
               sys.exit(f"invalid years: {years!r}")
@@ -119,8 +119,32 @@ jobs:
                   sys.exit(f"invalid last_month: {last!r}")
               ly, lm = map(int, last.split("-"))
           else:
-              t = dt.date.today()
-              n = t.year * 12 + t.month - 1 - (4 if product == "final" else 1)
+              # newest granule in NASA CMR decides; IMERG Final can lag far more than the nominal 3.5 months
+              cmr = os.environ.get("IMERG_CMR_URL", "https://cmr.earthdata.nasa.gov/search/granules.json")
+              short = "GPM_3IMERGHH" if product == "final" else "GPM_3IMERGHHL"
+              url = f"{cmr}?short_name={short}&version=07&sort_key=-start_date&page_size=1"
+              latest = None
+              for attempt in range(1, 4):
+                  try:
+                      with urllib.request.urlopen(url, timeout=30) as resp:
+                          latest = json.load(resp)["feed"]["entry"][0]["time_start"]
+                      latest = dt.datetime.strptime(latest[:19], "%Y-%m-%dT%H:%M:%S")
+                      break
+                  except Exception as e:
+                      latest = None
+                      print(f"CMR attempt {attempt}/3 failed: {e!r}")
+                      if attempt < 3:
+                          time.sleep(2)
+              if latest is not None:
+                  # complete month = the newest granule is the month's last one (23:30 on its last day)
+                  done_month = latest.hour == 23 and latest.minute == 30 and (latest + dt.timedelta(days=1)).day == 1
+                  n = latest.year * 12 + latest.month - 1 - (0 if done_month else 1)
+                  print(f"last month from NASA CMR (newest granule {latest:%Y-%m-%dT%H:%M}): {n // 12}-{n % 12 + 1:02d}")
+              else:
+                  print("WARNING: NASA CMR unreachable; guessing last month from today (final -4, late -1 months)")
+                  t = dt.date.today()
+                  n = t.year * 12 + t.month - 1 - (4 if product == "final" else 1)
+                  print(f"last month from today-based fallback: {n // 12}-{n % 12 + 1:02d}")
               ly, lm = divmod(n, 12)
               lm += 1
           # wanted months, clipped to first_month (never before the first available month 2000-06)
