@@ -74,3 +74,55 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
   await expect(page.getByTestId("map-canvas")).not.toHaveAttribute("data-deck-layers", /rain-convection-idf/);
   expect(errors).toEqual([]);
 });
+
+test("convection: station marker and IMERG cell outline, with source tooltips", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("marker-convection-station")).toHaveCount(0);
+  await page.getByTestId("layer-toggle-convection-idf").check();
+  const station = page.getByTestId("marker-convection-station");
+  const cell = page.getByTestId("marker-convection-cell");
+  await expect(station).toBeVisible();
+  await expect(station).toContainText("Neuquén Aero (estación)");
+  await expect(station).toHaveAttribute("title", /NOAA ISD/);
+  await expect(cell).toContainText("Celda IMERG");
+  await expect(cell).toHaveAttribute("title", /IMERG falso de prueba/);
+  await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /convection-cell/);
+  // both sit inside the map card
+  const map = (await page.getByTestId("map-canvas").boundingBox())!;
+  for (const m of [station, cell]) {
+    const b = (await m.locator(".map-marker-label").boundingBox())!;
+    expect(b.x).toBeGreaterThanOrEqual(map.x);
+    expect(b.x + b.width).toBeLessThanOrEqual(map.x + map.width);
+    expect(b.y).toBeGreaterThanOrEqual(map.y);
+  }
+  await page.getByTestId("layer-toggle-convection-idf").uncheck();
+  await expect(station).toHaveCount(0);
+  await expect(page.getByTestId("map-canvas")).not.toHaveAttribute("data-deck-layers", /convection-cell/);
+});
+
+test("map legends stack without overlapping when the IVT and rain layers are both on", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-ar-events").check();
+  await page.getByTestId("layer-toggle-convection-idf").check();
+  const ivt = page.getByTestId("map-legend");
+  const rain = page.getByTestId("rain-legend");
+  await expect(ivt).toBeVisible();
+  await expect(rain).toBeVisible();
+  const a = (await ivt.boundingBox())!;
+  const b = (await rain.boundingBox())!;
+  const overlap = a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  expect(overlap).toBe(false);
+  const map = (await page.getByTestId("map-canvas").boundingBox())!;
+  for (const r of [a, b]) {
+    expect(r.x).toBeGreaterThanOrEqual(map.x);
+    expect(r.y).toBeGreaterThanOrEqual(map.y);
+    expect(r.y + r.height).toBeLessThanOrEqual(map.y + map.height);
+  }
+  // the clocks stack too: select an AR event so its clock shows next to the rain clock
+  await page.getByTestId("timeline-event-AR-2000-001").click();
+  await expect(page.getByTestId("map-clock")).toBeVisible();
+  const c1 = (await page.getByTestId("map-clock").boundingBox())!;
+  const c2 = (await page.getByTestId("rain-clock").boundingBox())!;
+  expect(c1.y + c1.height <= c2.y || c2.y + c2.height <= c1.y).toBe(true);
+});

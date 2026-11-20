@@ -33,7 +33,7 @@ const fmtMm = (v: number) => num1.format(v);
 const M = { ...CHART_MARGIN, r: 56 };
 const DEFAULT_T = 10;
 
-const chartHeight = (w: number) => Math.round(Math.min(280, Math.max(190, w * 0.62)));
+const chartHeight = (w: number) => Math.round(Math.min(260, Math.max(190, w * 0.5)));
 
 const ICONS = { play: "M4 2.5 V13.5 L13 8 Z", pause: "M4 3h3v10H4zM9 3h3v10H9z", prev: "M12 3 V13 L5 8 Z M3 3 V13", next: "M4 3 V13 L11 8 Z M13 3 V13" };
 function Icon({ d, stroke = false }: { d: string; stroke?: boolean }) {
@@ -142,7 +142,7 @@ function IdfChart({ idf, w, metric, t, showScenarios }: { idf: IdfData; w: numbe
 }
 
 function CompareChart({ replay, w, cursorMs }: { replay: ReplayData; w: number; cursorMs: number | null }) {
-  const H = Math.round(Math.min(240, Math.max(170, w * 0.55)));
+  const H = Math.round(Math.min(200, Math.max(130, w * 0.4)));
   const { cumulative: c, compare } = replay;
   const t0 = Date.parse(c.start);
   const stepMs = c.step_minutes * 60_000;
@@ -259,7 +259,6 @@ export function ConvectionPanel({ state, source, period }: ConvectionPanelProps)
   const stationNote = `${es.convection.stationSource(cmp.station.source)}. ${cmp.station.note}.`;
   return (
     <div className="conv-panel" data-testid="convection-panel">
-      <h3 className="event-id">{es.convection.title}</h3>
       <p className="conv-label" data-testid="idf-label">
         {idf.label}
       </p>

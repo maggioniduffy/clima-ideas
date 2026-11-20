@@ -7,7 +7,7 @@ Mockup del usuario: https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y (`project/
 ## Reglas de UI
 
 - Sin etiquetas, badges ni descripciones secundarias: jerarquía, color y forma explican.
-- Nunca blanco ni negro puros: claros con tono crema, oscuros con tono azul.
+- Nunca blanco ni negro puros: claros con tono crema, oscuros con tono azul. Única excepción: `--chart-surface` (blanco puro en claro).
 - Mismo layout en ambos temas: mismas regiones y mismas cajas; solo cambian los tokens.
 - Acento reservado para lo que importa (evento, anomalía, selección).
 - Solo lo que funciona: no se muestran navegación de secciones, filtros ni botones sin acción.
@@ -29,6 +29,7 @@ Los valores viven en `web/src/theme/tokens.css` y `tokens.ts`; `tokens.test.ts` 
 | `--accent` | `#8EB8E5` | `#FDDA0D` | Eventos, anomalías, selección, foco |
 | `--water` | `#3A6E8F` | `#7FA9C6` | Ríos en el mapa |
 | `--casing` | `#2A343B` | `#16212A` | Contorno de las marcas de acento |
+| `--chart-surface` | `#FFFFFF` | `#121C24` | Fondo de todos los gráficos: plano, sin textura; único blanco puro de la paleta |
 | `--relief-0` | `#A7AEAF` | `#4E5F6A` | Relieve, bajo |
 | `--relief-1` | `#77848A` | `#7D8D96` | Relieve, medio |
 | `--relief-2` | `#4A5A64` | `#B3BEC4` | Relieve, alto |
@@ -56,21 +57,22 @@ IBM Plex Sans para el cuerpo y los títulos; IBM Plex Mono con numerales tabular
 ## Layout
 
 - Barra superior (mínimo 56 px, `--surface`, con textura): marca del logo, "Clima Ideas", `h1` de la página y botón de tema de 44 px.
-- Cuerpo: panel de capas (`aside`) de 240 px por defecto; columna principal con la tarjeta del mapa (flex 1, mínimo 400 px de alto), una fila de tarjetas debajo (inspector `1 1 300px`, gráficos de detalle `1,6 1 420px`, lista de eventos `1 1 300px`) y la tira de línea de tiempo.
+- Cuerpo en CSS grid (escritorio): mapa a la izquierda (ocupa el ancho restante), columna de paneles a la derecha (440 px por defecto, 320–640) y la línea de tiempo abajo a todo el ancho. La columna de paneles apila el panel de capas, el inspector, la tarjeta de detalle (`1 0 auto`) y la lista de eventos; usa todo el alto y solo se desplaza como último recurso. Los gráficos de la capa de convección (IDF y acumulado) van apilados.
 - El inspector muestra filas etiqueta a la izquierda y valor mono a la derecha (mínimo 28 px); la fuente y el período se conservan. Sin evento elegido, la ayuda del mapa queda en un desplegable (`details`) para que el inspector no desborde su tarjeta. La tarjeta de detalle aloja los gráficos de la estación y la tabla ENSO cuando corresponden; sin contenido no se muestra. La lista de eventos tiene filas de 48 px (punto, nombre, valor y fecha en mono) y el conteo en el título.
 - Línea de tiempo: botones anterior / reproducir / siguiente de 44 px; pista con línea base de 2 px, marcas en acento y cabezal de 5 px en acento; hora de la reproducción en mono.
-- Mapa en una tarjeta redondeada; leyenda abajo a la izquierda sin borde, con el selector de vista como control segmentado (contenedor `--raised`, botón activo `--ctrl`); mientras hay una reproducción activa, un reloj arriba a la derecha muestra su fecha y hora.
+- Mapa en una tarjeta redondeada; las leyendas van en un solo contenedor abajo a la izquierda (`.map-legends`, pila vertical sin superposición cuando hay dos capas) sin borde, con el selector de vista como control segmentado (contenedor `--raised`, botón activo `--ctrl`); mientras hay una reproducción activa, los relojes (`.map-clocks`, también apilados) arriba a la derecha muestran su fecha y hora. Con la capa de convección: marca de Neuquén Aero (estación) y contorno de la celda IMERG (±0,05°) con etiqueta y fuente en el tooltip.
+- Gráficos: todos los SVG (`.flood-chart`, `.enso-chart`) sobre `--chart-surface`, con 8 px de relleno y borde de 1 px `--border`. Contraste de tinta verificado en `tokens.test.ts`; los escenarios de sensibilidad usan `--water`.
 
 ## Tiradores de arrastre
 
-- Hay tiradores para el ancho de capas, el alto de la fila de tarjetas y el alto de la línea de tiempo, ubicados en los huecos de 8 px entre regiones.
+- Hay tiradores para el ancho de la columna de paneles y el alto de la línea de tiempo, ubicados en los huecos de 8 px entre regiones.
 - Arrastrar por debajo del mínimo del panel lo colapsa a 0: el panel queda oculto (`hidden`, fuera del orden de tabulación) y el mapa ocupa el espacio. El tirador permanece en el borde para poder arrastrarlo de vuelta.
 - Teclado: las flechas redimensionan (16 px), Inicio colapsa, Fin maximiza, Enter o doble clic restablece el tamaño por defecto. `aria-valuemin` es 0 y `aria-valuenow` es 0 cuando está colapsado. El mapa conserva al menos 320 × 200 px.
 - Tamaños y estado colapsado se guardan en `localStorage` (`panel-sizes`); las claves inválidas o ausentes vuelven al defecto.
 
 ## Pantallas angostas
 
-En pantallas de hasta 800 px el panel de capas es un cajón. Las tarjetas se apilan debajo del mapa y la página se desplaza; no hay tiradores.
+En pantallas de hasta 800 px el panel de capas es un cajón. Se apilan mapa, paneles y línea de tiempo y la página se desplaza; no hay tiradores.
 
 ## Rampa IVT (secuencial)
 

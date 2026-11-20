@@ -1,5 +1,5 @@
 /* Design tokens from docs/design.md. Keep in sync with tokens.ts (tokens.test.ts enforces it).
-   Never pure white or black. */
+   Never pure white or black, except --chart-surface in the light theme. */
 :root {
   --main: #3E505B;
   --secondary: #A4AF69;
@@ -32,6 +32,8 @@
   --accent: #8EB8E5;
   --water: #3A6E8F;
   --casing: #2A343B;
+  /* Charts sit on a plain surface without grain: pure white in light, a flat dark well in dark */
+  --chart-surface: #FFFFFF;
   /* Card texture (.tx): dots + diagonal highlight in light, none in dark */
   --tex: radial-gradient(rgba(42, 52, 59, 0.09) 0.9px, transparent 1.3px);
   --shine: rgba(255, 255, 255, 0.45);
@@ -73,6 +75,7 @@
   --accent: #FDDA0D;
   --water: #7FA9C6;
   --casing: #16212A;
+  --chart-surface: #121C24;
   --tex: none;
   --shine: transparent;
   --ivt-0: #22384A;

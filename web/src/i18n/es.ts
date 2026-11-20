@@ -1,7 +1,7 @@
 export const es = {
   appTitle: "Neuquén: lluvias extremas",
   theme: { toggle: "Cambiar tema" },
-  resize: { layers: "Ancho del panel de capas", cards: "Alto del panel de detalle", timeline: "Alto de la línea de tiempo" },
+  resize: { panels: "Ancho de los paneles", timeline: "Alto de la línea de tiempo" },
   drawers: { layers: "Capas", close: "Cerrar panel" },
   layers: { empty: "Sin capas", loading: "Cargando capas…", error: "No se pudieron cargar las capas", toggle: "Activar capa" },
   inspector: {
@@ -84,6 +84,12 @@ export const es = {
     legendLow: "Menos de 0,1: transparente",
     legendSource: (source: string) => `Fuente: ${source}`,
     clockLabel: "Hora del replay (UTC)",
+    markerStation: (name: string) => `${name} (estación)`,
+    markerStationTip: (name: string, source: string, lat: string, lon: string) =>
+      `${name} (estación). Fuente: ${source}. Ubicación: ${lat}, ${lon}`,
+    markerCell: "Celda IMERG",
+    markerCellTip: (source: string, deg: string, lat: string, lon: string) =>
+      `Celda IMERG de ${deg}° centrada en ${lat}, ${lon}, la que se compara con la estación. Fuente: ${source}`,
   },
   timeline: { empty: "Sin serie temporal", events: "Eventos en la línea de tiempo", cursor: "Hora de la reproducción" },
   map: {

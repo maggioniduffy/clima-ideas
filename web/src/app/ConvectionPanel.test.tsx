@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import type { IdfData, ReplayData } from "../layers/convectionIdf";
 import type { ConvectionState } from "../layers/useConvectionIdf";
 import { ConvectionPanel } from "./ConvectionPanel";
-import { RainLegend } from "./RainLegend";
+import { RainClock, RainLegend } from "./RainLegend";
 
 const dir = "e2e/fixtures/processed/convection-idf/";
 const idf = JSON.parse(readFileSync(dir + "idf.json", "utf8")) as IdfData;
@@ -69,7 +69,12 @@ test("loading and error states", () => {
 });
 
 test("rain legend shows source, ticks and the clock", () => {
-  render(<RainLegend source="IMERG X" cursorMs={Date.parse("2014-04-06T10:00:00Z")} />);
+  render(
+    <>
+      <RainLegend source="IMERG X" />
+      <RainClock cursorMs={Date.parse("2014-04-06T10:00:00Z")} />
+    </>,
+  );
   expect(screen.getByTestId("rain-legend")).toHaveTextContent("Fuente: IMERG X");
   expect(screen.getByTestId("rain-legend-ticks")).toHaveTextContent("0138≥20");
   expect(screen.getByTestId("rain-clock")).toHaveTextContent("2014-04-06 10:00 UTC");

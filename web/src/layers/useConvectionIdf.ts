@@ -4,6 +4,7 @@ import { fetchFrames, fetchLayerData, type FramesIndex, type LayerManifest } fro
 import { useTheme } from "../theme/themeStore";
 import { frameTime, gridCells, parseFrames } from "./arEvents";
 import type { IdfData, ReplayData } from "./convectionIdf";
+import { buildCellLayers, convectionMarkers, gridStepDeg } from "./convectionStation";
 import { buildRainRasterLayer } from "./rainRasterLayer";
 
 /** Milliseconds between replay frames (one frame = 30 min of IMERG; 144 frames last ~17 s). */
@@ -103,9 +104,16 @@ export function useConvectionIdf(layer: LayerManifest | undefined, active: boole
   const deckLayers = useMemo<Layer[]>(
     () =>
       active && layerId && data
-        ? [buildRainRasterLayer({ layerId, grid: data.index.grid, cells, frames: data.frames, frame, theme })]
+        ? [
+            buildRainRasterLayer({ layerId, grid: data.index.grid, cells, frames: data.frames, frame, theme }),
+            ...buildCellLayers(data.replay, gridStepDeg(data.index.grid), theme),
+          ]
         : [],
     [active, layerId, data, cells, frame, theme],
+  );
+  const markers = useMemo(
+    () => (active && data ? convectionMarkers(data.replay, gridStepDeg(data.index.grid)) : []),
+    [active, data],
   );
 
   return {
@@ -120,6 +128,7 @@ export function useConvectionIdf(layer: LayerManifest | undefined, active: boole
     step,
     seek,
     deckLayers,
+    markers,
   };
 }
 

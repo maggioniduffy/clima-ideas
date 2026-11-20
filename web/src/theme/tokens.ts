@@ -13,6 +13,8 @@ export const tokens = {
     accent: "#8EB8E5",
     water: "#3A6E8F",
     casing: "#2A343B",
+    /** Chart background: plain, no grain. The one pure white of the palette (docs/design.md). */
+    "chart-surface": "#FFFFFF",
   },
   dark: {
     bg: "#16212A",
@@ -26,6 +28,8 @@ export const tokens = {
     accent: "#FDDA0D",
     water: "#7FA9C6",
     casing: "#16212A",
+    /** Chart background: a solid flat well, darker than --surface and without grain. */
+    "chart-surface": "#121C24",
   },
   /** IVT sequential ramp stops, low to high (evenly spaced over [0, IVT_SCALE_MAX]); `--ivt-0..5` in tokens.css. */
   ivtRamp: {

@@ -1,6 +1,6 @@
 /** Pure sizing logic for the resizable shell panels: limits, clamping, keyboard steps and persistence. */
 
-export type PanelId = "layers" | "cards" | "timeline";
+export type PanelId = "panels" | "timeline";
 /** Panel sizes in px; 0 means the panel is collapsed (hidden). */
 export type PanelSizes = Record<PanelId, number>;
 export interface Viewport {
@@ -8,15 +8,13 @@ export interface Viewport {
   height: number;
 }
 
-/** `layers` is a width, `cards` (the card row under the map) and `timeline` are heights. */
+/** `panels` is the width of the right column (layers, inspector, detail, events); `timeline` is the height of the bottom strip. */
 export const PANEL_LIMITS: Record<PanelId, { min: number; max: number; def: number }> = {
-  layers: { min: 160, max: 480, def: 240 },
-  cards: { min: 160, max: 520, def: 260 },
+  panels: { min: 320, max: 640, def: 440 },
   timeline: { min: 80, max: 480, def: 136 },
 };
 export const DEFAULT_SIZES: PanelSizes = {
-  layers: PANEL_LIMITS.layers.def,
-  cards: PANEL_LIMITS.cards.def,
+  panels: PANEL_LIMITS.panels.def,
   timeline: PANEL_LIMITS.timeline.def,
 };
 /** The map card never gets smaller than this (below it the page scrolls). */
@@ -31,16 +29,13 @@ export const STORAGE_KEY = "panel-sizes";
 
 const PANELS = Object.keys(PANEL_LIMITS) as PanelId[];
 
-/** Allowed range for a panel given the other panels' sizes and the window; min wins when space runs out. */
-export function limitsFor(panel: PanelId, sizes: PanelSizes, vp: Viewport): { min: number; max: number } {
+/** Allowed range for a panel given the window; min wins when space runs out. The map keeps MIN_MAP_W x MIN_MAP_H. */
+export function limitsFor(panel: PanelId, _sizes: PanelSizes, vp: Viewport): { min: number; max: number } {
   const { min, max } = PANEL_LIMITS[panel];
-  const column = vp.height - TOPBAR_H - 2 * BODY_PAD - 2 * HANDLE - MIN_MAP_H;
   const room =
-    panel === "layers"
+    panel === "panels"
       ? vp.width - 2 * BODY_PAD - HANDLE - MIN_MAP_W
-      : panel === "cards"
-        ? column - sizes.timeline
-        : column - sizes.cards;
+      : vp.height - TOPBAR_H - 2 * BODY_PAD - HANDLE - MIN_MAP_H;
   return { min, max: Math.max(min, Math.min(max, Math.floor(room))) };
 }
 
@@ -52,12 +47,12 @@ export function clampSize(panel: PanelId, value: number, sizes: PanelSizes, vp: 
   return Math.min(max, Math.max(min, Math.round(value)));
 }
 
-/** Re-clamp every panel against the window (cards first, then the timeline against the clamped cards). */
+/** Re-clamp every panel against the window. */
 export function clampAll(sizes: PanelSizes, vp: Viewport): PanelSizes {
-  const layers = clampSize("layers", sizes.layers, sizes, vp);
-  const cards = clampSize("cards", sizes.cards, sizes, vp);
-  const timeline = clampSize("timeline", sizes.timeline, { ...sizes, cards }, vp);
-  return { layers, cards, timeline };
+  return {
+    panels: clampSize("panels", sizes.panels, sizes, vp),
+    timeline: clampSize("timeline", sizes.timeline, sizes, vp),
+  };
 }
 
 /**
@@ -87,13 +82,13 @@ export function stepSize(
 
 /**
  * Stored sizes, falling back per panel to the default when missing or invalid (0 = collapsed is valid).
- * The old shape (with an inspector width) is ignored as a whole.
+ * Older shapes (inspector width, layers / cards) are ignored as a whole.
  */
 export function loadSizes(): PanelSizes {
   const out = { ...DEFAULT_SIZES };
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as Record<string, unknown> | null;
-    if (raw && typeof raw === "object" && !("inspector" in raw)) {
+    if (raw && typeof raw === "object" && !("inspector" in raw) && !("layers" in raw)) {
       for (const p of PANELS) {
         const v = raw[p];
         if (typeof v !== "number" || !Number.isFinite(v)) continue;
