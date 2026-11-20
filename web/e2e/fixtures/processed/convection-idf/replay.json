@@ -1,0 +1,49 @@
+{
+ "event": {
+  "id": "storm-2014-04",
+  "name": "Temporal falso de prueba",
+  "start": "2014-04-06T10:00:00Z",
+  "end": "2014-04-06T16:00:00Z",
+  "step_minutes": 30,
+  "n_frames": 12
+ },
+ "source": "IMERG falso de prueba",
+ "doi": "",
+ "units": "mm/h",
+ "cell": {
+  "lat": -38.95,
+  "lon": -68.15,
+  "row": 1,
+  "col": 2
+ },
+ "compare": {
+  "start": "2014-04-06T12:00:00Z",
+  "end": "2014-04-06T14:00:00Z",
+  "window": "12Z–12Z",
+  "imerg_mm": 97.6,
+  "station": {
+   "name": "Neuquén Aero",
+   "id": "877150-99999",
+   "lat": -38.949,
+   "lon": -68.156,
+   "value_mm": 118.0,
+   "source": "NOAA ISD (NCEI), estación 877150-99999",
+   "note": "Dato de prueba"
+  }
+ },
+ "cumulative": {
+  "start": "2014-04-06T12:00:00Z",
+  "step_minutes": 30,
+  "mm": [
+   0,
+   20,
+   45,
+   70,
+   97.6,
+   110,
+   120,
+   125,
+   128
+  ]
+ }
+}

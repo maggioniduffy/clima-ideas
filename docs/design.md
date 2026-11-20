@@ -94,3 +94,7 @@ En ambas vistas las celdas ERA5 siguen siendo seleccionables (hover/clic) aunque
 ## Panel de crecidas
 
 Gráficos SVG propios, solo con tokens: curva GEV y serie diaria en `--text`, banda IC 95 % y máximos anuales en `--text-muted` (banda translúcida), las 5 mayores crecidas en `--accent` con borde `--casing`. Los puntos y estaciones del mapa son `--ctrl`; el seleccionado va en `--accent` con contorno `--casing`; las reguladas se dibujan huecas con contorno.
+
+## Capa de convección (F3.5)
+
+Panel en la tarjeta de detalle: curvas IDF (eje x logarítmico de duración, eje y logarítmico; una curva continua por período de retorno, Gumbel a trazos, banda IC 90 % del T elegido, escenarios de sensibilidad ÷ 0,92 y ÷ 0,67 en puntos, T = 100 marcado "†" y atenuado como extrapolación) y replay del temporal de abril de 2014 con el acumulado de IMERG contra el total de la estación (punto en `--accent`). El mapa pinta la lluvia semihoraria con la rampa azul monocromática `--rain-0..4` (umbrales 0, 1, 3, 8 y ≥20 mm/h, parejos en la leyenda; transparente bajo 0,1 mm/h): sin colores de advertencia. Pie con fuente, período, el aviso de sesgo y "No es un sistema de alerta oficial".

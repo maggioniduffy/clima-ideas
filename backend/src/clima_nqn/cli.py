@@ -810,6 +810,21 @@ def convection_idf(
     typer.echo(f"wrote {out}")
 
 
+@convection_app.command("layer")
+def convection_layer(
+    zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(
+        "data/raw/imerg/neuquen.zarr"
+    ),
+    out: Annotated[
+        Path | None, typer.Option(help="Layer directory (default: <data root>/convection-idf).")
+    ] = None,
+) -> None:
+    """Build the convection-idf viewer layer: IDF curves + April 2014 replay (F3.5)."""
+    from clima_nqn.layers import convection_idf
+
+    typer.echo(convection_idf.build(zarr, out or convection_idf.DEFAULT_OUT))
+
+
 @convection_app.command("bias")
 def convection_bias(
     zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(

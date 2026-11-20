@@ -332,3 +332,32 @@
   font-size: 13px; background: transparent; color: var(--text); border: 1px solid var(--border); cursor: pointer;
 }
 .flood-ar-tag:hover { background: var(--ctrl); color: var(--on-ctrl); }
+
+/* Convection layer (F3.5): IDF chart, replay and cumulative comparison */
+.conv-panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.conv-panel h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.conv-panel h4 { margin: 0; font-size: 14px; }
+.conv-label { margin: 0; font-size: 13px; color: var(--text-muted); }
+.conv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-4); }
+.conv-col { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.conv-seg { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1); border-radius: 10px; background: var(--raised); }
+.conv-seg button {
+  flex: 1; min-height: 44px; min-width: 44px; padding: 0 4px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+  background: transparent; color: var(--text); border: 0; border-radius: 7px;
+}
+.conv-seg button[aria-pressed="true"] { background: var(--ctrl); color: var(--on-ctrl); }
+.conv-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; cursor: pointer; }
+.conv-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--ctrl); }
+.conv-note { margin: 0; font-size: 13px; line-height: 1.35; color: var(--text-muted); overflow-wrap: anywhere; }
+.conv-readout { margin: 0; }
+.idf-curve { fill: none; stroke: var(--text); stroke-width: 1.5; stroke-linejoin: round; }
+.idf-curve-selected { stroke-width: 2.75; }
+.idf-curve-extrap { stroke-opacity: 0.55; }
+.idf-gumbel { fill: none; stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 6 4; }
+.idf-scenario { fill: none; stroke: var(--ctrl); stroke-width: 2.5; stroke-dasharray: 2 4; stroke-linecap: round; }
+.idf-window-end { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.idf-cursor { stroke: var(--text); stroke-width: 1; }
+.idf-cursor-dot { fill: var(--text); }
+.rain-controls { flex-wrap: wrap; }
+.rain-controls input[type="range"] { min-width: 80px; margin: 0 var(--space-2); }
+.rain-controls .replay-time { flex-basis: 100%; min-width: 0; text-align: left; }

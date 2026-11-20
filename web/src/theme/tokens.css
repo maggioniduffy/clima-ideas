@@ -48,6 +48,12 @@
   --count-2: #B79C70;
   --count-3: #8A6F46;
   --count-4: #55402A;
+  /* Rain sequential ramp (IMERG mm/h, convection layer), low to high: single-hue blue, no warning colors */
+  --rain-0: #DCE8EC;
+  --rain-1: #A9C8D6;
+  --rain-2: #6FA0BD;
+  --rain-3: #3A6E96;
+  --rain-4: #1B3A5C;
   --relief-0: #A7AEAF;
   --relief-1: #77848A;
   --relief-2: #4A5A64;
@@ -80,6 +86,11 @@
   --count-2: #76588A;
   --count-3: #A77FA6;
   --count-4: #DDB9C6;
+  --rain-0: #24384A;
+  --rain-1: #2F5878;
+  --rain-2: #4A82A8;
+  --rain-3: #86B4D2;
+  --rain-4: #D6E8F2;
   --relief-0: #4E5F6A;
   --relief-1: #7D8D96;
   --relief-2: #B3BEC4;

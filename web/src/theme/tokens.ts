@@ -37,6 +37,11 @@ export const tokens = {
     light: ["#EFE8DA", "#D9C7A4", "#B79C70", "#8A6F46", "#55402A"],
     dark: ["#2A2F3C", "#4A4468", "#76588A", "#A77FA6", "#DDB9C6"],
   },
+  /** Rain ramp (IMERG mm/h, convection layer), low to high; single-hue blue, neutral (no warning colors); `--rain-0..4` in tokens.css. */
+  rainRamp: {
+    light: ["#DCE8EC", "#A9C8D6", "#6FA0BD", "#3A6E96", "#1B3A5C"],
+    dark: ["#24384A", "#2F5878", "#4A82A8", "#86B4D2", "#D6E8F2"],
+  },
   /** Monochrome slate relief ramp (mockup), far/low to peaks (elevations in RELIEF_STOPS_M); `--relief-0..3` in tokens.css. */
   reliefRamp: {
     light: ["#A7AEAF", "#77848A", "#4A5A64", "#2A343B"],

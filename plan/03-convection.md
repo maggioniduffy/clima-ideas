@@ -21,7 +21,7 @@ IMERG 30 min (2000–hoy), SMN Neuquén Aero, estaciones AIC (Plottier). Acceso 
 | F3.2 | Ingesta de estaciones con control de calidad | Sonnet | Parquet + unit de QC |
 | F3.3 ✅ | Curvas IDF (duraciones 30 min–24 h) estación vs. IMERG | Sonnet | Unit con serie sintética de cuantiles conocidos |
 | F3.4 ✅ | Sesgo de IMERG en eventos conocidos; corrección por cuantiles | opencode analiza, Sonnet implementa | Informe de sesgo + función QM testeada |
-| F3.5 | Capa: curva IDF lado a lado + replay del temporal de abril de 2014 | Sonnet | e2e: replay y comparación |
+| F3.5 ✅ | Capa: curva IDF lado a lado + replay del temporal de abril de 2014 | Sonnet | e2e: replay y comparación |
 | F3.6 ✅ | Frecuencia de días convectivos extremos por fase ENSO (F0.10), primavera y verano | opencode analiza | Tabla con n de años, test de permutación y "sin verificar" donde no alcance; conteos en el formato de F1.9 ("5 de 7 primaveras Niño"), nunca "de cada 10" |
 
 ## Entregable
@@ -78,3 +78,7 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   conjunto 12,6 mm/h: solo 5 días, todos en primavera (1 de 8 primaveras Niño, 2 de 10 neutras, 0 de 7 Niña). Ningún
   test pasa BH < 0,05 en la principal ni en 4 sensibilidades (p95, regional, p99 y p95 por estación). Con tan pocos
   días la prueba no tiene potencia: ausencia de señal no es ausencia de efecto.
+- 2026-11-20 F3.5 hecha: capa `convection-idf` (`layers/convection_idf.py`, `clima-nqn convection layer`; 484 KB)
+  con la curva IDF (GEV por T con IC 90 %, Gumbel punteado, escenarios ÷0,92 y ÷0,67, T 100 marcado como
+  extrapolación) y el replay de 144 medias horas del 6 al 8/4/2014 con el acumulado de la celda contra los 118 mm de
+  la estación (IMERG 97,6 mm 12Z–12Z). e2e `web/e2e/convection-idf.spec.ts`. Falta publicarla en R2 (`make publish`).

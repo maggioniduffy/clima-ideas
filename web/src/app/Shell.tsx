@@ -11,6 +11,8 @@ import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
+import { CONVECTION_LAYER_ID } from "../layers/convectionIdf";
+import { useConvectionIdf } from "../layers/useConvectionIdf";
 import { useLayers } from "../layers/useLayers";
 import { useTheme } from "../theme/themeStore";
 import { ClockBox } from "./ClockBox";
@@ -20,6 +22,7 @@ import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
 import { MapCanvas } from "./MapCanvas";
 import { MapLegend } from "./MapLegend";
+import { RainLegend } from "./RainLegend";
 import { PanelResizer } from "./PanelResizer";
 import {
   clampAll,
@@ -134,6 +137,9 @@ export function Shell() {
   const floodPoint =
     s.selectedLayer?.id === FLOOD_LAYER_ID ? (s.selectedFeatures.find((f) => f.id === s.selectedPointId) ?? null) : null;
   const flood = useFloodStation(floodPoint ? FLOOD_LAYER_ID : null, floodPoint?.id ?? null);
+  const convLayer = s.layers.find((l) => l.id === CONVECTION_LAYER_ID);
+  const convActive = !!convLayer && s.activeIds.has(convLayer.id);
+  const conv = useConvectionIdf(convLayer, convActive);
   const refLayers = useReferenceLayers();
   const arVisible = useMemo(
     () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn, TOP_N, ratios),
@@ -198,11 +204,15 @@ export function Shell() {
             layers={[
               ...mapLayers.filter((l) => !isFlood(l)),
               ...ar.deckLayers,
+              ...conv.deckLayers,
               ...mapLayers.filter(isFlood),
               ...refLayers,
             ]}
           >
             {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} count={ar.count} />}
+            {convActive && convLayer && conv.status === "ready" && (
+              <RainLegend source={convLayer.source} cursorMs={conv.cursorMs} />
+            )}
             {ar.selectedEvent && ar.cursorMs != null && (
               <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />
             )}
@@ -220,6 +230,11 @@ export function Shell() {
             <DetailCard
               onOpenArEvent={openArEvent}
               flood={floodPoint ? flood : null}
+              convection={
+                convActive && convLayer && s.selectedLayer?.id === convLayer.id
+                  ? { state: conv, source: convLayer.source, period: convLayer.period }
+                  : null
+              }
               enso={
                 showEnso && eventsLayer && enso.status !== "none"
                   ? {
