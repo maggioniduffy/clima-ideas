@@ -395,21 +395,21 @@
 .flood-ar-tag:hover { background: var(--ctrl); color: var(--on-ctrl); }
 
 /* Convection layer (F3.5): IDF chart, replay and cumulative comparison */
-.conv-panel { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.conv-panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .conv-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-2); }
 .conv-head .conv-seg { flex: 0 1 220px; }
 .detail-card .conv-panel .flood-figure figcaption { font-size: 12px; line-height: 1.3; }
 .conv-panel h3 { margin: 0; font-size: 16px; font-weight: 600; }
 .conv-panel h4 { margin: 0; font-size: 14px; }
 .conv-label { margin: 0; font-size: 13px; color: var(--text-muted); }
-.conv-col { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.conv-col { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .conv-seg { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1); border-radius: 10px; background: var(--raised); }
 .conv-seg button {
-  flex: 1; min-height: 32px; min-width: 44px; padding: 0 4px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+  flex: 1; min-height: 36px; min-width: 44px; padding: 0 4px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
   background: transparent; color: var(--text); border: 0; border-radius: 7px;
 }
 .conv-seg button[aria-pressed="true"] { background: var(--ctrl); color: var(--on-ctrl); }
-.conv-check { display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 13px; cursor: pointer; }
+.conv-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; cursor: pointer; }
 .conv-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--ctrl); }
 .conv-note { margin: 0; font-size: 13px; line-height: 1.35; color: var(--text-muted); overflow-wrap: anywhere; }
 .conv-readout { margin: 0; }
@@ -451,17 +451,9 @@
   .conv-replay-plot { height: 180px; flex: none; }
 }
 
-/* Right column: compact cards so the layer list, inspector and a detail card fit a 900 px window without scrolling */
-.shell-panels > .card { padding: 10px var(--space-3); }
-.shell-panels { gap: var(--space-1); }
-.shell-panels .panel-title, .shell-panels .card-title { margin-bottom: var(--space-1); }
-.shell-panels .layer-item, .shell-panels .layer-title { min-height: 28px; }
-.shell-panels .kv dt, .shell-panels .kv dd { min-height: 22px; }
-.shell-panels .inspector-meta { margin-top: var(--space-1); }
+/* Right column: scrolls when the cards are taller than the window (overflow-y auto on .shell-panels) */
 .shell-timeline .conv-replay + .timeline-track { margin-top: var(--space-2); }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .conv-head .conv-check { flex: 1 1 auto; }
-.conv-seg { padding: 2px; }
 .conv-col .flood-chart { padding: 0; }
 .conv-panel .conv-note, .conv-panel .flood-warn { font-size: 12px; line-height: 1.3; }
-.conv-notes summary { min-height: 28px; }

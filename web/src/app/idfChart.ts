@@ -29,3 +29,20 @@ export const utcTickLabel = (ms: number): string => {
   const d = new Date(ms);
   return `${d.getUTCDate()}/${d.getUTCMonth() + 1} ${String(d.getUTCHours()).padStart(2, "0")}Z`;
 };
+
+/**
+ * Vertical positions for end-of-curve labels: keeps the given order (ascending y), pushes labels apart to at least
+ * `minGap` and keeps them inside [top, bottom]. If the range cannot hold them all at `minGap`, the gap shrinks evenly.
+ */
+export function spreadLabels(ys: number[], minGap: number, top: number, bottom: number): number[] {
+  const n = ys.length;
+  if (n === 0) return [];
+  const gap = n > 1 ? Math.min(minGap, (bottom - top) / (n - 1)) : minGap;
+  const out = ys.map((v) => Math.min(Math.max(v, top), bottom));
+  for (let i = 1; i < n; i++) out[i] = Math.max(out[i]!, out[i - 1]! + gap);
+  for (let i = n - 1; i >= 0; i--) {
+    const cap = i === n - 1 ? bottom : out[i + 1]! - gap;
+    out[i] = Math.min(out[i]!, cap);
+  }
+  return out;
+}

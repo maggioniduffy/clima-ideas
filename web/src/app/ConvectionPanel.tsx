@@ -18,7 +18,7 @@ import {
   tickAnchor,
   type Pt,
 } from "./floodCharts";
-import { durationLabel, logDomain, logTicks } from "./idfChart";
+import { durationLabel, logDomain, logTicks, spreadLabels } from "./idfChart";
 import { useWidth } from "./useWidth";
 
 const num1 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
@@ -62,12 +62,9 @@ function IdfChart({ idf, w, metric, t, showScenarios }: { idf: IdfData; w: numbe
     .map((c) => ({ t: c.t, y: c.rows.length ? y(metricValue(c.rows[c.rows.length - 1]!, metric) ?? yLo) : NaN }))
     .filter((e) => !Number.isNaN(e.y))
     .sort((a, b) => a.y - b.y);
-  ends.forEach((e, i) => labelY.set(e.t, i === 0 ? e.y : Math.max(e.y, labelY.get(ends[i - 1]!.t)! + 13)));
-  // keep the stack inside the chart: whatever the push-apart moved below the bottom edge is shifted back up
-  for (let i = ends.length - 1; i >= 0; i--) {
-    const cap = i === ends.length - 1 ? H - 6 : labelY.get(ends[i + 1]!.t)! - 13;
-    labelY.set(ends[i]!.t, Math.min(labelY.get(ends[i]!.t)!, cap));
-  }
+  // labels keep >= 14 px apart and stay inside the plot, above the x tick labels (which start ~6 px under the axis; the text box is ~14 px tall)
+  const spread = spreadLabels(ends.map((e) => e.y), 14, M.t + 2, H - M.b - 6);
+  ends.forEach((e, i) => labelY.set(e.t, spread[i]!));
   return (
     <svg viewBox={`0 0 ${w} ${H}`} className="flood-chart" role="img" aria-label={es.convection.idfLabel} data-testid="idf-chart" data-curves={curves.length}>
       {yTicks.map((v) => (

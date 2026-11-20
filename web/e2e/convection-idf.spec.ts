@@ -89,21 +89,31 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
   expect(errors).toEqual([]);
 });
 
-test("convection: the right column fits at 1440x900 without scrolling", async ({ page }) => {
+test("convection: the right column scrolls and the IDF chart is reachable at 1440x900", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByTestId("layer-toggle-convection-idf").check();
-  await expect(page.getByTestId("idf-chart")).toBeVisible();
   await expect(page.getByTestId("compare-chart")).toBeVisible();
   const col = page.getByTestId("panels-slot");
-  const m = await col.evaluate((el) => ({ sh: el.scrollHeight, ch: el.clientHeight }));
-  expect(m.sh).toBeLessThanOrEqual(m.ch + 1);
+  expect(await col.evaluate((el) => getComputedStyle(el).overflowY)).toBe("auto");
+  await page.getByTestId("idf-chart").scrollIntoViewIfNeeded();
+  await expect(page.getByTestId("idf-chart")).toBeInViewport();
+  const c = (await col.boundingBox())!;
+  const i = (await page.getByTestId("idf-chart").boundingBox())!;
+  expect(i.y).toBeGreaterThanOrEqual(c.y - 1);
+  expect(i.y + i.height).toBeLessThanOrEqual(c.y + c.height + 1);
+  // end-of-curve labels do not touch the x tick labels
+  const labels = await page.locator('[data-testid^="idf-label-"]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom));
+  const ticks = await page.getByTestId("idf-chart").locator("text.flood-tick").evaluateAll((els) =>
+    els.filter((e) => /\d+ (h|min)$/.test(e.textContent ?? "")).map((e) => e.getBoundingClientRect().top),
+  );
+  expect(Math.max(...labels)).toBeLessThanOrEqual(Math.min(...ticks) + 1);
   // the replay chart sits inside the timeline region
   const tl = (await page.getByTestId("timeline-slot").boundingBox())!;
   const ch = (await page.getByTestId("compare-chart").boundingBox())!;
   expect(ch.y).toBeGreaterThanOrEqual(tl.y);
   expect(ch.y + ch.height).toBeLessThanOrEqual(tl.y + tl.height + 1);
-  // opening the notes may scroll the column, but nothing is cut horizontally
+  // opening the notes lengthens the column, nothing is cut horizontally
   await page.getByTestId("conv-notes").locator("summary").click();
   await expect(page.getByTestId("conv-bias-caveat")).toBeVisible();
 });
