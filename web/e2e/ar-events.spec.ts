@@ -212,14 +212,14 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
   await expect(page.getByTestId("enso-tab-SON")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("enso-row-ivt_mean")).toContainText("0,0312");
 
-  // the inspector keeps fitting without scrolling and the panel sits in the card row under the map
+  // the inspector keeps fitting without scrolling and the panel sits in the right column, beside the map
   const inspector = page.getByTestId("inspector");
   expect(await inspector.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
-  await expect(page.getByTestId("cards-row").getByTestId("detail-card")).toContainText("¿Cambia ENSO los ríos atmosféricos en Neuquén?");
+  await expect(page.getByTestId("panels-slot").getByTestId("detail-card")).toContainText("¿Cambia ENSO los ríos atmosféricos en Neuquén?");
   const map = (await page.getByTestId("map-canvas").boundingBox())!;
-  const box = (await page.getByTestId("detail-card").boundingBox())!; // the card scrolls its taller content
-  expect(box.y).toBeGreaterThanOrEqual(map.y + map.height);
-  expect(box.x + box.width).toBeLessThanOrEqual(map.x + map.width);
+  const box = (await page.getByTestId("detail-card").boundingBox())!; // in the right column, beside the map
+  expect(box.x).toBeGreaterThanOrEqual(map.x + map.width);
+  expect(box.x + box.width).toBeLessThanOrEqual(1400);
 
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);

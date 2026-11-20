@@ -5,6 +5,8 @@ import { ivtColor, rgbCss } from "../layers/arEvents";
 import { getTheme } from "../theme/themeStore";
 import { es } from "../i18n/es";
 import type { ArEventsState } from "../layers/useArEvents";
+import type { ConvectionState } from "../layers/useConvectionIdf";
+import { readFileSync } from "node:fs";
 import { Timeline } from "./Timeline";
 
 const ev = (id: string, start: string, end: string, ivt: number): ArEvent => ({
@@ -70,4 +72,14 @@ test("replay controls drive the callbacks and the cursor follows the replay time
   expect(replay.step).toHaveBeenCalledWith(1);
   fireEvent.change(screen.getByRole("slider", { name: es.events.hour }), { target: { value: "5" } });
   expect(replay.seek).toHaveBeenCalledWith(5);
+});
+
+test("shows the convection replay instead of the empty message when that layer is ready", () => {
+  const dir = "e2e/fixtures/processed/convection-idf/";
+  const replay = JSON.parse(readFileSync(dir + "replay.json", "utf8"));
+  const state = { status: "ready", idf: null, replay, nFrames: 12, frame: 0, playing: false, cursorMs: null, toggle: vi.fn(), step: vi.fn(), seek: vi.fn(), deckLayers: [] } as unknown as ConvectionState;
+  render(<Timeline convection={state} />);
+  expect(screen.queryByText(es.timeline.empty)).not.toBeInTheDocument();
+  expect(screen.getByTestId("timeline")).toContainElement(screen.getByTestId("compare-chart"));
+  expect(screen.getByTestId("timeline")).toContainElement(screen.getByTestId("rain-controls"));
 });

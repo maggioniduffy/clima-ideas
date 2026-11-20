@@ -1,6 +1,6 @@
 # Fase 3 — Convección en la meseta y la Confluencia
 
-Estado: en curso (F3.0 hecha: sin lluvia horaria de estación; la pregunta va reformulada) · Depende de: 0 · Refs: `docs/architecture.md`
+Estado: hecha (F3.0: sin lluvia horaria de estación, pregunta reformulada; capa publicada el 2026-11-20) · Depende de: 0 · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -18,10 +18,10 @@ IMERG 30 min (2000–hoy), SMN Neuquén Aero, estaciones AIC (Plottier). Acceso 
 |---|---|---|---|
 | F3.0 | Comprobar lluvia horaria de Neuquén Aero en NOAA ISD 877150 (S3 anónimo): período, huecos y licencia. SMN horario sigue sin verificar y AIC es restringido | opencode | Informe en `reports/03/F3.0.md` con sí o no y por qué |
 | F3.1 | Ingesta IMERG recortado a la Confluencia y meseta | Sonnet escribe, opencode corre | Zarr 2000–hoy |
-| F3.2 | Ingesta de estaciones con control de calidad | Sonnet | Parquet + unit de QC |
+| F3.2 ✅ | Ingesta de estaciones con control de calidad | Sonnet | Parquet + unit de QC |
 | F3.3 ✅ | Curvas IDF (duraciones 30 min–24 h) estación vs. IMERG | Sonnet | Unit con serie sintética de cuantiles conocidos |
 | F3.4 ✅ | Sesgo de IMERG en eventos conocidos; corrección por cuantiles | opencode analiza, Sonnet implementa | Informe de sesgo + función QM testeada |
-| F3.5 | Capa: curva IDF lado a lado + replay del temporal de abril de 2014 | Sonnet | e2e: replay y comparación |
+| F3.5 ✅ | Capa: curva IDF lado a lado + replay del temporal de abril de 2014 | Sonnet | e2e: replay y comparación |
 | F3.6 ✅ | Frecuencia de días convectivos extremos por fase ENSO (F0.10), primavera y verano | opencode analiza | Tabla con n de años, test de permutación y "sin verificar" donde no alcance; conteos en el formato de F1.9 ("5 de 7 primaveras Niño"), nunca "de cada 10" |
 
 ## Entregable
@@ -78,3 +78,16 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   conjunto 12,6 mm/h: solo 5 días, todos en primavera (1 de 8 primaveras Niño, 2 de 10 neutras, 0 de 7 Niña). Ningún
   test pasa BH < 0,05 en la principal ni en 4 sensibilidades (p95, regional, p99 y p95 por estación). Con tan pocos
   días la prueba no tiene potencia: ausencia de señal no es ausencia de efecto.
+- 2026-11-20 F3.5 hecha: capa `convection-idf` (`layers/convection_idf.py`, `clima-nqn convection layer`; 484 KB)
+  con la curva IDF (GEV por T con IC 90 %, Gumbel punteado, escenarios ÷0,92 y ÷0,67, T 100 marcado como
+  extrapolación) y el replay de 144 medias horas del 6 al 8/4/2014 con el acumulado de la celda contra los 118 mm de
+  la estación (IMERG 97,6 mm 12Z–12Z). e2e `web/e2e/convection-idf.spec.ts`. Falta publicarla en R2 (`make publish`).
+- 2026-11-20 F3.2 hecha (`reports/03/F3.2.md`, `stages/stations/qc.py`, `clima-nqn stations qc`): solo NOAA ISD
+  877150 (SMN horario sin verificar, AIC restringido). `data/interim/stations/isd_877150.parquet` guarda los 15.716
+  grupos AA crudos 2000-01-01 a 2025-08-24 con `valid` y `reason` (9.665 ok; 2.844 sin valor 9999; 95 bandera QC;
+  17 p24 > 150 mm; 5 p24 inconsistente con los p6; 3.090 de períodos que no se usan), más huecos por año y mes.
+  Cobertura casi completa solo en 2003, 2004, 2023 y 2024; 2006–2021 con 32–101 días válidos por año. F3.4 lee el
+  producto y da los mismos números.
+- 2026-11-20 Capa `convection-idf` publicada en R2 (`nqn`): sus 5 objetos y `layers.json` fusionado a mano con las
+  capas en vivo (ar-events, flood-stations, relief). `make publish` desde un `data/processed` parcial reescribiría
+  `layers.json` solo con lo local y bajaría las otras capas: publicar siempre desde un árbol completo o fusionar el índice.

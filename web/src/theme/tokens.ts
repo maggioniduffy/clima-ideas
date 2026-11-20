@@ -13,6 +13,8 @@ export const tokens = {
     accent: "#8EB8E5",
     water: "#3A6E8F",
     casing: "#2A343B",
+    /** Chart background: plain, no grain. The one pure white of the palette (docs/design.md). */
+    "chart-surface": "#FFFFFF",
   },
   dark: {
     bg: "#16212A",
@@ -26,6 +28,8 @@ export const tokens = {
     accent: "#FDDA0D",
     water: "#7FA9C6",
     casing: "#16212A",
+    /** Chart background: a solid flat well, darker than --surface and without grain. */
+    "chart-surface": "#121C24",
   },
   /** IVT sequential ramp stops, low to high (evenly spaced over [0, IVT_SCALE_MAX]); `--ivt-0..5` in tokens.css. */
   ivtRamp: {
@@ -36,6 +40,11 @@ export const tokens = {
   countRamp: {
     light: ["#EFE8DA", "#D9C7A4", "#B79C70", "#8A6F46", "#55402A"],
     dark: ["#2A2F3C", "#4A4468", "#76588A", "#A77FA6", "#DDB9C6"],
+  },
+  /** Rain ramp (IMERG mm/h, convection layer), low to high; single-hue blue, neutral (no warning colors); `--rain-0..4` in tokens.css. */
+  rainRamp: {
+    light: ["#DCE8EC", "#A9C8D6", "#6FA0BD", "#3A6E96", "#1B3A5C"],
+    dark: ["#24384A", "#2F5878", "#4A82A8", "#86B4D2", "#D6E8F2"],
   },
   /** Monochrome slate relief ramp (mockup), far/low to peaks (elevations in RELIEF_STOPS_M); `--relief-0..3` in tokens.css. */
   reliefRamp: {

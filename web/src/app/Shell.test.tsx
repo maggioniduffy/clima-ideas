@@ -96,9 +96,16 @@ test("the layers drawer toggle exposes aria-expanded/aria-controls; there is no 
   expect(screen.getByTestId("shell")).not.toHaveAttribute("data-drawer");
 });
 
-test("the inspector is the first card of the card row", () => {
+test("the right column holds the layers, then the inspector; the map and the timeline are its siblings", () => {
   render(<Shell />);
-  expect(screen.getByTestId("cards-row")).toContainElement(screen.getByTestId("inspector"));
+  const panels = screen.getByTestId("panels-slot");
+  expect(panels).toContainElement(screen.getByTestId("layers-slot"));
+  expect(panels).toContainElement(screen.getByTestId("inspector"));
+  expect(panels).not.toContainElement(screen.getByTestId("map-canvas"));
+  expect(panels).not.toContainElement(screen.getByTestId("timeline-slot"));
+  const order = (a: HTMLElement, b: HTMLElement) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+  expect(order(screen.getByTestId("map-canvas"), panels)).toBeTruthy(); // narrow screens stack map, panels, timeline
+  expect(order(panels, screen.getByTestId("timeline-slot"))).toBeTruthy();
   expect(screen.getByTestId("inspector")).toHaveAttribute("id", "inspector-panel");
 });
 
@@ -252,7 +259,7 @@ test("ENSO panel: button only when the layer lists enso.json; opens in the detai
   fireEvent.click(await screen.findByTestId("enso-open"));
   expect(await screen.findByTestId("enso-row-ivt_mean")).toHaveTextContent("527 ± 80 (n=14)");
   expect(screen.getByTestId("detail-card")).toContainElement(screen.getByTestId("enso-panel"));
-  expect(screen.getByTestId("cards-row")).toContainElement(screen.getByTestId("detail-card"));
+  expect(screen.getByTestId("panels-slot")).toContainElement(screen.getByTestId("detail-card"));
   fireEvent.keyDown(window, { key: "Escape" });
   expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
   fireEvent.click(screen.getByTestId("enso-open"));
@@ -261,45 +268,43 @@ test("ENSO panel: button only when the layer lists enso.json; opens in the detai
   expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
 });
 
-test("three resize separators exist and keyboard resizing updates the grid variables", () => {
+test("two resize separators exist and keyboard resizing updates the grid variables", () => {
   localStorage.clear();
   vi.stubGlobal("innerHeight", 1200); // jsdom's 768 px leaves no room above the 400 px map minimum
   render(<Shell />);
-  expect(screen.getAllByRole("separator")).toHaveLength(3);
-  expect(screen.getByTestId("resizer-layers")).toHaveAttribute("aria-orientation", "vertical");
+  expect(screen.getAllByRole("separator")).toHaveLength(2);
+  const panels = screen.getByRole("separator", { name: "Ancho de los paneles" });
+  expect(panels).toBe(screen.getByTestId("resizer-panels"));
+  expect(panels).toHaveAttribute("aria-orientation", "vertical");
   expect(screen.getByTestId("resizer-timeline")).toHaveAttribute("aria-orientation", "horizontal");
-  const cards = screen.getByRole("separator", { name: "Alto del panel de detalle" });
-  expect(cards).toBe(screen.getByTestId("resizer-cards"));
-  expect(cards).toHaveAttribute("aria-orientation", "horizontal");
-  fireEvent.keyDown(cards, { key: "ArrowUp" });
-  expect(screen.getByTestId("shell").style.getPropertyValue("--cards-h")).toBe("276px");
-  expect(JSON.parse(localStorage.getItem("panel-sizes")!).cards).toBe(276);
-  fireEvent.doubleClick(cards);
-  expect(screen.getByTestId("shell").style.getPropertyValue("--cards-h")).toBe("260px");
+  // the handle sits left of the column, so ArrowLeft widens it
+  fireEvent.keyDown(panels, { key: "ArrowLeft" });
+  expect(screen.getByTestId("shell").style.getPropertyValue("--panels-w")).toBe("456px");
+  expect(JSON.parse(localStorage.getItem("panel-sizes")!).panels).toBe(456);
+  fireEvent.doubleClick(panels);
+  expect(screen.getByTestId("shell").style.getPropertyValue("--panels-w")).toBe("440px");
 });
 
 test("Home collapses a panel (hidden, handle stays at 0), Enter restores it, and the state persists", () => {
   localStorage.clear();
   render(<Shell />);
-  const layers = screen.getByTestId("resizer-layers");
-  expect(screen.getByTestId("layers-slot")).not.toHaveAttribute("hidden");
-  fireEvent.keyDown(layers, { key: "Home" });
-  expect(screen.getByTestId("layers-slot")).toHaveAttribute("hidden");
-  expect(layers).toHaveAttribute("aria-valuenow", "0");
-  expect(layers).toHaveAttribute("aria-valuemin", "0");
-  expect(JSON.parse(localStorage.getItem("panel-sizes")!).layers).toBe(0);
-  fireEvent.keyDown(layers, { key: "Enter" });
-  expect(screen.getByTestId("layers-slot")).not.toHaveAttribute("hidden");
-  expect(layers).toHaveAttribute("aria-valuenow", "240");
-  for (const [id, slot] of [["cards", "cards-row"], ["timeline", "timeline-slot"]]) {
-    fireEvent.keyDown(screen.getByTestId(`resizer-${id}`), { key: "Home" });
-    expect(screen.getByTestId(slot)).toHaveAttribute("hidden");
-  }
+  const panels = screen.getByTestId("resizer-panels");
+  expect(screen.getByTestId("panels-slot")).not.toHaveAttribute("hidden");
+  fireEvent.keyDown(panels, { key: "Home" });
+  expect(screen.getByTestId("panels-slot")).toHaveAttribute("hidden");
+  expect(panels).toHaveAttribute("aria-valuenow", "0");
+  expect(panels).toHaveAttribute("aria-valuemin", "0");
+  expect(JSON.parse(localStorage.getItem("panel-sizes")!).panels).toBe(0);
+  fireEvent.keyDown(panels, { key: "Enter" });
+  expect(screen.getByTestId("panels-slot")).not.toHaveAttribute("hidden");
+  expect(panels).toHaveAttribute("aria-valuenow", "440");
+  fireEvent.keyDown(screen.getByTestId("resizer-timeline"), { key: "Home" });
+  expect(screen.getByTestId("timeline-slot")).toHaveAttribute("hidden");
 });
 
 test("a stored collapsed state is applied on load", () => {
-  localStorage.setItem("panel-sizes", JSON.stringify({ layers: 0, cards: 260, timeline: 136 }));
+  localStorage.setItem("panel-sizes", JSON.stringify({ panels: 0, timeline: 136 }));
   render(<Shell />);
-  expect(screen.getByTestId("layers-slot")).toHaveAttribute("hidden");
+  expect(screen.getByTestId("panels-slot")).toHaveAttribute("hidden");
   localStorage.clear();
 });
