@@ -59,3 +59,7 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   (run 44455941236, retención 90 días, no está en el repo), IMERG V07 Final semihorario 2000-06-01 a 2025-09-30,
   444 144 pasos × 25 lat × 31 lon, `missing_months` vacío. 2025-10 en adelante todavía no existe como Final en Harmony
   ("No matching granules"); la latencia real de Final es mayor que los 4 meses asumidos (sin verificar cuánto).
+- 2026-11-20 IMERG Final 2000-06..2025-09 respaldado en R2 privado (`nqn-raw/imerg/final-v07/`, sha256 verificado;
+  `odd/tasks/imerg-ingest.md` L17). Final termina en 2025-09 en NASA CMR; 2025-10..2026-10 se baja como IMERG Late
+  (producto aparte, sin ajuste mensual con pluviómetros, nunca mezclado con Final; L16). El `last_month` por defecto
+  del workflow sale ahora del último mes completo en CMR.

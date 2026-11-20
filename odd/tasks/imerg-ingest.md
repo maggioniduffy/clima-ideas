@@ -95,3 +95,7 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
   2026-10. User asked to use Late for the gap. Added `--product final|late` (CLI + workflow input, with `first_month`):
   Late lives in its own stores/artifacts (`neuquen-late`, `imerg-late-month-*`, `imerg-neuquen-late`) with a note that
   it has no monthly gauge adjustment; Final is never mixed with it. Launched product=late, 2025-10..2026-10.
+- L17 (2026-11-20) Backup: artifact `imerg-neuquen` (id 14497909514, sha256 8417bedf…3ada97, 37 355 089 B) copied to
+  the private R2 bucket `nqn-raw` (Cloudflare account of the project; r2.dev public access off) as
+  `imerg/final-v07/neuquen_2000-06_2025-09.zarr.zip`; download from R2 re-checked with the same sha256. The artifact
+  still expires 2027-02-17; R2 is now the durable copy. Late goes to `imerg/late-v07/` once its run finishes.
