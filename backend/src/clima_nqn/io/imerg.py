@@ -1,24 +1,29 @@
-"""Regional GPM IMERG Final V07 for Neuquén, downloaded with NASA Harmony.
+"""Regional GPM IMERG V07 (Final and Late Run) for Neuquén, downloaded with NASA Harmony.
 
 Usage (from ``backend/``)::
 
     uv run clima-nqn imerg fetch --year 2014 --months 4
     uv run clima-nqn imerg fetch --years 2000-2026
     uv run clima-nqn imerg combine
+    uv run clima-nqn imerg fetch --product late --years 2025-2026   # Late Run, separate stores
 
 Source: GPM IMERG Final Run V07 half-hourly (GPM_3IMERGHH), NASA GES DISC.
 License: CC BY 4.0. DOI: https://doi.org/10.5067/GPM/IMERG/3B-HH/07.
 Citation: Huffman et al. (2023). Final latency is approximately 3.5 months.
+Late Run (GPM_3IMERGHHL, DOI https://doi.org/10.5067/GPM/IMERG/3B-HH-L/07) has ~14 h latency and no monthly gauge
+adjustment; it lives in its own labels, directories and stores and must never be mixed with Final.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import threading
 import time
 from calendar import monthrange
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC
 from itertools import pairwise
 from pathlib import Path
@@ -44,6 +49,43 @@ COMBINED_CHUNKS = (17520, 5, 5)
 _HDF5_LOCK = threading.Lock()
 _TIME_CODER = xr.coders.CFDatetimeCoder(use_cftime=True)
 HARMONY_LABEL = "clima-nqn-imerg"
+LATE_NOTE = (
+    "Late Run: near-real-time, no monthly gauge adjustment (Final has it); "
+    "do not mix with Final without saying so"
+)
+
+
+@dataclass(frozen=True)
+class Product:
+    """One IMERG product; Final and Late never share labels, directories or stores."""
+
+    name: str
+    collection_id: str
+    source: str
+    product: str
+    doi: str
+    label: str
+    out_dir: Path
+    combined: Path
+    note: str | None = None
+
+
+PRODUCTS = {
+    "final": Product(
+        "final", COLLECTION_ID, SOURCE, PRODUCT, DOI, HARMONY_LABEL, DEFAULT_OUT, COMBINED
+    ),
+    "late": Product(
+        "late",
+        "C2723754845-GES_DISC",
+        "GPM IMERG Late Run V07 half-hourly (GPM_3IMERGHHL), NASA GES DISC via Harmony",
+        "GPM IMERG Late Run V07 half-hourly (GPM_3IMERGHHL)",
+        "https://doi.org/10.5067/GPM/IMERG/3B-HH-L/07",
+        "clima-nqn-imerg-late",
+        Path("data/raw/imerg/neuquen-late"),
+        Path("data/raw/imerg/neuquen-late.zarr"),
+        LATE_NOTE,
+    ),
+}
 ACTIVE_STATES = frozenset({"accepted", "running", "running_with_errors", "paused", "previewing"})
 _monotonic = time.monotonic  # bound here so tests can stub the module's `time` for sleep only
 
@@ -124,23 +166,38 @@ def _client(workers: int):
     return harmony.Client(auth=(username, password))
 
 
-def month_label(year: int, month: int) -> str:
+def get_product(product: str = "final") -> Product:
+    try:
+        return PRODUCTS[product]
+    except KeyError:
+        raise ValueError(
+            f"unknown IMERG product {product!r}, expected one of {sorted(PRODUCTS)}"
+        ) from None
+
+
+def month_label(year: int, month: int, product: str = "final") -> str:
     """Per-month Harmony job label, so a later run can find and reuse the job."""
-    return f"{HARMONY_LABEL}-{year:04d}-{month:02d}"
+    return f"{get_product(product).label}-{year:04d}-{month:02d}"
 
 
-def build_request(start, stop, month_tag: str | None = None):
+def _month_label_re(product: str):
+    """Exact month labels of one product: Final's ``clima-nqn-imerg-YYYY-MM`` never matches Late's."""
+    return re.compile(re.escape(get_product(product).label) + r"-\d{4}-\d{2}")
+
+
+def build_request(start, stop, month_tag: str | None = None, product: str = "final"):
     """Harmony request for the box, one variable, no preview pause (UTC naive datetimes)."""
     import harmony
 
+    prod = get_product(product)
     utc = {"tzinfo": UTC}
     return harmony.Request(
-        harmony.Collection(id=COLLECTION_ID),
+        harmony.Collection(id=prod.collection_id),
         spatial=harmony.BBox(*BBOX),
         temporal={"start": start.replace(**utc), "stop": stop.replace(**utc)},
         variables=[VARIABLE],
         skip_preview=True,
-        labels=[HARMONY_LABEL] if month_tag is None else [HARMONY_LABEL, month_tag],
+        labels=[prod.label] if month_tag is None else [prod.label, month_tag],
     )
 
 
@@ -186,14 +243,17 @@ def find_job(client, label: str) -> str | None:
         return None
 
 
-def cancel_running(client, label: str = HARMONY_LABEL, keep: Iterable[str] = ()) -> list[str]:
-    """Cancel this account's active Harmony jobs carrying ``label``; return the cancelled job ids.
+def cancel_running(
+    client, label: str | None = None, keep: Iterable[str] = (), product: str = "final"
+) -> list[str]:
+    """Cancel this account's active Harmony jobs carrying ``label`` (default: the product's); return job ids.
 
     Jobs carrying any label in ``keep`` (month labels) survive, except older duplicates: only the newest
     active job per month label is kept, so the queue never holds two jobs for one month.
     """
     keep = set(keep)
-    prefix = f"{HARMONY_LABEL}-"
+    label = get_product(product).label if label is None else label
+    month_re = _month_label_re(product)
     active = [
         item
         for item in _list_jobs(client, label)
@@ -203,13 +263,13 @@ def cancel_running(client, label: str = HARMONY_LABEL, keep: Iterable[str] = ())
     for item in active:
         created = item.get("createdAt") or ""
         for lbl in item.get("labels") or []:
-            if lbl.startswith(prefix) and (lbl not in newest or created > newest[lbl][0]):
+            if month_re.fullmatch(lbl) and (lbl not in newest or created > newest[lbl][0]):
                 newest[lbl] = (created, item["jobID"])
     cancelled = []
     for item in active:
         job_id = item["jobID"]
         labels = set(item.get("labels") or [])
-        month_labels = {lbl for lbl in labels if lbl.startswith(prefix)}
+        month_labels = {lbl for lbl in labels if month_re.fullmatch(lbl)}
         duplicate = any(newest[lbl][1] != job_id for lbl in month_labels)
         if labels & keep and not duplicate:
             continue
@@ -225,11 +285,12 @@ def cancel_running(client, label: str = HARMONY_LABEL, keep: Iterable[str] = ())
 def fetch_month(
     year: int,
     month: int,
-    out_dir: Path = DEFAULT_OUT,
+    out_dir: Path | None = None,
     client=None,
     workers: int = DEFAULT_WORKERS,
     deadline: float | None = None,
     log_every: float = 60,
+    product: str = "final",
 ) -> Path | None:
     """Fetch and atomically store one complete month; return None if unavailable as Final.
 
@@ -237,7 +298,8 @@ def fetch_month(
     next run to reuse (see ``find_job``) and TimeoutError is raised. Any other error or interrupt before the
     downloads complete cancels the job.
     """
-    out_dir = Path(out_dir)
+    prod = get_product(product)
+    out_dir = Path(prod.out_dir if out_dir is None else out_dir)
     tag = f"{year:04d}-{month:02d}"
     target = out_dir / f"{tag}.zarr"
     if is_complete(target, year, month):
@@ -252,7 +314,7 @@ def fetch_month(
     raw_dir = out_dir / f"{tag}-raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     start, stop = expected_times(year, month)[[0, -1]]
-    label = month_label(year, month)
+    label = month_label(year, month, product)
     job = find_job(client, label)
     if job:
         print(f"{tag}: reusing harmony job {job}", flush=True)
@@ -261,6 +323,7 @@ def fetch_month(
             start.to_pydatetime(),
             (stop + pd.Timedelta(minutes=29, seconds=59)).to_pydatetime(),
             label,
+            product,
         )
         job = client.submit(request)
         print(f"{tag}: harmony job {job} submitted", flush=True)
@@ -306,8 +369,16 @@ def fetch_month(
     ds = merge_granules(paths)
     check_complete(ds, year, month)
     ds.attrs.update(
-        {"source": SOURCE, "license": LICENSE, "doi": DOI, "product": PRODUCT, "bbox": str(BBOX)}
+        {
+            "source": prod.source,
+            "license": LICENSE,
+            "doi": prod.doi,
+            "product": prod.product,
+            "bbox": str(BBOX),
+        }
     )
+    if prod.note:
+        ds.attrs["note"] = prod.note
     ds.to_zarr(tmp, mode="w", consolidated=False)
     if target.exists():
         shutil.rmtree(target)
@@ -316,8 +387,11 @@ def fetch_month(
     return target
 
 
-def combine(in_dir: Path = DEFAULT_OUT, out: Path = COMBINED) -> Path:
+def combine(in_dir: Path | None = None, out: Path | None = None, product: str = "final") -> Path:
     """Concatenate available monthly stores with provenance and missing-month metadata."""
+    prod = get_product(product)
+    in_dir = prod.out_dir if in_dir is None else in_dir
+    out = prod.combined if out is None else out
     stores = sorted(Path(in_dir).glob("[0-9][0-9][0-9][0-9]-[0-9][0-9].zarr"))
     if not stores:
         raise FileNotFoundError(f"no YYYY-MM.zarr stores in {in_dir}")
@@ -337,15 +411,17 @@ def combine(in_dir: Path = DEFAULT_OUT, out: Path = COMBINED) -> Path:
     joined["precipitation"].attrs["units"] = "mm/h"
     joined.attrs.update(
         {
-            "source": SOURCE,
+            "source": prod.source,
             "license": LICENSE,
-            "doi": DOI,
-            "product": PRODUCT,
+            "doi": prod.doi,
+            "product": prod.product,
             "period": f"{pd.Timestamp(joined.time.values[0]).isoformat()}/{pd.Timestamp(joined.time.values[-1]).isoformat()}",
             "bbox": str(BBOX),
             "missing_months": ",".join(missing),
         }
     )
+    if prod.note:
+        joined.attrs["note"] = prod.note
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_name(out.name + ".tmp")

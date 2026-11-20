@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import Future
 from pathlib import Path
 
@@ -152,7 +153,7 @@ def test_cli_fetch_and_combine(tmp_path, monkeypatch, one_day):
     monkeypatch.setattr(
         imerg, "fetch_month", lambda y, m, out, **kw: Path(out) / f"{y}-{m:02d}.zarr"
     )
-    monkeypatch.setattr(imerg, "combine", lambda src, out: Path(out))
+    monkeypatch.setattr(imerg, "combine", lambda src, out, **kw: Path(out))
     runner = CliRunner()
     fetched = runner.invoke(
         cli.app, ["imerg", "fetch", "--year", "2014", "--months", "4", "--out", str(tmp_path)]
@@ -421,3 +422,262 @@ def test_cli_fetch_deadline_skips_unstarted_months(tmp_path, monkeypatch):
     ok = CliRunner().invoke(cli.app, [*base, "--deadline-min", "30"])
     assert ok.exit_code == 0, ok.output
     assert [m for m, _ in calls] == [1, 2] and all(d is not None for _, d in calls)
+
+
+LATE_ID = "C2723754845-GES_DISC"
+WORKFLOW = Path(__file__).resolve().parents[2] / ".github/workflows/imerg.yml"
+
+
+def test_late_build_request_uses_late_collection_and_labels():
+    from datetime import datetime
+
+    start, stop = datetime(2025, 10, 1), datetime(2025, 10, 31, 23, 59, 59)
+    tag = imerg.month_label(2025, 10, "late")
+    assert tag == "clima-nqn-imerg-late-2025-10"
+    req = imerg.build_request(start, stop, tag, "late")
+    assert req.collection.id == LATE_ID != imerg.COLLECTION_ID
+    assert req.labels == ["clima-nqn-imerg-late", tag]
+    assert req.variables == [imerg.VARIABLE] and req.is_valid()
+    final = imerg.build_request(start, stop, imerg.month_label(2025, 10))
+    assert final.collection.id == imerg.COLLECTION_ID
+    assert final.labels == ["clima-nqn-imerg", "clima-nqn-imerg-2025-10"]
+    with pytest.raises(ValueError, match="unknown IMERG product"):
+        imerg.month_label(2025, 10, "early")
+
+
+def test_cancel_running_is_product_aware_when_final_and_late_coexist():
+    fin, late = "clima-nqn-imerg", "clima-nqn-imerg-late"
+    jobs = [
+        {
+            "jobID": "f-new",
+            "status": "running",
+            "labels": [fin, f"{fin}-2025-04"],
+            "createdAt": "2",
+        },
+        {
+            "jobID": "f-old",
+            "status": "running",
+            "labels": [fin, f"{fin}-2025-04"],
+            "createdAt": "1",
+        },
+        {
+            "jobID": "l-new",
+            "status": "running",
+            "labels": [late, f"{late}-2025-10"],
+            "createdAt": "2",
+        },
+        {
+            "jobID": "l-old",
+            "status": "running",
+            "labels": [late, f"{late}-2025-10"],
+            "createdAt": "1",
+        },
+        {
+            "jobID": "l-other",
+            "status": "running",
+            "labels": [late, f"{late}-2025-11"],
+            "createdAt": "1",
+        },
+        # harmony-py labels both products' jobs
+        {"jobID": "hp-f", "status": "running", "labels": ["harmony-py", fin, f"{fin}-2025-04"]},
+        {"jobID": "hp-l", "status": "running", "labels": ["harmony-py", late, f"{late}-2025-10"]},
+    ]
+
+    class Jobs:
+        def __init__(self):
+            self.cancelled = []
+
+        def submit(self, request):
+            return {"jobs": [j for j in jobs if set(request.labels) <= set(j["labels"])]}
+
+        def cancel(self, job):
+            self.cancelled.append(job)
+
+    # late: Final labels are not months of Late and Final jobs are not even listed under the Late label
+    client = Jobs()
+    result = imerg.cancel_running(client, keep=[f"{late}-2025-10"], product="late")
+    assert sorted(result) == ["hp-l", "l-old", "l-other"]  # hp-l is an older duplicate of l-new
+    assert not {"f-new", "f-old", "hp-f"} & set(result)
+    # final: Late jobs never count as Final months or duplicates
+    client = Jobs()
+    result = imerg.cancel_running(client, keep=[f"{fin}-2025-04"], product="final")
+    assert "f-old" in result and "f-new" not in result
+    assert not {"l-new", "l-old", "l-other", "hp-l"} & set(result)
+    # --label harmony-py keeps the batch months of the given product only
+    client = Jobs()
+    result = imerg.cancel_running(client, "harmony-py", keep=[f"{late}-2025-10"], product="late")
+    # harmony-py labels every job: Late batch month kept (newest only), Final jobs are not its months
+    for j in jobs:
+        j["labels"].append("harmony-py")
+    client = Jobs()
+    result = imerg.cancel_running(client, "harmony-py", keep=[f"{late}-2025-10"], product="late")
+    assert sorted(result) == ["f-new", "f-old", "hp-f", "hp-l", "l-old", "l-other"]
+    assert "l-new" not in result
+
+
+def _late_one_day(monkeypatch):
+    original = imerg.expected_times
+    monkeypatch.setattr(imerg, "expected_times", lambda y, m: original(y, m)[:48])
+
+
+def test_fetch_month_late_writes_late_attrs_to_the_late_store(tmp_path, monkeypatch):
+    _late_one_day(monkeypatch)
+    monkeypatch.setattr(imerg, "time", type("T", (), {"sleep": staticmethod(lambda _: None)}))
+    seen = []
+
+    class LateClient(FakeClient):
+        def submit(self, request):
+            if hasattr(request, "collection"):
+                seen.append((request.collection.id, request.labels))
+            return super().submit(request)
+
+        def download_all(self, job, directory):
+            def futures():
+                for i, stamp in enumerate(imerg.expected_times(2014, 4)):
+                    future = Future()
+                    future.set_result(write_granule(Path(directory) / f"{i}.nc4", stamp))
+                    yield future
+
+            return futures()
+
+    out = tmp_path / "late"
+    result = imerg.fetch_month(2014, 4, out, client=LateClient(None), product="late")
+    assert result == out / "2014-04.zarr"
+    assert seen == [(LATE_ID, ["clima-nqn-imerg-late", "clima-nqn-imerg-late-2014-04"])]
+    attrs = xr.open_zarr(result, consolidated=False, chunks=None).attrs
+    late = imerg.PRODUCTS["late"]
+    assert attrs["source"] == late.source and "Late Run" in attrs["source"]
+    assert attrs["product"] == late.product and attrs["doi"].endswith("3B-HH-L/07")
+    assert attrs["note"].startswith("Late Run: near-real-time, no monthly gauge adjustment")
+    # Final stores carry no note
+    final = imerg.fetch_month(2014, 4, tmp_path / "final", client=LateClient(None))
+    final_attrs = xr.open_zarr(final, consolidated=False, chunks=None).attrs
+    assert final_attrs["source"] == imerg.SOURCE and "note" not in final_attrs
+
+
+def test_combine_late_records_late_attrs_and_defaults(tmp_path, monkeypatch):
+    original = imerg.expected_times
+    monkeypatch.setattr(imerg, "expected_times", lambda y, m: original(y, m)[:1])
+    for month in (1, 2):
+        ds = xr.Dataset(
+            {"precipitation": (("time", "lat", "lon"), np.ones((1, 2, 2), dtype="f4"))},
+            coords={"time": original(2026, month)[:1], "lat": [-39, -38], "lon": [-69, -68]},
+        )
+        ds.to_zarr(tmp_path / f"2026-{month:02d}.zarr", mode="w")
+    path = imerg.combine(tmp_path, tmp_path / "late.zarr", product="late")
+    attrs = xr.open_zarr(path, consolidated=False).attrs
+    assert attrs["source"] == imerg.PRODUCTS["late"].source
+    assert attrs["product"] == imerg.PRODUCTS["late"].product
+    assert attrs["doi"] == "https://doi.org/10.5067/GPM/IMERG/3B-HH-L/07"
+    assert attrs["note"].startswith("Late Run:")
+    assert imerg.PRODUCTS["late"].out_dir == Path("data/raw/imerg/neuquen-late")
+    assert imerg.PRODUCTS["late"].combined == Path("data/raw/imerg/neuquen-late.zarr")
+    assert imerg.PRODUCTS["final"].out_dir == imerg.DEFAULT_OUT
+
+
+def test_cli_product_selects_defaults(tmp_path, monkeypatch):
+    calls = {}
+    monkeypatch.setattr(
+        imerg,
+        "fetch_month",
+        lambda y, m, out, **kw: calls.setdefault("fetch", (out, kw["product"])),
+    )
+    monkeypatch.setattr(
+        imerg, "combine", lambda src, out, **kw: calls.setdefault("combine", (src, out, kw))
+    )
+    runner = CliRunner()
+    args = ["imerg", "fetch", "--year", "2025", "--months", "10"]
+    assert runner.invoke(cli.app, [*args, "--product", "late"]).exit_code == 0
+    assert calls["fetch"] == (Path("data/raw/imerg/neuquen-late"), "late")
+    calls.clear()
+    assert runner.invoke(cli.app, args).exit_code == 0
+    assert calls["fetch"] == (imerg.DEFAULT_OUT, "final")
+    assert runner.invoke(cli.app, ["imerg", "combine", "--product", "late"]).exit_code == 0
+    assert calls["combine"] == (
+        Path("data/raw/imerg/neuquen-late"),
+        Path("data/raw/imerg/neuquen-late.zarr"),
+        {"product": "late"},
+    )
+    assert runner.invoke(cli.app, ["imerg", "combine", "--product", "bogus"]).exit_code != 0
+
+
+def _workflow():
+    yaml = pytest.importorskip("yaml")
+    return yaml.safe_load(WORKFLOW.read_text())
+
+
+def _run_plan(tmp_path, **env):
+    """Run the workflow's plan python snippet with a fake today (2026-11-20) and no artifacts."""
+    import subprocess
+    import sys
+
+    steps = _workflow()["jobs"]["plan"]["steps"]
+    script = next(s for s in steps if s.get("id") == "plan")["run"]
+    code = script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    prelude = (
+        "import datetime\n"
+        "class D(datetime.date):\n"
+        "    @classmethod\n"
+        "    def today(cls):\n"
+        "        return cls(2026, 11, 20)\n"
+        "datetime.date = D\n"
+    )
+    (tmp_path / "artifacts.tsv").write_text("")
+    output = tmp_path / "out.txt"
+    output.write_text("")
+    full = {
+        "YEARS": "2025-2026",
+        "LAST": "",
+        "PRODUCT": "final",
+        "FIRST": "",
+        "MAX_MONTHS": "48",
+        "RUNNER_TEMP": str(tmp_path),
+        "GITHUB_OUTPUT": str(output),
+        "GITHUB_REPOSITORY": "x/y",
+        "PATH": os.environ["PATH"],
+        **env,
+    }
+    proc = subprocess.run(
+        [sys.executable, "-c", prelude + code],
+        check=False,
+        env=full,
+        capture_output=True,
+        text=True,
+    )
+    outputs = dict(line.split("=", 1) for line in output.read_text().splitlines())
+    return proc, outputs
+
+
+def test_workflow_parses_with_product_and_first_month_inputs():
+    wf = _workflow()
+    inputs = wf[True]["workflow_dispatch"]["inputs"]  # YAML 1.1 reads the key `on` as True
+    assert inputs["product"]["default"] == "final"
+    assert inputs["first_month"]["default"] == ""
+    assert len(inputs) <= 10
+    text = WORKFLOW.read_text()
+    assert (
+        text.count("clima-nqn imerg") == 0 or text.count("--product") == 4
+    )  # fetch, 2x cancel, combine
+    assert "imerg-late-month-" in text and "imerg-neuquen-late" in text
+
+
+def test_workflow_plan_late_wants_2025_10_to_2026_10(tmp_path):
+    proc, out = _run_plan(tmp_path, PRODUCT="late", FIRST="2025-10")
+    assert proc.returncode == 0, proc.stderr
+    batch = out["batch"].split(",")
+    assert batch[0] == "2025-10" and batch[-1] == "2026-10" and len(batch) == 13
+    assert "wanted: 13" in proc.stdout
+
+
+def test_workflow_plan_final_default_is_unchanged(tmp_path):
+    proc, out = _run_plan(tmp_path, YEARS="2000-2026")
+    assert proc.returncode == 0, proc.stderr
+    batch = out["batch"].split(",")
+    assert batch[0] == "2000-06"  # first month; 48 per run
+    assert len(batch) == 48
+    proc, out = _run_plan(tmp_path, YEARS="2025-2026")
+    assert out["batch"].split(",")[-1] == "2026-07"  # today minus 4 months
+    assert out["batch"].split(",")[0] == "2025-01"
+    for bad in ({"PRODUCT": "early"}, {"FIRST": "2025-13"}):
+        proc, _ = _run_plan(tmp_path, **bad)
+        assert proc.returncode != 0

@@ -671,8 +671,17 @@ def era5_combine(
     era5.combine(src, out)
 
 
-imerg_app = typer.Typer(help="Regional GPM IMERG Final V07 precipitation for Neuquén.")
+imerg_app = typer.Typer(
+    help="Regional GPM IMERG V07 (Final or Late Run) precipitation for Neuquén."
+)
 app.add_typer(imerg_app, name="imerg")
+
+
+def _imerg_product(product: str) -> imerg.Product:
+    try:
+        return imerg.get_product(product)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 @imerg_app.command("fetch")
@@ -680,7 +689,10 @@ def imerg_fetch(
     year: Annotated[int | None, typer.Option(help="Calendar year.")] = None,
     years: Annotated[str | None, typer.Option(help='Year range, e.g. "2000-2026".')] = None,
     months: Annotated[str, typer.Option(help='Months, e.g. "1-12", "4".')] = "1-12",
-    out: Annotated[Path, typer.Option(help="Per-month Zarr directory.")] = imerg.DEFAULT_OUT,
+    out: Annotated[
+        Path | None, typer.Option(help="Per-month Zarr directory (default: the product's).")
+    ] = None,
+    product: Annotated[str, typer.Option(help="IMERG product: final or late.")] = "final",
     workers: Annotated[
         int, typer.Option(help="Harmony download worker count.")
     ] = imerg.DEFAULT_WORKERS,
@@ -694,7 +706,9 @@ def imerg_fetch(
         ),
     ] = None,
 ) -> None:
-    """Fetch monthly half-hourly IMERG Final data (complete months skipped, others rebuilt)."""
+    """Fetch monthly half-hourly IMERG data (complete months skipped, others rebuilt)."""
+    prod = _imerg_product(product)
+    out = prod.out_dir if out is None else out
     if (year is None) == (years is None):
         raise typer.BadParameter("give exactly one of --year or --years")
     try:
@@ -714,9 +728,9 @@ def imerg_fetch(
             return f"{y}-{m:02d}"
         try:
             if deadline is None:
-                imerg.fetch_month(y, m, out, workers=workers)
+                imerg.fetch_month(y, m, out, workers=workers, product=product)
             else:
-                imerg.fetch_month(y, m, out, workers=workers, deadline=deadline)
+                imerg.fetch_month(y, m, out, workers=workers, deadline=deadline, product=product)
         except Exception as exc:  # noqa: BLE001 - continue and summarize failures
             typer.echo(f"{y}-{m:02d} failed: {exc}", err=True)
             return f"{y}-{m:02d}"
@@ -731,13 +745,18 @@ def imerg_fetch(
 
 @imerg_app.command("cancel-running")
 def imerg_cancel_running(
-    label: Annotated[str, typer.Option(help="Harmony job label to cancel.")] = imerg.HARMONY_LABEL,
+    label: Annotated[
+        str | None, typer.Option(help="Harmony job label to cancel (default: the product's).")
+    ] = None,
+    product: Annotated[str, typer.Option(help="IMERG product: final or late.")] = "final",
     keep_months: Annotated[
         str,
         typer.Option(help="Comma-separated YYYY-MM months whose jobs are kept (newest per month)."),
     ] = "",
 ) -> None:
     """Cancel this account's active Harmony jobs with the given label."""
+    prod = _imerg_product(product)
+    label = prod.label if label is None else label
     keep = []
     for tag in (t.strip() for t in keep_months.split(",")):
         if not tag:
@@ -746,18 +765,28 @@ def imerg_cancel_running(
             y, m = (int(part) for part in tag.split("-"))
         except ValueError as exc:
             raise typer.BadParameter(f"invalid month {tag!r}, expected YYYY-MM") from exc
-        keep.append(imerg.month_label(y, m))
-    cancelled = imerg.cancel_running(imerg._client(imerg.DEFAULT_WORKERS), label, keep=keep)
+        keep.append(imerg.month_label(y, m, product))
+    cancelled = imerg.cancel_running(
+        imerg._client(imerg.DEFAULT_WORKERS), label, keep=keep, product=product
+    )
     typer.echo(f"cancelled {len(cancelled)} job(s) with label {label!r}: {cancelled}")
 
 
 @imerg_app.command("combine")
 def imerg_combine(
-    src: Annotated[Path, typer.Option(help="Per-month store directory.")] = imerg.DEFAULT_OUT,
-    out: Annotated[Path, typer.Option(help="Combined Zarr store.")] = imerg.COMBINED,
+    src: Annotated[
+        Path | None, typer.Option(help="Per-month store directory (default: the product's).")
+    ] = None,
+    out: Annotated[
+        Path | None, typer.Option(help="Combined Zarr store (default: the product's).")
+    ] = None,
+    product: Annotated[str, typer.Option(help="IMERG product: final or late.")] = "final",
 ) -> None:
     """Concatenate available per-month stores."""
-    imerg.combine(src, out)
+    prod = _imerg_product(product)
+    imerg.combine(
+        prod.out_dir if src is None else src, prod.combined if out is None else out, product=product
+    )
 
 
 ar_app = typer.Typer(help="Atmospheric rivers in the Neuquén cordillera (phase 1).")

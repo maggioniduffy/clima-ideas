@@ -90,3 +90,8 @@ Quoted verbatim from `plan/03-convection.md` (column "Hecho cuando"), `CLAUDE.md
   published as Final, so the default last_month (today minus 4) is too recent (real Final latency sin verificar).
   F3.1 closed. Open: the plan's harmony-py cancel takes ~10 min per run (pages the whole job history); the Zarr lives
   only as an Actions artifact (expires 2027-02-16).
+- L16 (2026-11-20) CMR check: Final V07 (GPM_3IMERGHH) ends 2025-09-30 23:30; 2025-10..2026-07 have 0 granules. Late
+  Run V07 (GPM_3IMERGHHL, C2723754845-GES_DISC, DOI 10.5067/GPM/IMERG/3B-HH-L/07) has 1488 granules for 2025-10 and
+  2026-10. User asked to use Late for the gap. Added `--product final|late` (CLI + workflow input, with `first_month`):
+  Late lives in its own stores/artifacts (`neuquen-late`, `imerg-late-month-*`, `imerg-neuquen-late`) with a note that
+  it has no monthly gauge adjustment; Final is never mixed with it. Launched product=late, 2025-10..2026-10.

@@ -1,18 +1,23 @@
-# Regional IMERG V07 Final half-hourly for Neuquén via NASA Harmony (plan/03, F3.1). Manual, or a push to branch run/imerg-fetch.
+# Regional IMERG V07 half-hourly for Neuquén via NASA Harmony (plan/03, F3.1). Manual, or a push to branch run/imerg-fetch.
 # Needs repo secrets EARTHDATA_USERNAME / EARTHDATA_PASSWORD (Earthdata account with the GES DISC EULA accepted).
+# Input `product`: "final" (default, GPM_3IMERGHH) or "late" (Late Run, GPM_3IMERGHHL, ~14 h latency, no gauge
+# adjustment). They never mix: late uses its own labels (clima-nqn-imerg-late[-<YYYY-MM>]), artifacts
+# (imerg-late-month-<YYYY-MM>, imerg-neuquen-late), directory (neuquen-late) and store. Input `first_month` (YYYY-MM,
+# empty = 2000-06) drops earlier months from the plan.
 # Work is split in small per-month chunks that save progress and resume:
 #  - plan: lists which months already exist as artifacts and picks the next `max_months` missing ones (months after
-#    `last_month`, default today minus 4 months, Final latency ~3.5 months, are not requested; the first month is
-#    2000-06). Then it cancels leftover Harmony jobs of this account (labels clima-nqn-imerg and harmony-py; safe
+#    `last_month`, default today minus 4 months for final (latency ~3.5 months) and minus 1 month for late, are not
+#    requested). Then it cancels leftover Harmony jobs of this account (labels of the product and harmony-py; safe
 #    because the concurrency group allows one IMERG run at a time), except the newest job of each month in the batch.
 #  - fetch: one job per month (max `jobs` at once) writes <YYYY-MM>.zarr and uploads artifact imerg-month-<YYYY-MM>
-#    (90 days). A month takes longer on NASA's side than one run: the fetch stops itself after 40 min but leaves its
-#    Harmony job running (labelled clima-nqn-imerg-<YYYY-MM>); the next run reuses it instead of resubmitting.
+#    (late: imerg-late-month-<YYYY-MM>, 90 days). A month takes longer on NASA's side than one run: the fetch stops
+#    itself after 40 min but leaves its Harmony job running (labelled clima-nqn-imerg-<YYYY-MM>); the next run reuses
+#    it instead of resubmitting.
 #  - continue: if months remain, dispatches the next run (chain=false disables it) with stalls=0 after a run that
 #    finished a month, or stalls+1 after one that did not; after 6 runs in a row without one (~5 h) it stops and fails.
-#  - combine: when nothing is missing, joins every month artifact into neuquen.zarr (artifact imerg-neuquen);
-#    months that are absent are listed in its `missing_months` attribute.
-# Legacy per-year artifacts imerg-neuquen-<year> (newest non-expired one per year) count as done months too.
+#  - combine: when nothing is missing, joins every month artifact of the product into neuquen[-late].zarr (artifact
+#    imerg-neuquen[-late]); months that are absent are listed in its `missing_months` attribute.
+# Legacy per-year artifacts imerg-neuquen-<year> (final only; newest non-expired one per year) count as done months too.
 name: IMERG regional fetch
 
 on:
@@ -25,7 +30,13 @@ on:
         description: 'Years, e.g. "2000-2026", "2014" or "2000-2005,2014"'
         default: "2000-2026"
       last_month:
-        description: 'Last month to request, "YYYY-MM"; empty = today minus 4 months'
+        description: 'Last month to request, "YYYY-MM"; empty = today minus 4 months (final) or 1 month (late)'
+        default: ""
+      product:
+        description: '"final" (GPM_3IMERGHH) or "late" (Late Run, GPM_3IMERGHHL); stored separately, never mixed'
+        default: "final"
+      first_month:
+        description: 'First month to request, "YYYY-MM"; empty = 2000-06'
         default: ""
       max_months:
         description: "Months fetched per run"
@@ -84,6 +95,8 @@ jobs:
         env:
           YEARS: ${{ inputs.years || '2000-2026' }}
           LAST: ${{ inputs.last_month || '' }}
+          PRODUCT: ${{ inputs.product || 'final' }}
+          FIRST: ${{ inputs.first_month || '' }}
           MAX_MONTHS: ${{ inputs.max_months || '48' }}
         run: |
           python3 - <<'PY'
@@ -94,16 +107,23 @@ jobs:
           if not re.fullmatch(r"\d+", os.environ["MAX_MONTHS"]) or int(os.environ["MAX_MONTHS"]) < 1:
               sys.exit(f"invalid max_months: {os.environ['MAX_MONTHS']!r}")
           max_months = int(os.environ["MAX_MONTHS"])
+          product, first = os.environ["PRODUCT"].strip(), os.environ["FIRST"].strip()
+          if product not in ("final", "late"):
+              sys.exit(f"invalid product: {product!r}")
+          if first and not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", first):
+              sys.exit(f"invalid first_month: {first!r}")
+          first_ym = max(first, "2000-06")  # YYYY-MM sorts as text
+          month_prefix = "imerg-month-" if product == "final" else "imerg-late-month-"
           if last:
-              if not re.fullmatch(r"\d{4}-\d{2}", last):
+              if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", last):
                   sys.exit(f"invalid last_month: {last!r}")
               ly, lm = map(int, last.split("-"))
           else:
               t = dt.date.today()
-              n = t.year * 12 + t.month - 1 - 4
+              n = t.year * 12 + t.month - 1 - (4 if product == "final" else 1)
               ly, lm = divmod(n, 12)
               lm += 1
-          # wanted months, clipped to the first available month 2000-06
+          # wanted months, clipped to first_month (never before the first available month 2000-06)
           wanted = set()
           for part in years.split(","):
               a, _, b = part.partition("-")
@@ -111,9 +131,10 @@ jobs:
               if lo > hi or lo < 2000 or hi > 2100:
                   sys.exit(f"invalid range: {part!r}")
               for y in range(lo, hi + 1):
-                  first = 6 if y == 2000 else 1
                   last_m = 12 if y < ly else lm if y == ly else 0
-                  wanted.update(f"{y:04d}-{m:02d}" for m in range(first, last_m + 1))
+                  wanted.update(
+                      f"{y:04d}-{m:02d}" for m in range(1, last_m + 1) if f"{y:04d}-{m:02d}" >= first_ym
+                  )
 
           # newest non-expired artifact per name (created_at is ISO 8601, so it sorts as text)
           newest = {}
@@ -122,9 +143,10 @@ jobs:
               aid, name, created = line.rstrip("\n").split("\t")
               if name not in newest or created > newest[name][1]:
                   newest[name] = (aid, created)
-          done = {n[len("imerg-month-"):] for n in newest if re.fullmatch(r"imerg-month-\d{4}-\d{2}", n)}
+          done = {n[len(month_prefix):] for n in newest if re.fullmatch(re.escape(month_prefix) + r"\d{4}-\d{2}", n)}
           n_month = len(done)
-          legacy = sorted(n for n in newest if re.fullmatch(r"imerg-neuquen-\d{4}", n))
+          # legacy per-year artifacts only exist for final
+          legacy = sorted(n for n in newest if re.fullmatch(r"imerg-neuquen-\d{4}", n)) if product == "final" else []
           for name in legacy:
               zpath = os.path.join(os.environ["RUNNER_TEMP"], name + ".zip")
               with open(zpath, "wb") as f:
@@ -155,6 +177,7 @@ jobs:
         continue-on-error: true
         env:
           BATCH: ${{ steps.plan.outputs.batch }}
+          PRODUCT: ${{ inputs.product || 'final' }}
         run: |
           # shape check only, values are never printed
           for v in EARTHDATA_USERNAME EARTHDATA_PASSWORD; do
@@ -164,9 +187,9 @@ jobs:
             [ -n "$val" ] || { echo "$v is empty"; exit 1; }
           done
           # jobs of the months about to be fetched survive (the fetch reuses them); older duplicates and other months go
-          uv run clima-nqn imerg cancel-running --keep-months "$BATCH" || true
+          uv run clima-nqn imerg cancel-running --product "$PRODUCT" --keep-months "$BATCH" || true
           # harmony-py labels every job it submits, ours included: keep the batch months here too
-          uv run clima-nqn imerg cancel-running --label harmony-py --keep-months "$BATCH" || true
+          uv run clima-nqn imerg cancel-running --product "$PRODUCT" --label harmony-py --keep-months "$BATCH" || true
 
   fetch:
     needs: plan
@@ -191,6 +214,7 @@ jobs:
           EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
           EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
           MONTH: ${{ matrix.month }}
+          PRODUCT: ${{ inputs.product || 'final' }}
         run: |
           # shape check only, values are never printed
           for v in EARTHDATA_USERNAME EARTHDATA_PASSWORD; do
@@ -199,16 +223,16 @@ jobs:
             echo "$v: length ${#val}, edge whitespace: $([ "$val" != "$trimmed" ] && echo yes || echo no)"
             [ -n "$val" ] || { echo "$v is empty"; exit 1; }
           done
-          uv run clima-nqn imerg fetch --year "${MONTH%-*}" --months "$((10#${MONTH#*-}))" --workers 32 --parallel 1 --deadline-min 40
+          uv run clima-nqn imerg fetch --product "$PRODUCT" --year "${MONTH%-*}" --months "$((10#${MONTH#*-}))" --workers 32 --parallel 1 --deadline-min 40
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: imerg-month-${{ matrix.month }}
+          name: ${{ (inputs.product || 'final') == 'late' && 'imerg-late-month-' || 'imerg-month-' }}${{ matrix.month }}
           # the directory itself (not a *.zarr glob) keeps <YYYY-MM>.zarr/ at the artifact root
           path: |
-            backend/data/raw/imerg/neuquen/
-            !backend/data/raw/imerg/neuquen/*-raw/
-            !backend/data/raw/imerg/neuquen/*.tmp/
+            ${{ (inputs.product || 'final') == 'late' && 'backend/data/raw/imerg/neuquen-late/' || 'backend/data/raw/imerg/neuquen/' }}
+            !${{ (inputs.product || 'final') == 'late' && 'backend/data/raw/imerg/neuquen-late' || 'backend/data/raw/imerg/neuquen' }}/*-raw/
+            !${{ (inputs.product || 'final') == 'late' && 'backend/data/raw/imerg/neuquen-late' || 'backend/data/raw/imerg/neuquen' }}/*.tmp/
           retention-days: 90
           if-no-files-found: ignore
 
@@ -227,12 +251,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           YEARS: ${{ inputs.years || '2000-2026' }}
           LAST: ${{ inputs.last_month || '' }}
+          PRODUCT: ${{ inputs.product || 'final' }}
+          FIRST: ${{ inputs.first_month || '' }}
           MAX_MONTHS: ${{ inputs.max_months || '48' }}
           JOBS: ${{ inputs.jobs || '6' }}
           STALLS: ${{ inputs.stalls || '0' }}
         run: |
+          if [ "$PRODUCT" = late ]; then PREFIX=imerg-late-month-; else PREFIX=imerg-month-; fi
           n=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" \
-                --jq '.artifacts[] | select((.name | startswith("imerg-month-")) and .expired == false and .workflow_run.id == '"$GITHUB_RUN_ID"') | .name' | wc -l)
+                --jq '.artifacts[] | select((.name | startswith("'"$PREFIX"'")) and .expired == false and .workflow_run.id == '"$GITHUB_RUN_ID"') | .name' | wc -l)
           echo "month artifacts uploaded by this run: $n"
           if [ "$n" -ge 1 ]; then
             next=0
@@ -246,7 +273,7 @@ jobs:
             echo "no progress this run (stalls so far: $STALLS), chaining anyway so the reused Harmony jobs can finish"
           fi
           gh workflow run imerg.yml -R "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" \
-            -f years="$YEARS" -f last_month="$LAST" -f max_months="$MAX_MONTHS" -f jobs="$JOBS" -f chain=true \
+            -f years="$YEARS" -f last_month="$LAST" -f product="$PRODUCT" -f first_month="$FIRST" -f max_months="$MAX_MONTHS" -f jobs="$JOBS" -f chain=true \
             -f stalls="$next"
 
   combine:
@@ -268,6 +295,7 @@ jobs:
         working-directory: backend
         env:
           GH_TOKEN: ${{ github.token }}
+          PRODUCT: ${{ inputs.product || 'final' }}
         run: |
           gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
             --jq '.artifacts[] | select(.expired == false) | [.id, .name, .created_at] | @tsv' \
@@ -280,25 +308,34 @@ jobs:
               aid, name, created = line.rstrip("\n").split("\t")
               if name not in newest or created > newest[name][1]:
                   newest[name] = (aid, created)
-          for pattern in (r"imerg-month-\d{4}-\d{2}", r"imerg-neuquen-\d{4}"):
+          # only the product's artifacts; legacy per-year ones are final only
+          if os.environ["PRODUCT"] == "late":
+              patterns = (r"imerg-late-month-\d{4}-\d{2}",)
+          else:
+              patterns = (r"imerg-month-\d{4}-\d{2}", r"imerg-neuquen-\d{4}")
+          for pattern in patterns:
               for name in sorted(n for n in newest if re.fullmatch(pattern, n)):
                   print(newest[name][0], name)
           PY
-          mkdir -p data/raw/imerg/neuquen
+          if [ "$PRODUCT" = late ]; then DIR=data/raw/imerg/neuquen-late; else DIR=data/raw/imerg/neuquen; fi
+          mkdir -p "$DIR"
           while read -r id name; do
             echo "downloading $name ($id)"
             gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/a.zip"
-            unzip -qn "$RUNNER_TEMP/a.zip" -d data/raw/imerg/neuquen
+            unzip -qn "$RUNNER_TEMP/a.zip" -d "$DIR"
             rm "$RUNNER_TEMP/a.zip"
           done < "$RUNNER_TEMP/order.txt"
       - working-directory: backend
+        env:
+          PRODUCT: ${{ inputs.product || 'final' }}
         run: |
-          ls data/raw/imerg/neuquen | head -n 400
-          uv run clima-nqn imerg combine
-          uv run python -c "import xarray as xr; ds = xr.open_zarr('data/raw/imerg/neuquen.zarr', chunks=None); print(ds); print(ds.attrs)"
+          if [ "$PRODUCT" = late ]; then SUFFIX=-late; else SUFFIX=; fi
+          ls "data/raw/imerg/neuquen$SUFFIX" | head -n 400
+          uv run clima-nqn imerg combine --product "$PRODUCT"
+          uv run python -c "import sys, xarray as xr; ds = xr.open_zarr(sys.argv[1], chunks=None); print(ds); print(ds.attrs)" "data/raw/imerg/neuquen$SUFFIX.zarr"
       - uses: actions/upload-artifact@v7
         with:
-          name: imerg-neuquen
-          path: backend/data/raw/imerg/neuquen.zarr
+          name: ${{ (inputs.product || 'final') == 'late' && 'imerg-neuquen-late' || 'imerg-neuquen' }}
+          path: ${{ (inputs.product || 'final') == 'late' && 'backend/data/raw/imerg/neuquen-late.zarr' || 'backend/data/raw/imerg/neuquen.zarr' }}
           retention-days: 90
           if-no-files-found: error
