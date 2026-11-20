@@ -63,3 +63,7 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   `odd/tasks/imerg-ingest.md` L17). Final termina en 2025-09 en NASA CMR; 2025-10..2026-10 se baja como IMERG Late
   (producto aparte, sin ajuste mensual con pluviómetros, nunca mezclado con Final; L16). El `last_month` por defecto
   del workflow sale ahora del último mes completo en CMR.
+- 2026-11-20 F3.3 primera versión (`reports/03/F3.3.md`, `stages/convection/idf.py`): IDF solo con IMERG Final, sin
+  corrección de sesgo, celda de Neuquén Aero, 25 años hidrológicos 2000/01–2024/25, GEV por L-momentos con Gumbel y
+  empírico al lado. T 10: 17,9 mm/h a 1 h (IC 90 % 15,0–19,8) y 78,7 mm a 24 h (59–97); Gumbel dentro del IC de la GEV
+  en todos los casos. Abril de 2014 en IMERG: 108 mm en 24 h, T ≈ 25 años (14–100). Falta aplicar la corrección de F3.4.
