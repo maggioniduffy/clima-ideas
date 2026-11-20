@@ -18,6 +18,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from clima_nqn.stages.stations.qc import CORROB_ABS_MM, CORROB_REL, MAX_P24_MM
+
 WET_MM = 1.0
 HALF_HOUR = pd.Timedelta(minutes=30)
 STATION_LAT, STATION_LON = -38.949, -68.156
@@ -161,10 +163,6 @@ def top_events(pairs: pd.DataFrame, k: int = 20, min_mm: float | None = None) ->
 
 
 # --------------------------------------------------------------------------------------- screening
-
-MAX_P24_MM = 150.0
-CORROB_ABS_MM = 5.0
-CORROB_REL = 0.5
 
 
 def corroborate_p24(p24: pd.DataFrame, p6: pd.DataFrame) -> pd.DataFrame:
@@ -346,27 +344,41 @@ def run(
 ) -> str:
     """Compute every number of reports/03/F3.4.md and return it as Markdown (downloads missing ISD years)."""
     from clima_nqn.io import isd
+    from clima_nqn.stages.stations import qc as station_qc
 
     paths = isd.download_years(years, isd_dir)
     groups = isd.load_all_groups(paths)
+    qc = station_qc.apply_qc(
+        groups
+    )  # same function that builds data/interim/stations (clima-nqn stations qc)
     near, mean9, cell = load_imerg_point(zarr_path)
     out = [f"IMERG cell: lat {cell[0]:.2f}, lon {cell[1]:.2f}; AA groups parsed: {len(groups)}"]
     out.append(
         f"all AA groups, period 6/24 by (period, condition, quality):\n{groups[groups['period_h'].isin([6, 24])].groupby(['period_h', 'condition', 'quality']).size().to_string()}"
     )
-    kept = isd.admissible(groups)
+    out.append(f"QC rows by reason: {qc['reason'].value_counts().to_dict()}")
+    dedup = station_qc.valid_windows(qc, screened=False)
     out.append(
-        f"kept groups by (period, condition): {kept.groupby(['period_h', 'condition']).size().to_dict()}"
+        f"windows after dedupe: {len(dedup)}; duplicate groups dropped: "
+        f"{int((qc['reason'] == 'duplicate_window').sum())}"
     )
-    dedup, disagree = isd.dedupe_windows(kept)
-    out.append(
-        f"windows after dedupe: {len(dedup)}; duplicate windows with differing depths: {disagree}"
-    )
-    n_dup = len(kept) - len(dedup)
-    out.append(f"duplicate groups dropped: {n_dup}")
 
     p6_all = dedup[dedup["period_h"] == 6]
-    p24_flagged = corroborate_p24(dedup[dedup["period_h"] == 24], p6_all)
+    p24_flagged = qc.loc[
+        qc["period_h"].eq(24) & qc["p24_check"].notna(),
+        [
+            "time",
+            "report_type",
+            "slot",
+            "period_h",
+            "value_mm",
+            "condition",
+            "qc_flag",
+            "n6",
+            "sum6",
+            "p24_check",
+        ],
+    ].rename(columns={"value_mm": "depth_mm", "qc_flag": "quality", "p24_check": "flag"})
     out.append(f"p24 flags: {p24_flagged['flag'].value_counts().to_dict()}")
     out.append(
         "p24 flags by condition:\n" + p24_flagged.groupby(["condition", "flag"]).size().to_string()
@@ -376,9 +388,8 @@ def run(
         + str(p24_flagged["time"].dt.hour.value_counts().sort_index().to_dict())
     )
 
-    screened24 = p24_flagged[p24_flagged["flag"].isin(["corroborated", "unchecked"])].drop(
-        columns=["n6", "sum6", "flag"]
-    )
+    screened24 = station_qc.valid_windows(qc)
+    screened24 = screened24[screened24["period_h"] == 24]
     variants = {
         "A (principal): p24 filtrado (sin implausible/inconsistente), p6 sin filtrar": pd.concat(
             [screened24, p6_all]

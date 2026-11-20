@@ -18,7 +18,7 @@ IMERG 30 min (2000–hoy), SMN Neuquén Aero, estaciones AIC (Plottier). Acceso 
 |---|---|---|---|
 | F3.0 | Comprobar lluvia horaria de Neuquén Aero en NOAA ISD 877150 (S3 anónimo): período, huecos y licencia. SMN horario sigue sin verificar y AIC es restringido | opencode | Informe en `reports/03/F3.0.md` con sí o no y por qué |
 | F3.1 | Ingesta IMERG recortado a la Confluencia y meseta | Sonnet escribe, opencode corre | Zarr 2000–hoy |
-| F3.2 | Ingesta de estaciones con control de calidad | Sonnet | Parquet + unit de QC |
+| F3.2 ✅ | Ingesta de estaciones con control de calidad | Sonnet | Parquet + unit de QC |
 | F3.3 ✅ | Curvas IDF (duraciones 30 min–24 h) estación vs. IMERG | Sonnet | Unit con serie sintética de cuantiles conocidos |
 | F3.4 ✅ | Sesgo de IMERG en eventos conocidos; corrección por cuantiles | opencode analiza, Sonnet implementa | Informe de sesgo + función QM testeada |
 | F3.5 ✅ | Capa: curva IDF lado a lado + replay del temporal de abril de 2014 | Sonnet | e2e: replay y comparación |
@@ -82,3 +82,9 @@ Curva IDF de Neuquén capital, estación e IMERG lado a lado, con el sesgo medid
   con la curva IDF (GEV por T con IC 90 %, Gumbel punteado, escenarios ÷0,92 y ÷0,67, T 100 marcado como
   extrapolación) y el replay de 144 medias horas del 6 al 8/4/2014 con el acumulado de la celda contra los 118 mm de
   la estación (IMERG 97,6 mm 12Z–12Z). e2e `web/e2e/convection-idf.spec.ts`. Falta publicarla en R2 (`make publish`).
+- 2026-11-20 F3.2 hecha (`reports/03/F3.2.md`, `stages/stations/qc.py`, `clima-nqn stations qc`): solo NOAA ISD
+  877150 (SMN horario sin verificar, AIC restringido). `data/interim/stations/isd_877150.parquet` guarda los 15.716
+  grupos AA crudos 2000-01-01 a 2025-08-24 con `valid` y `reason` (9.665 ok; 2.844 sin valor 9999; 95 bandera QC;
+  17 p24 > 150 mm; 5 p24 inconsistente con los p6; 3.090 de períodos que no se usan), más huecos por año y mes.
+  Cobertura casi completa solo en 2003, 2004, 2023 y 2024; 2006–2021 con 32–101 días válidos por año. F3.4 lee el
+  producto y da los mismos números.
