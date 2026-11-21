@@ -37,7 +37,7 @@ encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en b
 | F6.1 | Ingesta operativa idempotente de entradas actuales (ERA5T, ERA5-Land, ECMWF open data, GEFS, ONI, caudal); verificar antes la latencia real del caudal en tiempo real (SNIH dice no ser red de alerta; AIC restringida) | Sonnet escribe, opencode corre | Latencia de caudal medida y anotada en `docs/research/data-access.md` + una corrida trae el último día disponible + unit de idempotencia |
 | F6.2 | Modelo estacional (regresión logística y LightGBM) + baselines, validado según "Validación (F6.2)" | Sonnet implementa, opencode entrena | RPS y Brier por año de test vs. cada baseline + unit de particiones sin fuga |
 | F6.3 | Corrida de corto plazo: F5.3 y LSTM F2.5 alimentados con pronósticos operativos | Sonnet | Predicción emitida para hoy con incertidumbre |
-| F6.4 | Registro de predicciones congeladas: append-only con fecha de emisión, versión de modelo y hash de entradas | Sonnet | Unit: no se puede editar ni emitir con fecha pasada |
+| F6.4 ✅ | Registro de predicciones congeladas: append-only con fecha de emisión, versión de modelo y hash de entradas | Sonnet | Unit: no se puede editar ni emitir con fecha pasada |
 | F6.5 | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, opencode corre | Tabla de skill por horizonte + unit de métricas |
 | F6.6 | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
 | F6.7 | Prueba de caudal alto: dejando afuera cada crecida grande (junio de 2023 incluida), con entradas de pronóstico y la latencia de caudal de F6.1, ¿la probabilidad de superar el umbral sube sobre la climatología antes de cada pico y los intervalos cubren los picos cerca de lo nominal? | opencode corre, Sonnet codifica | Tabla por crecida y anticipación con veredicto + unit de partición sin fuga |
@@ -121,6 +121,15 @@ lo que ya se observó.
 - Toda predicción muestra incertidumbre, fuente, período de entrenamiento y fecha de emisión.
 - Nada se evalúa con datos que el modelo vio; la verificación usa solo predicciones del registro F6.4.
 - Si un modelo no supera a la climatología, se informa así.
+
+## Avance
+
+- F6.4 (2026-11-21): registro en `backend/src/clima_nqn/forecast/registry.py`. JSON Lines con append + fsync y cadena
+  de hashes SHA-256 (`seq`, `prev_hash`, `record_hash`). `verify()` detecta edición, borrado o reorden. Un recorte al
+  final deja la cadena válida, así que el hash de cabeza que devuelve `verify()` se guarda aparte. La fecha de
+  emisión la pone el reloj del registro (tolerancia ±5 min), `valid_date` = día de emisión + anticipación, y no se
+  admiten duplicados por (versión, variable, región, anticipación, día). 17 unit. Todavía no emite predicciones:
+  espera a F6.1.
 
 ## Abierto
 

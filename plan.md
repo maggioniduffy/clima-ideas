@@ -14,7 +14,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | hecha (IDF solo con IMERG, sin corregir; sesgo a 24 h 0,92 y 0,67 en extremos; sin señal de ENSO; serie ISD con control de calidad; capa convection-idf publicada) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | pendiente |
 | 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | pendiente |
-| 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | pendiente |
+| 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | pendiente (F6.4 hecha: registro append-only) |
 
 ## Rumbo (revisión del 2026-11-11)
 
@@ -63,9 +63,8 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 ## Próximo
 
 1. F0.11: capas subidas a R2 y probadas con la web local; falta la web en línea con `VITE_DATA_URL` (`odd/tasks/publish.md`).
-2. F6.4: registro de predicciones congeladas (código y unit, sin depender de F0.11).
-3. Fase 5, mitad ríos atmosféricos: F5.9 (IVT en pronósticos abiertos) y licencia de GEFS antes de F5.1.
-4. Fase 4 núcleo: F4.1 y F4.2 (cuencas chicas y caudal pico SCS-CN con las lluvias de diseño de F3.3).
+2. Fase 5, mitad ríos atmosféricos: F5.9 (IVT en pronósticos abiertos) y licencia de GEFS antes de F5.1.
+3. Fase 4 núcleo: F4.1 y F4.2 (cuencas chicas y caudal pico SCS-CN con las lluvias de diseño de F3.3).
 
 ## Referencias
 
