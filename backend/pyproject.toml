@@ -21,6 +21,7 @@ dependencies = [
     "boto3>=1.44.1",
     "harmony-py>=1.8.0",
     "shapely>=2.2.0",
+    "pysheds>=0.5",
 ]
 
 [project.scripts]
