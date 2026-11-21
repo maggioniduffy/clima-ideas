@@ -106,7 +106,16 @@ export const es = {
     cnTitle: (hsg: string, cn: number, central: boolean) =>
       `Grupo hidrológico ${hsg}, CN ${cn}${central ? " (escenario central)" : ""}`,
     scenarioNote: "Escenarios de CN (TR-55), no medidos",
-    rankTitle: (n: number, total: number) => `Mayores caudales pico: ${n} de ${total} cuencas`,
+    rankTitle: (n: number, total: number) => `Mayores caudales pico: ${n} de ${total} cuencas con cauce`,
+    planarToggle: (n: number) => `Mostrar flujo laminar (artefacto D8, ${n} cuencas)`,
+    planarToggleHint:
+      "Franjas rectas sobre terreno plano donde el D8 no converge; ocultas del mapa y del ranking por defecto.",
+    planarNote:
+      "Flujo laminar: franja casi rectangular sobre terreno plano, probable artefacto del D8 (criterio propio, sin verificar). No es una cuenca con cauce y no entra en el ranking; el caudal pico de abajo no es confiable.",
+    overlapNote: (id: number, target: string) =>
+      `También desagua sobre ${target} (cuenca ${id}): el mismo terreno ya está en el ranking con esa cuenca, por eso esta no entra.`,
+    shape: "Rectangularidad / elongación",
+    shapeValue: (rect: string, elong: string) => `${rect} / ${elong}`,
     rankItem: (rank: number, target: string) => `${rank}. ${target}`,
     rankLabel: (rank: number, target: string, peak: string) => `Puesto ${rank}, ${target}, ${peak} m³/s`,
     km2: "km²",
@@ -143,6 +152,7 @@ export const es = {
       "La IDF es la de la celda de la capital; aplicarla a las cuencas cerca de Añelo es sin verificar.",
       "Los CN son escenarios de TR-55, no medidos (cita de la tabla: sin verificar).",
       "SCS-CN no está validado en bardas patagónicas: sin verificar.",
+      "Las franjas rectas sobre terreno plano (artefacto del D8, criterio propio, sin verificar) se ocultan por defecto.",
       "No es un sistema de alerta oficial: análisis retrospectivo de lluvias de diseño.",
     ],
   },

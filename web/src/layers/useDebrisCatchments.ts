@@ -10,6 +10,7 @@ import {
   DEBRIS_TOP_N,
   peakAt,
   rankCatchments,
+  visibleFeatures,
   type CatchmentCollection,
   type DebrisPeaks,
 } from "./debrisCatchments";
@@ -34,6 +35,7 @@ export function useDebrisCatchments(layer: LayerManifest | undefined, active: bo
   const [t, setT] = useState(DEBRIS_DEFAULT_T);
   const [cnPick, setCnPick] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showPlanar, setShowPlanarRaw] = useState(false);
   const [wasActive, setWasActive] = useState(active);
   const theme = useTheme();
 
@@ -74,14 +76,29 @@ export function useDebrisCatchments(layer: LayerManifest | undefined, active: bo
     [geo, peaks, cnId, tNow],
   );
   const domain = useMemo(() => colorDomain(ranking.map((r) => r.peak)), [ranking]);
+  const planarCount = useMemo(() => geo?.features.filter((f) => f.properties.planar_flow).length ?? 0, [geo]);
   const selected = selectedId != null ? (geo?.features.find((f) => f.properties.id === selectedId)?.properties ?? null) : null;
+
+  const setShowPlanar = (on: boolean) => {
+    setShowPlanarRaw(on);
+    if (!on && selected?.planar_flow) setSelectedId(null); // a hidden catchment cannot stay selected
+  };
 
   const deckLayers = useMemo<Layer[]>(
     () =>
       active && geo && peaks && cnId
-        ? buildDebrisLayers({ data: geo, peaks, cnId, t: tNow, domain, selectedId, theme, onPick: setSelectedId })
+        ? buildDebrisLayers({
+            data: { type: "FeatureCollection", features: visibleFeatures(geo.features, showPlanar) },
+            peaks,
+            cnId,
+            t: tNow,
+            domain,
+            selectedId,
+            theme,
+            onPick: setSelectedId,
+          })
         : [],
-    [active, geo, peaks, cnId, tNow, domain, selectedId, theme],
+    [active, geo, peaks, cnId, tNow, domain, selectedId, theme, showPlanar],
   );
 
   return {
@@ -98,6 +115,10 @@ export function useDebrisCatchments(layer: LayerManifest | undefined, active: bo
     ranking,
     top: ranking.slice(0, DEBRIS_TOP_N),
     domain,
+    showPlanar,
+    setShowPlanar,
+    planarCount,
+    shownCount: geo ? visibleFeatures(geo.features, showPlanar).length : 0,
     selectedPeak: selected && peaks && cnId ? peakAt(peaks, selected.id, cnId, tNow) : null,
     deckLayers,
   };

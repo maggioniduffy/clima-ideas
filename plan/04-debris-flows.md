@@ -51,14 +51,23 @@ Núcleo: mapa de cuencas por caudal pico. Extensión: un caso HEC-RAS validado y
   documento. Lluvia de diseño: IDF de F3.3 (celda IMERG de la capital, sin corregir, piso); usarla cerca de Añelo
   queda sin verificar. Capa `debris-catchments` con mapa por caudal pico, T y CN a elegir, ranking y ficha por
   cuenca. Hay pytest, vitest y e2e de Playwright. La mayor a T 10 y CN 85 es la cuenca 455 sobre la RP 7 (22,4 km²,
-  14,6 m³/s, rango 8,6–17,8, duración crítica 12 h).
+  14,6 m³/s, rango 8,6–17,8, duración crítica 12 h). Corregido el mismo día, ver la línea siguiente.
+- F4.3 franjas (2026-11-21): la cuenca 455 y las franjas del cruce RP 5–RP 7 son un artefacto del D8 sobre terreno
+  plano, no un error de código: el DEM ajusta un plano con RMSE 1,4 m en 2 km (pendiente ≈ 1 %), las direcciones
+  decodifican bien (0,5 % de celdas cuesta arriba, todas por relleno) y el relleno no lo explica (7–13 % de celdas
+  rellenadas). Se marca `planar_flow` si la rectangularidad es ≥ 0,85 con elongación ≥ 3, o si la elongación es ≥ 15
+  (franjas diagonales escalonadas). Es un criterio propio, sin verificar: marca 334 de 841, con poca variación ante
+  otros cortes. Esas cuencas quedan fuera del mapa y del ranking, salvo con el interruptor. Además, 10 cuencas que se
+  superponen en más del 50 % con otra de distinto blanco (corrida urbana contra RP 7) quedan fuera del ranking.
+  Quedan 497 cuencas con cauce en el ranking. La mayor a T 10 y CN 85 pasa a ser la 184 sobre la RP 5 (18,6 km²,
+  12,8 m³/s, rango 7,4–15,6).
 
 ## Abierto
 
-- F4.3: en el cruce RP 5–RP 7 hay cuencas en franjas rectas y largas, entre ellas la primera del ranking. Parecen
-  un artefacto del D8 sobre zonas planas de la meseta o de la rasterización de la ruta, sin verificar. Revisarlo
-  antes de leer el ranking.
-- F4.3: el mapa no hace zoom a la cuenca elegida, y la columna "T 100†" se corta en dos líneas.
+- F4.3: el mapa no hace zoom a la cuenca elegida (`MapCanvas` no expone la vista).
+- F4.3: quedan unas pocas franjas cortas en el cruce RP 5–RP 7 (elongación < 15) que el criterio no atrapa.
+- F4.3: el corte de flujo laminar es propio y sin verificar; una alternativa más física es delinear con un umbral de
+  área de cauce (inicio de cauce) o con D-infinito en lugar de D8.
 
 - HEC-RAS en Linux: sin verificar (F4.4a). Para confirmarlo hace falta permitir hec.usace.army.mil y que el usuario
   autorice bajar y correr el binario de USACE.

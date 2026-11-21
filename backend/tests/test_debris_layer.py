@@ -10,17 +10,23 @@ from clima_nqn.layers.manifest import load_manifest
 from clima_nqn.stages.debris import catchments, scs
 
 
-def _c(i, target, lon, area=1.0, slope=3.0, length=2000.0):
+def _c(i, target, lon, area=1.0, slope=3.0, length=2000.0, geom=None, planar=None):
+    geom = geom if geom is not None else box(lon, -38.0, lon + 0.01, -37.99)
+    lon = geom.bounds[0]  # distinct outlets so catchments are not deduplicated
+    rect, elong = catchments.shape_metrics(geom)
     return catchments.Catchment(
         id=i,
         target=target,
-        geometry=box(lon, -38.0, lon + 0.01, -37.99),
+        geometry=geom,
         area_km2=area,
         mean_slope_deg=slope,
         relief_m=40.0,
         longest_flow_path_m=length,
         outlet_lon=lon,
         outlet_lat=-38.0,
+        rectangularity=rect,
+        elongation=elong,
+        planar_flow=catchments.is_planar_flow(rect, elong) if planar is None else planar,
     )
 
 
@@ -100,3 +106,44 @@ def test_build_rejects_empty_input(tmp_path):
     p = catchments.write_parquet([], tmp_path / "e.parquet")
     with pytest.raises(ValueError):
         dl.build([p], tmp_path / "out")
+
+
+def test_planar_flag_computed_for_old_parquet_and_counted(tmp_path):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    strip = box(-69.0, -38.0, -68.99, -37.9)  # long thin rectangle -> planar flow
+    blob = box(-69.2, -38.0, -69.19, -37.99)  # square -> not flagged
+    p = catchments.write_parquet([_c(0, "RP7", 0, geom=strip), _c(1, "RP7", 0, geom=blob)], tmp_path / "n.parquet")
+    t = pq.read_table(p)
+    old = pa.table({n: t[n] for n in t.column_names if n not in ("rectangularity", "elongation", "planar_flow")})
+    old = old.replace_schema_metadata(t.schema.metadata)
+    pq.write_table(old, tmp_path / "old.parquet")
+    rows, _ = dl.read_catchments([tmp_path / "old.parquet"])
+    assert [r["planar_flow"] for r in rows] == [True, False]
+    out = dl.build([tmp_path / "old.parquet"], tmp_path / "o")
+    pk = json.loads((out / "peaks.json").read_text(encoding="utf-8"))
+    assert pk["planar_flow"]["n_excluded"] == 1 and pk["n_ranked"] == 1
+    assert pk["planar_flow"]["min_rectangularity"] == 0.85 and "sin verificar" in pk["planar_flow"]["note"]
+    gj = json.loads((out / "catchments.geojson").read_text(encoding="utf-8"))
+    assert [f["properties"]["planar_flow"] for f in gj["features"]] == [True, False]
+
+
+def test_overlap_marks_the_smaller_catchment_of_another_target(tmp_path):
+    big = box(-69.0, -38.0, -68.95, -37.95)
+    inside = box(-68.99, -37.99, -68.97, -37.97)  # fully inside big, other target -> excluded from ranking
+    same_target = box(-68.99, -37.99, -68.96, -37.97)
+    apart = box(-68.5, -38.0, -68.45, -37.95)
+    p = catchments.write_parquet(
+        [_c(0, "RP7", 0, area=9, geom=big), _c(1, "Centenario", 0, area=1, geom=inside), _c(2, "RP7", 0, area=1, geom=apart)],
+        tmp_path / "a.parquet",
+    )
+    q = catchments.write_parquet([_c(0, "RP7", 0, area=1, geom=same_target)], tmp_path / "b.parquet")
+    rows, _ = dl.read_catchments([p, q])
+    assert [r["overlaps_id"] for r in rows] == [None, 0, None, None]  # same target is not an overlap
+    out = dl.build([p, q], tmp_path / "o")
+    pk = json.loads((out / "peaks.json").read_text(encoding="utf-8"))
+    assert pk["overlap"]["n_excluded"] == 1 and pk["n_ranked"] == 3 and pk["n_catchments"] == 4
+    gj = json.loads((out / "catchments.geojson").read_text(encoding="utf-8"))
+    assert gj["features"][1]["properties"]["overlaps_id"] == 0 and gj["features"][0]["properties"]["overlaps_id"] is None
+    assert "1" in pk["catchments"]  # the excluded one keeps its peaks (still clickable)

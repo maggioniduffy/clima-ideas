@@ -14,7 +14,7 @@ const state = (over: Partial<DebrisState> = {}): DebrisState => {
   const ranking = rankCatchments(geo.features, peaks, "hsg-c", 10);
   return {
     status: "ready", peaks, geo, t: 10, cnId: "hsg-c", selectedId: null, selected: null, ranking, top: ranking,
-    domain: [0.7, 9], setT: vi.fn(), setCnId: vi.fn(), select: vi.fn(), deckLayers: [], selectedPeak: null, ...over,
+    domain: [0.7, 9], showPlanar: false, setShowPlanar: vi.fn(), planarCount: 1, shownCount: 4, setT: vi.fn(), setCnId: vi.fn(), select: vi.fn(), deckLayers: [], selectedPeak: null, ...over,
   } as unknown as DebrisState;
 };
 
@@ -31,6 +31,45 @@ test("ranked list, selectors and fixed caveats are shown without a selection", (
     expect(caveats).toHaveTextContent(txt);
   expect(screen.getByTestId("debris-source")).toHaveTextContent("Fuente X");
   expect(screen.getByTestId("debris-source")).toHaveTextContent("2000/01");
+});
+
+test("planar-flow catchments are not ranked; the toggle announces their count and calls back", () => {
+  const s = state();
+  render(<DebrisPanel state={s} source="s" period="p" />);
+  expect(screen.getByRole("heading", { name: "Mayores caudales pico: 4 de 4 cuencas con cauce" })).toBeInTheDocument();
+  expect(screen.queryByTestId("debris-rank-4")).toBeNull();
+  expect(screen.getByTestId("debris-panel")).toHaveAttribute("data-map-shown", "4");
+  const toggle = screen.getByTestId("debris-planar-toggle");
+  expect(toggle).not.toBeChecked();
+  expect(screen.getByText("Mostrar flujo laminar (artefacto D8, 1 cuencas)")).toBeInTheDocument();
+  fireEvent.click(toggle);
+  expect(s.setShowPlanar).toHaveBeenCalledWith(true);
+});
+
+test("no toggle when the layer has no planar-flow catchments", () => {
+  render(<DebrisPanel state={state({ planarCount: 0 })} source="s" period="p" />);
+  expect(screen.queryByTestId("debris-planar-toggle")).toBeNull();
+});
+
+test("a planar-flow catchment's panel carries a clear note; an overlapping one names the other target", () => {
+  const planar = geo.features.find((f) => f.properties.id === 4)!.properties;
+  const { unmount } = render(
+    <DebrisPanel state={state({ selectedId: 4, selected: planar, showPlanar: true })} source="s" period="p" />,
+  );
+  expect(screen.getByTestId("debris-planar-note")).toHaveTextContent("artefacto del D8");
+  expect(screen.getByTestId("debris-planar-note")).toHaveTextContent("sin verificar");
+  expect(screen.getByTestId("debris-shape")).toHaveTextContent("1 / 18,99");
+  expect(screen.queryByTestId("debris-overlap-note")).toBeNull();
+  unmount();
+  const overlapping = { ...geo.features[1]!.properties, overlaps_id: 0 };
+  render(<DebrisPanel state={state({ selectedId: 1, selected: overlapping })} source="s" period="p" />);
+  expect(screen.getByTestId("debris-overlap-note")).toHaveTextContent("También desagua sobre RP5 (cuenca 0)");
+  expect(screen.queryByTestId("debris-planar-note")).toBeNull();
+});
+
+test("the T cells do not wrap", () => {
+  render(<DebrisPanel state={state({ selectedId: 0, selected: geo.features[0]!.properties })} source="s" period="p" />);
+  expect(screen.getByTestId("debris-peak-row-100").querySelector("th")).toHaveTextContent("T 100†");
 });
 
 test("clicking a ranked row, T and CN buttons call back", () => {

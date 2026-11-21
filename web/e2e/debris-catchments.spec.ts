@@ -20,6 +20,18 @@ test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   await expect(page.getByTestId("debris-legend")).toBeVisible();
   await expect(page.getByTestId("debris-empty")).toBeVisible();
 
+  // the planar-flow strip (D8 artifact) is hidden and unranked by default; the toggle shows it
+  await expect(page.getByRole("heading", { name: "Mayores caudales pico: 4 de 4 cuencas con cauce" })).toBeVisible();
+  const toggle = page.getByTestId("debris-planar-toggle");
+  await expect(toggle).not.toBeChecked();
+  await expect(page.getByText("Mostrar flujo laminar (artefacto D8, 1 cuencas)")).toBeVisible();
+  await expect(panel).toHaveAttribute("data-map-shown", "4"); // polygons and dots drawn on the map
+  await toggle.check();
+  await expect(panel).toHaveAttribute("data-map-shown", "5");
+  await expect(page.locator('[data-testid^="debris-rank-"]')).toHaveCount(4); // shown but still unranked
+  await toggle.uncheck();
+  await expect(panel).toHaveAttribute("data-map-shown", "4");
+
   // changing T or CN reorders / rescales
   await page.getByTestId("debris-t-100").click();
   await expect(page.getByTestId("debris-t-100")).toHaveAttribute("aria-pressed", "true");

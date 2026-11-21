@@ -91,3 +91,45 @@ def test_geoparquet_roundtrip(tmp_path):
     meta = table.schema.metadata
     assert b"geo" in meta and b"source" in meta and b"period" in meta
     assert row["target"] == "r"
+
+
+def planar_dem(nrows=80, ncols=60) -> np.ndarray:
+    """Exact tilted plane (south fall, tiny eastward rise): D8 routes parallel lines that never converge."""
+    south = np.arange(nrows)[::-1] * 0.01
+    return np.add.outer(south, np.arange(ncols) * 0.003) + 1000.0
+
+
+def test_planar_terrain_gives_flagged_strips():
+    line = LineString([(LON0, row_lat(70.5)), (LON0 + RES * 60, row_lat(70.5))])
+    out = C.delineate(planar_dem(), TRANSFORM, [("r", line)], min_area_km2=0.0001, max_area_km2=50)
+    assert len(out) >= 30
+    assert all(b.planar_flow for b in out)
+    assert all(b.rectangularity >= C.PLANAR_RECTANGULARITY and b.elongation >= C.PLANAR_ELONGATION for b in out)
+
+
+def test_v_valley_catchment_is_not_flagged():
+    out = C.delineate(v_valley(), TRANSFORM, [("route_x", _line(30))], min_area_km2=0.01, max_area_km2=50)
+    assert len(out) == 1
+    b = out[0]
+    assert b.rectangularity >= C.PLANAR_RECTANGULARITY  # a box-shaped valley is rectangular...
+    assert b.elongation < C.PLANAR_ELONGATION  # ...but not elongated, so it is not an artifact
+    assert not b.planar_flow
+
+
+def test_shape_metrics_use_a_metric_frame():
+    # 0.01 deg of longitude at -38 deg is ~0.79 x the length of 0.01 deg of latitude
+    rect, elong = C.shape_metrics(box(-69.0, -38.0, -68.99, -37.99))
+    assert rect > 0.999 and abs(elong - 1 / math.cos(math.radians(-37.995))) < 0.01
+    # an L shape is far from its bounding rectangle
+    l_shape = box(0, 0, 3, 1).union(box(0, 0, 1, 3))
+    assert C.shape_metrics(l_shape)[0] < 0.7
+    assert not C.is_planar_flow(0.62, 8.0) and not C.is_planar_flow(0.95, 2.0) and C.is_planar_flow(0.9, 3.0)
+    # stair-stepped diagonal strip: low rectangularity, extreme elongation
+    assert C.is_planar_flow(0.4, 150.0) and not C.is_planar_flow(0.4, 14.0)
+
+
+def test_parquet_stores_planar_fields(tmp_path):
+    line = LineString([(LON0, row_lat(70.5)), (LON0 + RES * 60, row_lat(70.5))])
+    out = C.delineate(planar_dem(), TRANSFORM, [("r", line)], min_area_km2=0.0001, max_area_km2=50)
+    row = pq.read_table(C.write_parquet(out, tmp_path / "p.parquet")).to_pylist()[0]
+    assert row["planar_flow"] is True and 0 < row["rectangularity"] <= 1 and row["elongation"] >= 3

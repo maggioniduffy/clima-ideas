@@ -477,7 +477,10 @@
 .debris-table caption { text-align: left; font-weight: 600; font-size: 13px; padding-bottom: var(--space-1); }
 .debris-table th, .debris-table td { padding: 4px 6px; text-align: right; border-bottom: 1px solid var(--border); font-weight: 400; vertical-align: bottom; }
 .debris-table thead th { color: var(--text-muted); font-size: 11px; line-height: 1.2; }
-.debris-table tbody th { text-align: left; }
+.debris-table tbody th { text-align: left; white-space: nowrap; }
+.debris-toggle { display: flex; align-items: flex-start; gap: var(--space-2); font-size: 12px; line-height: 1.3; cursor: pointer; }
+.debris-toggle input { margin-top: 2px; }
+.debris-warn { border-left: 3px solid var(--border); padding-left: var(--space-2); }
 .debris-table tr[data-current="true"] td, .debris-table tr[data-current="true"] th { font-weight: 700; }
 .debris-caveats { margin: 0; padding-left: var(--space-4); display: flex; flex-direction: column; gap: 2px; }
 .debris-panel .conv-note { font-size: 12px; line-height: 1.3; }

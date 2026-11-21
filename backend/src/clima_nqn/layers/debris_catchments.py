@@ -15,6 +15,14 @@ Several catchment Parquets (F4.1 runs: Routes 5/7, urban targets) can be concate
 the original ids are kept as ``source_id``/``source_file``. A catchment that appears twice (same target and outlet) is
 kept once.
 
+Planar flow (D8 artifact on planar terrain, see ``stages/debris/catchments.py``): ``rectangularity``, ``elongation`` and
+``planar_flow`` are read from the Parquet or, for older Parquets, computed here from the polygon. The viewer hides
+``planar_flow`` catchments by default and ranks without them.
+
+Overlap: when two catchments of different targets overlap by more than ``OVERLAP_FRACTION`` of the smaller one's area
+(both non-planar), both are kept but the smaller gets ``overlaps_id`` (the id of the one it overlaps most). It stays
+clickable and is left out of the ranking, so the same ground is not ranked twice.
+
 Not an alert system: values are retrospective design-storm estimates, with no levels or thresholds.
 """
 
@@ -27,12 +35,19 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow.parquet as pq
-from shapely import wkb
+from shapely import STRtree, wkb
 from shapely.geometry import mapping
 
 from clima_nqn.layers.manifest import LayerManifest
 from clima_nqn.stages.convection import idf as idf_mod
 from clima_nqn.stages.debris import scs
+from clima_nqn.stages.debris.catchments import (
+    PLANAR_ELONGATION,
+    PLANAR_RECTANGULARITY,
+    PLANAR_STRIP_ELONGATION,
+    is_planar_flow,
+    shape_metrics,
+)
 
 LAYER_ID = "debris-catchments"
 TITLE = "Aluviones: cuencas chicas"
@@ -82,6 +97,8 @@ CAVEATS = (
     "CN: escenarios de TR-55, no medidos (matorral desértico, condición pobre; B, C y D).",
     "SCS-CN y el hidrograma triangular no están validados en bardas patagónicas: sin verificar.",
     "T = 100 años es una extrapolación (más de 2 veces el registro de 25 años).",
+    "Cuencas en franjas rectas sobre terreno plano (artefacto del D8, criterio propio, sin verificar): ocultas por defecto.",
+    "Las cuencas que se superponen con otra cuenca de otro destino se quedan fuera del ranking.",
     "Análisis retrospectivo de lluvias de diseño. No es un sistema de alerta oficial.",
 )
 
@@ -109,6 +126,40 @@ def load_idf(parquet: Path | None = None) -> tuple[dict[tuple[float, float], flo
     )
 
 
+OVERLAP_FRACTION = 0.5  # of the smaller catchment's area; criterio propio, sin verificar
+PLANAR_NOTE = (
+    "Cuencas casi rectangulares y alargadas (rectangularidad >= {rect:g} y elongación >= {elong:g}) o franjas muy "
+    "alargadas (elongación >= {strip:g}) sobre terreno plano: el D8 traza líneas paralelas que no convergen y cada "
+    "línea o banda se vuelve una cuenca falsa. Criterio propio, sin verificar; el conteo cambia poco con otros cortes "
+    "(rectangularidad 0,70: 292 contra 252 de 841; franjas con elongación 10 o 20: 86 o 74 contra 81)."
+)
+
+
+def find_overlaps(rows: Sequence[dict], fraction: float = OVERLAP_FRACTION) -> dict[int, int]:
+    """``{smaller id: id it overlaps}`` for non-planar catchments of different targets overlapping > ``fraction``."""
+    geoms = {r["id"]: wkb.loads(r["geometry"]) for r in rows if not r["planar_flow"]}
+    by_id = {r["id"]: r for r in rows}
+    ids = list(geoms)
+    tree = STRtree([geoms[i] for i in ids])
+    out: dict[int, int] = {}
+    for i in ids:
+        gi = geoms[i]
+        best, best_area = None, 0.0
+        for j in (ids[k] for k in tree.query(gi)):
+            if j == i or by_id[j]["target"] == by_id[i]["target"]:
+                continue
+            gj = geoms[j]
+            smaller = (gi.area, i) <= (gj.area, j)
+            if not smaller:
+                continue  # only the smaller of the pair is marked
+            inter = gi.intersection(gj).area
+            if gi.area > 0 and inter / gi.area > fraction and gj.area > best_area:
+                best, best_area = j, gj.area
+        if best is not None:
+            out[i] = best
+    return out
+
+
 def read_catchments(paths: Sequence[Path | str]) -> tuple[list[dict], dict]:
     """Concatenate catchment Parquets; returns (rows with a WKB ``geometry``, sources metadata)."""
     rows: list[dict] = []
@@ -124,7 +175,12 @@ def read_catchments(paths: Sequence[Path | str]) -> tuple[list[dict], dict]:
             if key in seen:
                 continue
             seen.add(key)
-            rows.append({**r, "source_id": int(r["id"]), "source_file": p.name})
+            row = {**r, "source_id": int(r["id"]), "source_file": p.name}
+            if row.get("rectangularity") is None or row.get("elongation") is None:
+                row["rectangularity"], row["elongation"] = shape_metrics(wkb.loads(r["geometry"]))
+            # always re-apply the current rule, so older Parquets follow threshold changes
+            row["planar_flow"] = is_planar_flow(row["rectangularity"], row["elongation"])
+            rows.append(row)
             n += 1
         sources.append(
             {
@@ -138,6 +194,9 @@ def read_catchments(paths: Sequence[Path | str]) -> tuple[list[dict], dict]:
         r["id"] = i
     if not rows:
         raise ValueError("no catchments in the input Parquets")
+    overlaps = find_overlaps(rows)
+    for r in rows:
+        r["overlaps_id"] = overlaps.get(r["id"])
     return rows, {"files": sources}
 
 
@@ -208,6 +267,10 @@ def build(
                     "longest_flow_path_m": round(r["longest_flow_path_m"], 1),
                     "outlet_lon": round(r["outlet_lon"], 5),
                     "outlet_lat": round(r["outlet_lat"], 5),
+                    "rectangularity": round(r["rectangularity"], 3),
+                    "elongation": round(r["elongation"], 2),
+                    "planar_flow": bool(r["planar_flow"]),
+                    "overlaps_id": r["overlaps_id"],
                     "source_id": r["source_id"],
                     "source_file": r["source_file"],
                 },
@@ -215,6 +278,8 @@ def build(
         )
         table[str(r["id"])] = peaks_for(r, rains)
 
+    n_planar = sum(bool(r["planar_flow"]) for r in rows)
+    n_overlap = sum(r["overlaps_id"] is not None for r in rows)
     dem_periods = sorted({f["period"] for f in cmeta["files"] if f["period"]})
     dem_sources = sorted({f["source"] for f in cmeta["files"] if f["source"]})
     peaks = {
@@ -245,6 +310,26 @@ def build(
         "catchments_source": {"sources": dem_sources, "periods": dem_periods, **cmeta},
         "caveats": list(CAVEATS),
         "n_catchments": len(rows),
+        "n_ranked": len(rows) - n_planar - n_overlap,
+        "planar_flow": {
+            "min_rectangularity": PLANAR_RECTANGULARITY,
+            "min_elongation": PLANAR_ELONGATION,
+            "min_strip_elongation": PLANAR_STRIP_ELONGATION,
+            "n_excluded": n_planar,
+            "citation": "sin verificar",
+            "note": PLANAR_NOTE.format(
+                rect=PLANAR_RECTANGULARITY, elong=PLANAR_ELONGATION, strip=PLANAR_STRIP_ELONGATION
+            ),
+        },
+        "overlap": {
+            "min_fraction": OVERLAP_FRACTION,
+            "n_excluded": n_overlap,
+            "citation": "sin verificar",
+            "note": (
+                "Cuenca que se superpone en más de la mitad de su área con otra de otro destino (ruta o barrio): "
+                "queda en el mapa pero fuera del ranking, para no contar dos veces el mismo terreno."
+            ),
+        },
         "catchments": table,
     }
     manifest = LayerManifest(

@@ -8,6 +8,8 @@ import {
   peakAt,
   peakRange,
   rankCatchments,
+  visibleFeatures,
+  isRanked,
   type CatchmentCollection,
   type DebrisPeaks,
 } from "./debrisCatchments";
@@ -56,4 +58,18 @@ test("color scale is logarithmic, neutral (token ramp) and handles degenerate in
 test("discharge uses three significant digits with a decimal comma", () => {
   expect(fmtQ(0.0173)).toBe("0,0173");
   expect(fmtQ(12.352)).toBe("12,4");
+});
+
+test("planar-flow and overlapping catchments are left out of the ranking but planar ones can be shown on the map", () => {
+  expect(geo.features.map((f) => f.properties.id)).toContain(4);
+  expect(geo.features.find((f) => f.properties.id === 4)!.properties.planar_flow).toBe(true);
+  const ids = rankCatchments(geo.features, peaks, "hsg-c", 10).map((x) => x.id);
+  expect(ids).toEqual([0, 2, 3, 1]); // the planar strip 4 has a large peak but is not ranked
+  expect(peakAt(peaks, 4, "hsg-c", 10)).toBeGreaterThan(0);
+  expect(visibleFeatures(geo.features, false).map((f) => f.properties.id)).toEqual([0, 1, 2, 3]);
+  expect(visibleFeatures(geo.features, true)).toHaveLength(5);
+  const overlapping = { ...geo.features[1]!, properties: { ...geo.features[1]!.properties, overlaps_id: 0 } };
+  expect(isRanked(overlapping.properties)).toBe(false);
+  expect(rankCatchments([geo.features[0]!, overlapping], peaks, "hsg-c", 10).map((x) => x.id)).toEqual([0]);
+  expect(isRanked({ ...geo.features[0]!.properties, planar_flow: undefined, overlaps_id: undefined })).toBe(true);
 });

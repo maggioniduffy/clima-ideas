@@ -21,7 +21,17 @@ export interface CatchmentProps {
   longest_flow_path_m: number;
   outlet_lon: number;
   outlet_lat: number;
+  /** Polygon area / minimum rotated rectangle area (0..1); with `elongation` it flags D8 artifacts. */
+  rectangularity?: number;
+  elongation?: number;
+  /** Probable D8 artifact on planar terrain (criterio propio, sin verificar): hidden and unranked by default. */
+  planar_flow?: boolean;
+  /** Id of the larger catchment of another target this one overlaps; it stays on the map but is not ranked. */
+  overlaps_id?: number | null;
 }
+
+/** True for catchments that enter the ranking: neither a planar-flow artifact nor an overlap of another target's. */
+export const isRanked = (p: CatchmentProps): boolean => !p.planar_flow && p.overlaps_id == null;
 
 export interface CatchmentFeature {
   type: "Feature";
@@ -62,6 +72,9 @@ export interface DebrisPeaks {
   method: string;
   catchments_source: { sources: string[]; periods: string[] };
   n_catchments: number;
+  n_ranked?: number;
+  planar_flow?: { min_rectangularity: number; min_elongation: number; n_excluded: number; citation: string; note: string };
+  overlap?: { min_fraction: number; n_excluded: number; citation: string; note: string };
   catchments: Record<string, { peak_m3s: Record<string, number[]>; critical_duration_h: Record<string, number[]> }>;
 }
 
@@ -98,7 +111,7 @@ export interface RankedCatchment {
   props: CatchmentProps;
 }
 
-/** Catchments by peak discharge, largest first (ties by id); `rank` starts at 1. */
+/** Ranked catchments (see `isRanked`) by peak discharge, largest first (ties by id); `rank` starts at 1. */
 export function rankCatchments(
   features: readonly CatchmentFeature[],
   p: DebrisPeaks,
@@ -108,6 +121,7 @@ export function rankCatchments(
 ): RankedCatchment[] {
   return features
     .flatMap((f) => {
+      if (!isRanked(f.properties)) return [];
       const peak = peakAt(p, f.properties.id, cnId, t);
       return peak == null ? [] : [{ id: f.properties.id, peak, props: f.properties }];
     })
@@ -149,7 +163,13 @@ export function debrisColor(fraction: number, theme: Theme, alpha = 215): Rgba {
 
 const rgba = (h: string, a = 255): Rgba => [...hex(h), a] as Rgba;
 
+/** Features drawn on the map: planar-flow ones only when `showPlanar` is on. */
+export function visibleFeatures(features: readonly CatchmentFeature[], showPlanar: boolean): CatchmentFeature[] {
+  return showPlanar ? [...features] : features.filter((f) => !f.properties.planar_flow);
+}
+
 export interface DebrisLayerArgs {
+  /** Already filtered with `visibleFeatures`. */
   data: CatchmentCollection;
   peaks: DebrisPeaks;
   cnId: string;
@@ -167,14 +187,17 @@ export interface DebrisLayerArgs {
  */
 export function buildDebrisLayers({ data, peaks, cnId, t, domain, selectedId, theme, onPick }: DebrisLayerArgs): Layer[] {
   const tk = tokens[theme];
+  const planar = new Set(data.features.filter((f) => f.properties.planar_flow).map((f) => f.properties.id));
+  const muted = rgba(theme === "dark" ? tk.text : tk.ctrl, 45); // planar-flow artifacts: pale neutral, not on the scale
   const fill = (id: number): Rgba => {
+    if (planar.has(id)) return muted;
     const v = peakAt(peaks, id, cnId, t) ?? 0;
     return debrisColor(domain ? logFraction(v, domain) : 0, theme);
   };
   const outline = rgba(theme === "dark" ? tk.text : tk.ctrl, 200);
   const accent = rgba(tk.accent);
   const casing = rgba(tk.casing);
-  const triggers = { getFillColor: [cnId, t, domain, theme], getLineColor: [selectedId, theme], getLineWidth: [selectedId] };
+  const triggers = { getFillColor: [cnId, t, domain, theme, planar.size], getLineColor: [selectedId, theme], getLineWidth: [selectedId] };
   return [
     new GeoJsonLayer<CatchmentProps>({
       id: `polygons-${DEBRIS_LAYER_ID}`,
@@ -221,4 +244,5 @@ const n1 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
 const n2 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
 export const fmtKm2 = (v: number): string => n2.format(v);
 export const fmtMetres = (v: number): string => n1.format(v);
+export const fmtRatio = (v: number): string => n2.format(v);
 export const fmtDeg = (v: number): string => n1.format(v);

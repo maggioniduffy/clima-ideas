@@ -6,6 +6,7 @@ import {
   fmtKm2,
   fmtMetres,
   fmtQ,
+  fmtRatio,
   peakAt,
   peakRange,
   rainDepth,
@@ -33,7 +34,7 @@ export function DebrisPanel({ state, source, period }: DebrisPanelProps) {
   const methodNote = peaks.method;
   const dem = peaks.catchments_source.periods.join(", ");
   return (
-    <div className="debris-panel" data-testid="debris-panel">
+    <div className="debris-panel" data-testid="debris-panel" data-map-shown={state.shownCount}>
       <p className="conv-label" data-testid="debris-label">
         {es.debris.label}
       </p>
@@ -70,6 +71,17 @@ export function DebrisPanel({ state, source, period }: DebrisPanelProps) {
       </p>
 
       <h4 className="debris-h">{es.debris.rankTitle(top.length, state.ranking.length)}</h4>
+      {state.planarCount > 0 && (
+        <label className="debris-toggle" title={es.debris.planarToggleHint}>
+          <input
+            type="checkbox"
+            data-testid="debris-planar-toggle"
+            checked={state.showPlanar}
+            onChange={(e) => state.setShowPlanar(e.target.checked)}
+          />
+          <span>{es.debris.planarToggle(state.planarCount)}</span>
+        </label>
+      )}
       <ol className="debris-rank" data-testid="debris-ranking">
         {top.map((r) => (
           <li key={r.id}>
@@ -97,6 +109,19 @@ export function DebrisPanel({ state, source, period }: DebrisPanelProps) {
           <h4 id="debris-detail-title" className="debris-h">
             {es.debris.detailTitle(selected.id)}
           </h4>
+          {selected.planar_flow && (
+            <p className="conv-note debris-warn" data-testid="debris-planar-note" role="note">
+              {es.debris.planarNote}
+            </p>
+          )}
+          {selected.overlaps_id != null && (
+            <p className="conv-note debris-warn" data-testid="debris-overlap-note" role="note">
+              {es.debris.overlapNote(
+                selected.overlaps_id,
+                geo.features.find((f) => f.properties.id === selected.overlaps_id)?.properties.target ?? "?",
+              )}
+            </p>
+          )}
           <dl className="kv debris-kv">
             <dt>{es.debris.target}</dt>
             <dd data-testid="debris-target">{selected.target}</dd>
@@ -117,6 +142,14 @@ export function DebrisPanel({ state, source, period }: DebrisPanelProps) {
             <dd className="num" data-testid="debris-flowpath">
               {fmtMetres(selected.longest_flow_path_m)} {es.debris.metres}
             </dd>
+            {selected.rectangularity != null && selected.elongation != null && (
+              <>
+                <dt>{es.debris.shape}</dt>
+                <dd className="num" data-testid="debris-shape">
+                  {es.debris.shapeValue(fmtRatio(selected.rectangularity), fmtRatio(selected.elongation))}
+                </dd>
+              </>
+            )}
             <dt>{es.debris.outlet}</dt>
             <dd className="num">{formatLatLon(selected.outlet_lat, selected.outlet_lon)}</dd>
           </dl>

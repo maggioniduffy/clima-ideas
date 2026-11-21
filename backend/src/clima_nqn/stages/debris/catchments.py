@@ -11,6 +11,11 @@ Choices (all sin verificar against literature for Neuquén):
   cannot leak flow through a gap between cells.
 - Cell sizes use a spherical Earth (R = 6371008.8 m) per row; slope and flow-path lengths use the same metric
   spacing. pysheds picks the steepest D8 neighbour using degree spacing, a small bias at -39 deg (cos = 0.78).
+- Planar-flow flag (``planar_flow``): on planar terrain (GLO-30 fits a plane with RMSE ~1.4 m, slope ~1 %) D8 routes
+  parallel straight lines that never converge, and each line or band becomes a fake catchment shaped like a
+  rotated rectangle. ``rectangularity`` (polygon area / minimum rotated rectangle area) and ``elongation`` (long /
+  short side of that rectangle) are measured in a local metric frame (longitude scaled by cos(lat)). See
+  ``PLANAR_RECTANGULARITY`` / ``PLANAR_ELONGATION``.
 - Cells flowing out of the DEM, or into nodata, simply end there (catchments touching the DEM edge are
   truncated; the caller should pad the bbox).
 
@@ -34,7 +39,7 @@ from pyproj import Proj
 from pysheds.grid import Grid
 from pysheds.sview import Raster, ViewFinder
 from rasterio import features
-from shapely import wkb
+from shapely import affinity, wkb
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
@@ -42,6 +47,15 @@ from shapely.ops import unary_union
 EARTH_RADIUS_M = 6371008.8
 DEFAULT_MIN_AREA_KM2 = 0.1
 DEFAULT_MAX_AREA_KM2 = 25.0
+# Planar-flow (D8 artifact) criterion: criterio propio, sin verificar. Sensitivity on the 841 catchments of the
+# Routes 5/7 + urban runs: rectangularity >= 0.85 and elongation >= 3 flags 252 (30 %); 0.70 / 3 flags 292, so the
+# count is stable. The rectangularity distribution is bimodal (median 0.62, 75th percentile 1.0).
+# Second rule: diagonal strips 2-3 cells wide have stair-step edges (rectangularity 0.33-0.75) but extreme
+# elongation (45-280). Among catchments not flagged by the first rule, elongation is bimodal with a trough between
+# 12 and 20; elongation >= 15 flags 81 more (74 at 20, 86 at 10), all <= 3.5 km2. Also criterio propio, sin verificar.
+PLANAR_RECTANGULARITY = 0.85
+PLANAR_ELONGATION = 3.0
+PLANAR_STRIP_ELONGATION = 15.0
 SOURCE = "Copernicus DEM GLO-30 (ESA); cuencas D8 con pysheds"
 PERIOD = "2021-01-01/2021-12-31"  # DEM release period as in io/dem.py (acquisition period sin verificar)
 # pysheds default dirmap order: N, NE, E, SE, S, SW, W, NW -> (drow, dcol)
@@ -59,6 +73,29 @@ class Catchment:
     longest_flow_path_m: float
     outlet_lon: float
     outlet_lat: float
+    rectangularity: float  # polygon area / minimum rotated rectangle area (metric frame), 0..1
+    elongation: float  # long / short side of the minimum rotated rectangle (capped at 1000)
+    planar_flow: bool  # likely D8 artifact on planar terrain; see PLANAR_* constants
+
+
+def shape_metrics(geom: BaseGeometry) -> tuple[float, float]:
+    """``(rectangularity, elongation)`` of a lon/lat polygon, in a local metric frame (lon scaled by cos(lat))."""
+    lat0 = geom.centroid.y
+    kx = math.cos(math.radians(lat0))
+    g = affinity.scale(geom, xfact=kx, yfact=1.0, origin=(0, 0))
+    rect = g.minimum_rotated_rectangle
+    if rect.geom_type != "Polygon" or rect.area <= 0:
+        return 1.0, 1000.0
+    rect_area = rect.area
+    xs, ys = rect.exterior.coords.xy
+    sides = sorted(math.hypot(xs[i + 1] - xs[i], ys[i + 1] - ys[i]) for i in range(2))
+    elong = min(sides[1] / sides[0], 1000.0) if sides[0] > 0 else 1000.0
+    return min(g.area / rect_area, 1.0), elong
+
+
+def is_planar_flow(rectangularity: float, elongation: float) -> bool:
+    rectangular = rectangularity >= PLANAR_RECTANGULARITY and elongation >= PLANAR_ELONGATION
+    return rectangular or elongation >= PLANAR_STRIP_ELONGATION
 
 
 def cell_area_m2(transform: Affine, nrows: int) -> np.ndarray:
@@ -189,17 +226,22 @@ def delineate(
     for k, o in enumerate(outlets):
         sel = label == k
         o_lon, o_lat = transform @ (cols[o] + 0.5, rows[o] + 0.5)
+        geom = unary_union(polys[k])
+        rect, elong = shape_metrics(geom)
         out.append(
             Catchment(
                 id=k,
                 target=targets[int(tid[down[o]]) - 1][0],
-                geometry=unary_union(polys[k]),
+                geometry=geom,
                 area_km2=float(areas[sel].sum() / 1e6),
                 mean_slope_deg=float(np.nanmean(slope[sel])),
                 relief_m=float(np.nanmax(flat_dem[sel]) - np.nanmin(flat_dem[sel])),
                 longest_flow_path_m=float(dist[sel].max()),
                 outlet_lon=float(o_lon),
                 outlet_lat=float(o_lat),
+                rectangularity=rect,
+                elongation=elong,
+                planar_flow=is_planar_flow(rect, elong),
             )
         )
     return out
@@ -218,6 +260,9 @@ def write_parquet(
         "longest_flow_path_m": [c.longest_flow_path_m for c in catchments],
         "outlet_lon": [c.outlet_lon for c in catchments],
         "outlet_lat": [c.outlet_lat for c in catchments],
+        "rectangularity": [c.rectangularity for c in catchments],
+        "elongation": [c.elongation for c in catchments],
+        "planar_flow": [c.planar_flow for c in catchments],
         "geometry": [wkb.dumps(c.geometry) for c in catchments],
     }
     geo = {
