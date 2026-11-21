@@ -41,7 +41,16 @@ test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   await page.getByTestId("debris-cn-hsg-c").click();
 
   // choose a catchment: its panel shows geometry, peaks per T with CN range, critical duration and caveats
+  const canvas = page.getByTestId("map-canvas");
+  const view = async () => ({
+    zoom: Number(await canvas.getAttribute("data-view-zoom")),
+    center: await canvas.getAttribute("data-view-center"),
+  });
+  const before = await view();
   await page.getByTestId("debris-rank-2").click();
+  // the map flies to the chosen catchment (zoom in, centre moves)
+  await expect.poll(async () => (await view()).zoom, { timeout: 8000 }).toBeGreaterThan(before.zoom + 2);
+  expect((await view()).center).not.toBe(before.center);
   const detail = page.getByTestId("debris-detail");
   await expect(detail).toBeVisible();
   await expect(page.getByTestId("debris-target")).toHaveText("RP7");
@@ -64,7 +73,9 @@ test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   await expect(page.getByTestId("debris-source")).toContainText("2021-01-01/2021-12-31");
 
   // another catchment replaces the panel content
+  const second = await view();
   await page.getByTestId("debris-rank-0").click();
+  await expect.poll(async () => (await view()).center, { timeout: 8000 }).not.toBe(second.center);
   await expect(page.getByTestId("debris-target")).toHaveText("RP5");
   await expect(page.getByTestId("debris-area")).toContainText("12 km²");
 

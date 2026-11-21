@@ -1,6 +1,7 @@
 import DeckGL from "@deck.gl/react";
-import { MapView, WebMercatorViewport, type Layer, type MapViewState } from "@deck.gl/core";
+import { FlyToInterpolator, MapView, WebMercatorViewport, type Layer, type MapViewState } from "@deck.gl/core";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { FIT_TRANSITION_MS, resolveFocus, type FocusRequest } from "./MapCanvasFit";
 
 // Neuquén province; pitch leaves room for the 3D relief layer (F0.5).
 const INITIAL_VIEW_STATE: MapViewState = {
@@ -34,7 +35,18 @@ const MAP_VIEW = new MapView({ repeat: false });
  * The map card. deck.gl sizes its canvas to this element, so it follows layout changes (panel resizes, grid
  * reflow); the element size is also tracked here to place the HTML markers.
  */
-export function MapCanvas({ layers = [], markers = [], children }: { layers?: Layer[]; markers?: MapMarker[]; children?: ReactNode }) {
+export function MapCanvas({
+  layers = [],
+  markers = [],
+  focus = null,
+  children,
+}: {
+  layers?: Layer[];
+  markers?: MapMarker[];
+  /** Frame a box: the map acts once per request object (see `FocusRequest`). Generic, usable by any layer. */
+  focus?: FocusRequest | null;
+  children?: ReactNode;
+}) {
   const ref = useRef<HTMLElement>(null);
   const [view, setView] = useState<MapViewState>(INITIAL_VIEW_STATE);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -47,6 +59,22 @@ export function MapCanvas({ layers = [], markers = [], children }: { layers?: La
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // Latest view and size are read inside the effect without making it re-run on every frame of a pan.
+  const live = useRef({ view, size });
+  useEffect(() => {
+    live.current = { view, size };
+  });
+  useEffect(() => {
+    if (!focus) return;
+    const target = resolveFocus(live.current.view, focus, live.current.size);
+    if (!target) return;
+    const reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setView(
+      reduce
+        ? target
+        : { ...target, transitionDuration: FIT_TRANSITION_MS, transitionInterpolator: new FlyToInterpolator({ speed: 1.6 }) },
+    );
+  }, [focus]);
   const placed = useMemo(() => {
     if (!markers.length || size.width < 1 || size.height < 1) return [];
     const vp = new WebMercatorViewport({ ...view, width: size.width, height: size.height });
@@ -58,7 +86,10 @@ export function MapCanvas({ layers = [], markers = [], children }: { layers?: La
     });
   }, [markers, view, size]);
   return (
-    <main ref={ref} className="shell-canvas" data-testid="map-canvas" data-deck-layers={layers.map((l) => l.id).join(",")}>
+    <main ref={ref} className="shell-canvas" data-testid="map-canvas" data-deck-layers={layers.map((l) => l.id).join(",")}
+      data-view-zoom={view.zoom.toFixed(2)}
+      data-view-center={`${view.longitude.toFixed(4)},${view.latitude.toFixed(4)}`}
+    >
       <DeckGL
         views={MAP_VIEW}
         viewState={view}

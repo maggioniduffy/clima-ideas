@@ -61,10 +61,12 @@ Núcleo: mapa de cuencas por caudal pico. Extensión: un caso HEC-RAS validado y
   superponen en más del 50 % con otra de distinto blanco (corrida urbana contra RP 7) quedan fuera del ranking.
   Quedan 497 cuencas con cauce en el ranking. La mayor a T 10 y CN 85 pasa a ser la 184 sobre la RP 5 (18,6 km²,
   12,8 m³/s, rango 7,4–15,6).
+- F4.3 zoom (2026-11-21): `MapCanvas` recibe `focus` ({bounds, ifNeeded}) y encuadra con zoom máximo 13 y salto
+  directo con `prefers-reduced-motion`. Elegir desde la lista siempre encuadra; un clic en el mapa encuadra solo si
+  la cuenca está fuera de vista o se ve demasiado chica.
 
 ## Abierto
 
-- F4.3: el mapa no hace zoom a la cuenca elegida (`MapCanvas` no expone la vista).
 - F4.3: quedan unas pocas franjas cortas en el cruce RP 5–RP 7 (elongación < 15) que el criterio no atrapa.
 - F4.3: el corte de flujo laminar es propio y sin verificar; una alternativa más física es delinear con un umbral de
   área de cauce (inicio de cauce) o con D-infinito en lugar de D8.

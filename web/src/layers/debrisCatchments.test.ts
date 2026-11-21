@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import {
+  catchmentBounds,
   colorDomain,
   criticalDuration,
   debrisColor,
@@ -72,4 +73,16 @@ test("planar-flow and overlapping catchments are left out of the ranking but pla
   expect(isRanked(overlapping.properties)).toBe(false);
   expect(rankCatchments([geo.features[0]!, overlapping], peaks, "hsg-c", 10).map((x) => x.id)).toEqual([0]);
   expect(isRanked({ ...geo.features[0]!.properties, planar_flow: undefined, overlaps_id: undefined })).toBe(true);
+});
+
+test("catchmentBounds covers Polygon and MultiPolygon and rejects empty geometry", () => {
+  for (const f of geo.features) {
+    const b = catchmentBounds(f)!;
+    expect(b[0]).toBeLessThanOrEqual(b[2]);
+    expect(b[1]).toBeLessThanOrEqual(b[3]);
+    expect(b[0]).toBeLessThanOrEqual(f.properties.outlet_lon + 1e-3);
+  }
+  const multi = { geometry: { type: "MultiPolygon" as const, coordinates: [[[[0, 0], [1, 0], [1, 2], [0, 0]]], [[[5, -3], [6, -3], [6, -2], [5, -3]]]] } };
+  expect(catchmentBounds(multi)).toEqual([0, -3, 6, 2]);
+  expect(catchmentBounds({ geometry: { type: "Polygon", coordinates: [] } })).toBeNull();
 });

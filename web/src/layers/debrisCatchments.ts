@@ -45,6 +45,26 @@ export interface CatchmentCollection {
   features: CatchmentFeature[];
 }
 
+/** [minLon, minLat, maxLon, maxLat] of a catchment polygon (Polygon or MultiPolygon); null when it has no finite point. */
+export function catchmentBounds(f: Pick<CatchmentFeature, "geometry">): [number, number, number, number] | null {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const walk = (c: unknown): void => {
+    if (!Array.isArray(c)) return;
+    if (typeof c[0] === "number" && typeof c[1] === "number") {
+      const [x, y] = c as number[];
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      minX = Math.min(minX, x!);
+      maxX = Math.max(maxX, x!);
+      minY = Math.min(minY, y!);
+      maxY = Math.max(maxY, y!);
+      return;
+    }
+    c.forEach(walk);
+  };
+  walk(f.geometry.coordinates);
+  return Number.isFinite(minX) ? [minX, minY, maxX, maxY] : null;
+}
+
 export interface CnScenario {
   id: string;
   /** Hydrologic soil group. */

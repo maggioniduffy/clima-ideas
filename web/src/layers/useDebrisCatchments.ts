@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Layer } from "@deck.gl/core";
+import type { FocusRequest } from "../app/MapCanvasFit";
 import { fetchLayerData, type LayerManifest } from "../api/client";
 import { useTheme } from "../theme/themeStore";
 import {
   buildDebrisLayers,
+  catchmentBounds,
   centralScenario,
   colorDomain,
   DEBRIS_DEFAULT_T,
@@ -35,6 +37,7 @@ export function useDebrisCatchments(layer: LayerManifest | undefined, active: bo
   const [t, setT] = useState(DEBRIS_DEFAULT_T);
   const [cnPick, setCnPick] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [focus, setFocus] = useState<FocusRequest | null>(null);
   const [showPlanar, setShowPlanarRaw] = useState(false);
   const [wasActive, setWasActive] = useState(active);
   const theme = useTheme();
@@ -42,7 +45,10 @@ export function useDebrisCatchments(layer: LayerManifest | undefined, active: bo
   if (wasActive !== active) {
     setWasActive(active);
     if (active) setFailed(false); // switching the layer back on retries a failed load
-    if (!active) setSelectedId(null);
+    if (!active) {
+      setSelectedId(null);
+      setFocus(null);
+    }
   }
 
   useEffect(() => {
@@ -79,6 +85,15 @@ export function useDebrisCatchments(layer: LayerManifest | undefined, active: bo
   const planarCount = useMemo(() => geo?.features.filter((f) => f.properties.planar_flow).length ?? 0, [geo]);
   const selected = selectedId != null ? (geo?.features.find((f) => f.properties.id === selectedId)?.properties ?? null) : null;
 
+  // List choice always frames the catchment; a map click only moves the view when the catchment is not in view or is
+  // far smaller than the view (a click is already a pointing gesture, so a catchment in view must not jump around).
+  const choose = (id: number, ifNeeded: boolean) => {
+    setSelectedId(id);
+    const f = geo?.features.find((x) => x.properties.id === id);
+    const bounds = f && catchmentBounds(f);
+    if (bounds) setFocus({ bounds, ifNeeded });
+  };
+
   const setShowPlanar = (on: boolean) => {
     setShowPlanarRaw(on);
     if (!on && selected?.planar_flow) setSelectedId(null); // a hidden catchment cannot stay selected
@@ -95,9 +110,10 @@ export function useDebrisCatchments(layer: LayerManifest | undefined, active: bo
             domain,
             selectedId,
             theme,
-            onPick: setSelectedId,
+            onPick: (id) => choose(id, true),
           })
         : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `choose` only reads `geo`
     [active, geo, peaks, cnId, tNow, domain, selectedId, theme, showPlanar],
   );
 
@@ -111,7 +127,8 @@ export function useDebrisCatchments(layer: LayerManifest | undefined, active: bo
     setCnId: setCnPick,
     selectedId,
     selected,
-    select: setSelectedId,
+    select: (id: number) => choose(id, false),
+    focus,
     ranking,
     top: ranking.slice(0, DEBRIS_TOP_N),
     domain,

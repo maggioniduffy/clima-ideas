@@ -187,6 +187,7 @@ export function Shell() {
       <div className="shell-body">
         <MapCanvas
           markers={conv.markers}
+          focus={debris.focus}
           layers={[
             ...mapLayers.filter((l) => !isFlood(l)),
             ...ar.deckLayers,
