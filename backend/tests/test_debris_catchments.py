@@ -133,3 +133,56 @@ def test_parquet_stores_planar_fields(tmp_path):
     out = C.delineate(planar_dem(), TRANSFORM, [("r", line)], min_area_km2=0.0001, max_area_km2=50)
     row = pq.read_table(C.write_parquet(out, tmp_path / "p.parquet")).to_pylist()[0]
     assert row["planar_flow"] is True and 0 < row["rectangularity"] <= 1 and row["elongation"] >= 3
+
+
+def plane_with_gully(nrows=80, ncols=60, gc=30) -> np.ndarray:
+    """Planar_dem with a 3-column V gully (2 m deep) incised along column ``gc``."""
+    cut = np.maximum(0.0, 2.0 - 1.0 * np.abs(np.arange(ncols) - gc))
+    return planar_dem(nrows, ncols) - cut
+
+
+def _plane_line() -> LineString:
+    return LineString([(LON0, row_lat(70.5)), (LON0 + RES * 60, row_lat(70.5))])
+
+
+def test_plane_has_no_channel_outlets():
+    out = C.delineate(planar_dem(), TRANSFORM, [("r", _plane_line())], min_area_km2=0.0001, max_area_km2=50)
+    assert len(out) >= 30
+    assert not any(b.channel for b in out)
+    assert max(b.prominence for b in out) < 1.6  # no convergence along the front (low only at the DEM edge)
+    mid = [b for b in out if 3 < (b.outlet_lon - LON0) / RES < 25]
+    assert mid and all(abs(b.prominence - 1.0) < 0.1 for b in mid)
+    assert all(b.dinf_acc_km2 > 0 for b in out)
+
+
+def test_v_valley_outlet_is_a_channel():
+    out = C.delineate(v_valley(), TRANSFORM, [("route_x", _line(30))], min_area_km2=0.01, max_area_km2=50)
+    assert len(out) == 1
+    b = out[0]
+    assert b.channel and b.prominence >= 10 and b.dinf_acc_km2 >= C.CHANNEL_MIN_ACC_KM2
+    assert set(b.prominence_by_r) == set(C.PROMINENCE_RADII_M)
+
+
+def test_plane_with_one_gully_has_one_channel():
+    out = C.delineate(
+        plane_with_gully(), TRANSFORM, [("r", _plane_line())], min_area_km2=0.0001, max_area_km2=50
+    )
+    channels = [b for b in out if b.channel]
+    assert len(channels) == 1
+    assert abs(channels[0].outlet_lon - (LON0 + RES * 30.5)) <= 2 * RES
+    assert channels[0].prominence >= 3 * C.CHANNEL_MIN_PROMINENCE
+
+
+def test_channel_thresholds_are_parameters():
+    kw = {"min_area_km2": 0.01, "max_area_km2": 50}
+    strict = C.delineate(v_valley(), TRANSFORM, [("r", _line(30))], channel_min_prominence=1e9, **kw)
+    assert not strict[0].channel
+    big = C.delineate(v_valley(), TRANSFORM, [("r", _line(30))], channel_min_acc_km2=1e3, **kw)
+    assert not big[0].channel
+
+
+def test_parquet_stores_channel_fields(tmp_path):
+    out = C.delineate(v_valley(), TRANSFORM, [("r", _line(30))], min_area_km2=0.01, max_area_km2=50)
+    row = pq.read_table(C.write_parquet(out, tmp_path / "c.parquet")).to_pylist()[0]
+    assert row["channel"] is True and row["dinf_acc_km2"] > 0 and row["prominence"] >= 3
+    assert {"prominence_r250", "prominence_r500", "prominence_r1000", "planar_flow"} <= row.keys()

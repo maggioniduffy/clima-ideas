@@ -142,6 +142,22 @@ export function DebrisPanel({ state, source, period }: DebrisPanelProps) {
             <dd className="num" data-testid="debris-flowpath">
               {fmtMetres(selected.longest_flow_path_m)} {es.debris.metres}
             </dd>
+            {selected.dinf_acc_km2 != null && (
+              <>
+                <dt>{es.debris.dinfArea}</dt>
+                <dd className="num" data-testid="debris-dinf-area">
+                  {fmtKm2(selected.dinf_acc_km2)} {es.debris.km2}
+                </dd>
+              </>
+            )}
+            {selected.prominence != null && (
+              <>
+                <dt>{es.debris.prominence}</dt>
+                <dd className="num" data-testid="debris-prominence">
+                  {es.debris.prominenceValue(fmtRatio(selected.prominence))}
+                </dd>
+              </>
+            )}
             {selected.rectangularity != null && selected.elongation != null && (
               <>
                 <dt>{es.debris.shape}</dt>
@@ -153,6 +169,15 @@ export function DebrisPanel({ state, source, period }: DebrisPanelProps) {
             <dt>{es.debris.outlet}</dt>
             <dd className="num">{formatLatLon(selected.outlet_lat, selected.outlet_lon)}</dd>
           </dl>
+          {selected.prominence != null && peaks.channel && (
+            <p className="conv-note" data-testid="debris-channel-note">
+              {es.debris.channelNote(
+                fmtKm2(peaks.channel.min_acc_km2),
+                fmtRatio(peaks.channel.min_prominence),
+                fmtMetres(peaks.channel.radius_m),
+              )}
+            </p>
+          )}
           <table className="debris-table" data-testid="debris-peaks">
             <caption>{es.debris.peaksTitle}</caption>
             <thead>

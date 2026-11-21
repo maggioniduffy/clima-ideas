@@ -15,9 +15,13 @@ Several catchment Parquets (F4.1 runs: Routes 5/7, urban targets) can be concate
 the original ids are kept as ``source_id``/``source_file``. A catchment that appears twice (same target and outlet) is
 kept once.
 
-Planar flow (D8 artifact on planar terrain, see ``stages/debris/catchments.py``): ``rectangularity``, ``elongation`` and
-``planar_flow`` are read from the Parquet or, for older Parquets, computed here from the polygon. The viewer hides
-``planar_flow`` catchments by default and ranks without them.
+Channel crossing (primary criterion, ``stages/debris/catchments.py``): ``dinf_acc_km2``, ``prominence`` and ``channel``
+are read from the Parquet. The feature property ``planar_flow`` (the boolean the viewer reads) is ``not channel or shape_planar``
+(a "frente de escurrimiento laminar", probable D8 artifact): both rules must agree for a catchment to rank, because
+large bands converge onto a line of cells along the road (the embankment in the DEM) and pass the channel test; the viewer hides those by default and ranks without them.
+The old shape rule (``rectangularity``/``elongation``) stays as the secondary property ``shape_planar``. Only for
+Parquets without the channel columns does ``planar_flow`` fall back to the shape rule (``channel_method`` = ``shape``
+in ``peaks.json``).
 
 Overlap: when two catchments of different targets overlap by more than ``OVERLAP_FRACTION`` of the smaller one's area
 (both non-planar), both are kept but the smaller gets ``overlaps_id`` (the id of the one it overlaps most). It stays
@@ -42,9 +46,12 @@ from clima_nqn.layers.manifest import LayerManifest
 from clima_nqn.stages.convection import idf as idf_mod
 from clima_nqn.stages.debris import scs
 from clima_nqn.stages.debris.catchments import (
+    CHANNEL_MIN_ACC_KM2,
+    CHANNEL_MIN_PROMINENCE,
     PLANAR_ELONGATION,
     PLANAR_RECTANGULARITY,
     PLANAR_STRIP_ELONGATION,
+    PROMINENCE_RADIUS_M,
     is_planar_flow,
     shape_metrics,
 )
@@ -97,7 +104,7 @@ CAVEATS = (
     "CN: escenarios de TR-55, no medidos (matorral desértico, condición pobre; B, C y D).",
     "SCS-CN y el hidrograma triangular no están validados en bardas patagónicas: sin verificar.",
     "T = 100 años es una extrapolación (más de 2 veces el registro de 25 años).",
-    "Cuencas en franjas rectas sobre terreno plano (artefacto del D8, criterio propio, sin verificar): ocultas por defecto.",
+    "Frentes de escurrimiento laminar (el D-infinito no converge en el cruce; artefacto del D8 sobre terreno plano, criterio propio, sin verificar): ocultos por defecto.",
     "Las cuencas que se superponen con otra cuenca de otro destino se quedan fuera del ranking.",
     "Análisis retrospectivo de lluvias de diseño. No es un sistema de alerta oficial.",
 )
@@ -128,10 +135,20 @@ def load_idf(parquet: Path | None = None) -> tuple[dict[tuple[float, float], flo
 
 OVERLAP_FRACTION = 0.5  # of the smaller catchment's area; criterio propio, sin verificar
 PLANAR_NOTE = (
-    "Cuencas casi rectangulares y alargadas (rectangularidad >= {rect:g} y elongación >= {elong:g}) o franjas muy "
-    "alargadas (elongación >= {strip:g}) sobre terreno plano: el D8 traza líneas paralelas que no convergen y cada "
-    "línea o banda se vuelve una cuenca falsa. Criterio propio, sin verificar; el conteo cambia poco con otros cortes "
-    "(rectangularidad 0,70: 292 contra 252 de 841; franjas con elongación 10 o 20: 86 o 74 contra 81)."
+    "Frente de escurrimiento laminar: el D-infinito no converge hacia un cauce en el cruce con el destino, el área "
+    "acumulada en el desagüe es chica, o la forma es una franja o banda rectangular. En terreno plano el D8 traza "
+    "líneas paralelas que no convergen y cada línea o banda se vuelve una cuenca falsa; las bandas grandes convergen "
+    "solo sobre una línea de celdas pegada a la ruta (el terraplén en el DEM), no sobre un cauce natural. Se exigen las "
+    "dos reglas. Criterio propio, sin verificar."
+)
+CHANNEL_NOTE = (
+    "Cuenca con cauce: área acumulada D-infinito en el desagüe >= {a_min} km² y prominencia >= {k} (acumulado en el "
+    "desagüe sobre la mediana de las celdas vecinas que alimentan el mismo destino, a +-{r} m a lo largo de este). "
+    "Umbrales y radio: criterio propio, sin verificar; sensibilidad en reports/04/F4.3-channels.md."
+)
+SHAPE_NOTE = (
+    "Regla de forma anterior (secundaria): rectangularidad >= {rect} y elongación >= {elong}, o elongación >= "
+    "{strip}. Criterio propio, sin verificar."
 )
 
 
@@ -165,10 +182,14 @@ def read_catchments(paths: Sequence[Path | str]) -> tuple[list[dict], dict]:
     rows: list[dict] = []
     seen: set[tuple[str, float, float]] = set()
     sources: list[dict] = []
+    channel_params: dict[str, set[float]] = {}
     for p in paths:
         p = Path(p)
         table = pq.read_table(p)
         meta = {k.decode(): v.decode() for k, v in (table.schema.metadata or {}).items()}
+        for k in ("channel_min_acc_km2", "channel_min_prominence", "prominence_radius_m"):
+            if k in meta:
+                channel_params.setdefault(k, set()).add(float(meta[k]))
         n = 0
         for r in table.to_pylist():
             key = (str(r["target"]), round(r["outlet_lon"], 6), round(r["outlet_lat"], 6))
@@ -178,8 +199,17 @@ def read_catchments(paths: Sequence[Path | str]) -> tuple[list[dict], dict]:
             row = {**r, "source_id": int(r["id"]), "source_file": p.name}
             if row.get("rectangularity") is None or row.get("elongation") is None:
                 row["rectangularity"], row["elongation"] = shape_metrics(wkb.loads(r["geometry"]))
-            # always re-apply the current rule, so older Parquets follow threshold changes
-            row["planar_flow"] = is_planar_flow(row["rectangularity"], row["elongation"])
+            # always re-apply the current shape rule, so older Parquets follow threshold changes
+            row["shape_planar"] = is_planar_flow(row["rectangularity"], row["elongation"])
+            if r.get("channel") is not None:
+                row["channel_method"] = "dinf"
+                # both rules (decision 2026-11-21): bands like 455/467 converge only onto a line along the road
+                # (embankment in the DEM), not onto a natural channel, so the shape rule still excludes them
+                row["planar_flow"] = (not r["channel"]) or row["shape_planar"]
+            else:  # Parquet from before the D-infinity criterion: fall back to the shape rule
+                row["channel_method"] = "shape"
+                row["planar_flow"] = row["shape_planar"]
+                row["dinf_acc_km2"] = row["prominence"] = None
             rows.append(row)
             n += 1
         sources.append(
@@ -197,7 +227,7 @@ def read_catchments(paths: Sequence[Path | str]) -> tuple[list[dict], dict]:
     overlaps = find_overlaps(rows)
     for r in rows:
         r["overlaps_id"] = overlaps.get(r["id"])
-    return rows, {"files": sources}
+    return rows, {"files": sources, "channel_params": channel_params}
 
 
 def _slope_pct(mean_slope_deg: float) -> float:
@@ -230,6 +260,16 @@ def _write_json(path: Path, obj) -> None:
         json.dumps(obj, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
         encoding="utf-8",
     )
+
+
+def _es(x: float) -> str:
+    """Number with a decimal comma, for the Spanish notes."""
+    return f"{x:g}".replace(".", ",")
+
+
+def _num(v, nd: int):
+    """Rounded float, or ``None`` for missing / NaN (JSON is written with ``allow_nan=False``)."""
+    return None if v is None or (isinstance(v, float) and math.isnan(v)) else round(float(v), nd)
 
 
 def _round_coords(obj, nd: int = 5):
@@ -270,6 +310,9 @@ def build(
                     "rectangularity": round(r["rectangularity"], 3),
                     "elongation": round(r["elongation"], 2),
                     "planar_flow": bool(r["planar_flow"]),
+                    "shape_planar": bool(r["shape_planar"]),
+                    "dinf_acc_km2": _num(r.get("dinf_acc_km2"), 4),
+                    "prominence": _num(r.get("prominence"), 2),
                     "overlaps_id": r["overlaps_id"],
                     "source_id": r["source_id"],
                     "source_file": r["source_file"],
@@ -279,6 +322,15 @@ def build(
         table[str(r["id"])] = peaks_for(r, rains)
 
     n_planar = sum(bool(r["planar_flow"]) for r in rows)
+    n_shape = sum(bool(r["shape_planar"]) for r in rows)
+    methods = {r["channel_method"] for r in rows}
+    method = "dinf" if methods == {"dinf"} else "shape" if methods == {"shape"} else "mixed"
+    cp = cmeta["channel_params"]
+    params = {
+        "channel_min_acc_km2": min(cp.get("channel_min_acc_km2", {CHANNEL_MIN_ACC_KM2})),
+        "channel_min_prominence": min(cp.get("channel_min_prominence", {CHANNEL_MIN_PROMINENCE})),
+        "prominence_radius_m": min(cp.get("prominence_radius_m", {PROMINENCE_RADIUS_M})),
+    }
     n_overlap = sum(r["overlaps_id"] is not None for r in rows)
     dem_periods = sorted({f["period"] for f in cmeta["files"] if f["period"]})
     dem_sources = sorted({f["source"] for f in cmeta["files"] if f["source"]})
@@ -307,19 +359,39 @@ def build(
             "scenarios": [dict(sc) for sc in CN_SCENARIOS],
         },
         "method": scs.SOURCE,
-        "catchments_source": {"sources": dem_sources, "periods": dem_periods, **cmeta},
+        "catchments_source": {"sources": dem_sources, "periods": dem_periods, "files": cmeta["files"]},
         "caveats": list(CAVEATS),
         "n_catchments": len(rows),
         "n_ranked": len(rows) - n_planar - n_overlap,
         "planar_flow": {
-            "min_rectangularity": PLANAR_RECTANGULARITY,
-            "min_elongation": PLANAR_ELONGATION,
-            "min_strip_elongation": PLANAR_STRIP_ELONGATION,
+            "criterion": "channel+shape" if method == "dinf" else "shape",
             "n_excluded": n_planar,
             "citation": "sin verificar",
-            "note": PLANAR_NOTE.format(
-                rect=PLANAR_RECTANGULARITY, elong=PLANAR_ELONGATION, strip=PLANAR_STRIP_ELONGATION
+            "note": PLANAR_NOTE,
+        },
+        "channel": {
+            "method": method,
+            "min_acc_km2": params["channel_min_acc_km2"],
+            "min_prominence": params["channel_min_prominence"],
+            "radius_m": params["prominence_radius_m"],
+            "n_channel": sum(bool(r.get("channel")) for r in rows) if method == "dinf" else len(rows) - n_planar,
+            "n_shape_planar": n_shape,
+            "citation": "sin verificar",
+            "note": CHANNEL_NOTE.format(
+                a_min=_es(params["channel_min_acc_km2"]),
+                k=_es(params["channel_min_prominence"]),
+                r=_es(params["prominence_radius_m"]),
             ),
+            "shape_rule": {
+                "min_rectangularity": PLANAR_RECTANGULARITY,
+                "min_elongation": PLANAR_ELONGATION,
+                "min_strip_elongation": PLANAR_STRIP_ELONGATION,
+                "note": SHAPE_NOTE.format(
+                    rect=_es(PLANAR_RECTANGULARITY),
+                    elong=_es(PLANAR_ELONGATION),
+                    strip=_es(PLANAR_STRIP_ELONGATION),
+                ),
+            },
         },
         "overlap": {
             "min_fraction": OVERLAP_FRACTION,

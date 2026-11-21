@@ -20,11 +20,11 @@ test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   await expect(page.getByTestId("debris-legend")).toBeVisible();
   await expect(page.getByTestId("debris-empty")).toBeVisible();
 
-  // the planar-flow strip (D8 artifact) is hidden and unranked by default; the toggle shows it
+  // the laminar-flow front (no channel; D8 artifact) is hidden and unranked by default; the toggle shows it
   await expect(page.getByRole("heading", { name: "Mayores caudales pico: 4 de 4 cuencas con cauce" })).toBeVisible();
   const toggle = page.getByTestId("debris-planar-toggle");
   await expect(toggle).not.toBeChecked();
-  await expect(page.getByText("Mostrar flujo laminar (artefacto D8, 1 cuencas)")).toBeVisible();
+  await expect(page.getByText("Mostrar frentes de escurrimiento laminar (1 cuenca)")).toBeVisible();
   await expect(panel).toHaveAttribute("data-map-shown", "4"); // polygons and dots drawn on the map
   await toggle.check();
   await expect(panel).toHaveAttribute("data-map-shown", "5");
@@ -58,6 +58,9 @@ test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   await expect(page.getByTestId("debris-slope")).toContainText("5°");
   await expect(page.getByTestId("debris-relief")).toContainText("120 m");
   await expect(page.getByTestId("debris-flowpath")).toContainText("4.200 m");
+  await expect(page.getByTestId("debris-dinf-area")).toContainText("3,9 km²");
+  await expect(page.getByTestId("debris-prominence")).toContainText("12,5 veces");
+  await expect(page.getByTestId("debris-channel-note")).toContainText("criterio propio, sin verificar");
   await expect(page.locator('[data-testid^="debris-peak-row-"]')).toHaveCount(6);
   await expect(page.getByTestId("debris-peak-10")).toHaveText("3,45");
   await expect(page.getByTestId("debris-range-10")).toContainText("–");

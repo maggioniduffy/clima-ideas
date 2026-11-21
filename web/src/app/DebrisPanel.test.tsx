@@ -41,7 +41,7 @@ test("planar-flow catchments are not ranked; the toggle announces their count an
   expect(screen.getByTestId("debris-panel")).toHaveAttribute("data-map-shown", "4");
   const toggle = screen.getByTestId("debris-planar-toggle");
   expect(toggle).not.toBeChecked();
-  expect(screen.getByText("Mostrar flujo laminar (artefacto D8, 1 cuencas)")).toBeInTheDocument();
+  expect(screen.getByText("Mostrar frentes de escurrimiento laminar (1 cuenca)")).toBeInTheDocument();
   fireEvent.click(toggle);
   expect(s.setShowPlanar).toHaveBeenCalledWith(true);
 });
@@ -102,4 +102,12 @@ test("legend shows the log-scale limits and source", () => {
   render(<DebrisLegend domain={[0.7, 9]} source="Fuente Y" />);
   expect(screen.getByTestId("debris-legend-ticks")).toHaveTextContent("0,7");
   expect(screen.getByTestId("debris-legend")).toHaveTextContent("Fuente: Fuente Y");
+});
+
+test("the detail rows show the D-infinity area and the prominence with the channel criterion note", () => {
+  render(<DebrisPanel state={state({ selectedId: 2, selected: geo.features[2]!.properties })} source="s" period="p" />);
+  expect(screen.getByTestId("debris-dinf-area")).toHaveTextContent("3,9 km²");
+  expect(screen.getByTestId("debris-prominence")).toHaveTextContent("12,5 veces la mediana vecina");
+  expect(screen.getByTestId("debris-channel-note")).toHaveTextContent("sin verificar");
+  expect(screen.getByTestId("debris-channel-note")).toHaveTextContent("±500 m");
 });

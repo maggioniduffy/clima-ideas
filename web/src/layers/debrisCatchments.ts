@@ -24,8 +24,13 @@ export interface CatchmentProps {
   /** Polygon area / minimum rotated rectangle area (0..1); with `elongation` it flags D8 artifacts. */
   rectangularity?: number;
   elongation?: number;
-  /** Probable D8 artifact on planar terrain (criterio propio, sin verificar): hidden and unranked by default. */
+  /** No channel at the outlet (not `channel`): probable D8 artifact on planar terrain (criterio propio, sin verificar); hidden and unranked by default. */
   planar_flow?: boolean;
+  /** Old shape rule (secondary). */
+  shape_planar?: boolean;
+  /** D-infinity accumulated area at the outlet (km²) and its prominence over the neighbouring feeder cells; null when unavailable. */
+  dinf_acc_km2?: number | null;
+  prominence?: number | null;
   /** Id of the larger catchment of another target this one overlaps; it stays on the map but is not ranked. */
   overlaps_id?: number | null;
 }
@@ -93,7 +98,8 @@ export interface DebrisPeaks {
   catchments_source: { sources: string[]; periods: string[] };
   n_catchments: number;
   n_ranked?: number;
-  planar_flow?: { min_rectangularity: number; min_elongation: number; n_excluded: number; citation: string; note: string };
+  planar_flow?: { criterion?: string; n_excluded: number; citation: string; note: string };
+  channel?: { method: string; min_acc_km2: number; min_prominence: number; radius_m: number; n_channel: number; citation: string; note: string };
   overlap?: { min_fraction: number; n_excluded: number; citation: string; note: string };
   catchments: Record<string, { peak_m3s: Record<string, number[]>; critical_duration_h: Record<string, number[]> }>;
 }

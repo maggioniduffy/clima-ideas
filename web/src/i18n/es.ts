@@ -107,13 +107,18 @@ export const es = {
       `Grupo hidrológico ${hsg}, CN ${cn}${central ? " (escenario central)" : ""}`,
     scenarioNote: "Escenarios de CN (TR-55), no medidos",
     rankTitle: (n: number, total: number) => `Mayores caudales pico: ${n} de ${total} cuencas con cauce`,
-    planarToggle: (n: number) => `Mostrar flujo laminar (artefacto D8, ${n} cuencas)`,
+    planarToggle: (n: number) => `Mostrar frentes de escurrimiento laminar (${n} ${n === 1 ? "cuenca" : "cuencas"})`,
     planarToggleHint:
-      "Franjas rectas sobre terreno plano donde el D8 no converge; ocultas del mapa y del ranking por defecto.",
+      "Cruces donde el agua no converge hacia un cauce (probable artefacto del D8 sobre terreno plano); ocultos del mapa y del ranking por defecto.",
     planarNote:
-      "Flujo laminar: franja casi rectangular sobre terreno plano, probable artefacto del D8 (criterio propio, sin verificar). No es una cuenca con cauce y no entra en el ranking; el caudal pico de abajo no es confiable.",
+      "Frente de escurrimiento laminar: el agua no converge hacia un cauce en este cruce, probable artefacto del D8 sobre terreno plano (criterio propio, sin verificar). No es una cuenca con cauce y no entra en el ranking; el caudal pico de abajo no es confiable.",
     overlapNote: (id: number, target: string) =>
       `También desagua sobre ${target} (cuenca ${id}): el mismo terreno ya está en el ranking con esa cuenca, por eso esta no entra.`,
+    dinfArea: "Área acumulada en el desagüe (D-infinito)",
+    prominence: "Prominencia del cauce",
+    prominenceValue: (p: string) => `${p} veces la mediana vecina`,
+    channelNote: (aMin: string, k: string, r: string) =>
+      `Prominencia: acumulado D-infinito en el desagüe sobre la mediana de las celdas vecinas que alimentan el mismo destino, a ±${r} m a lo largo de este. Hay cauce si el área es ≥ ${aMin} km² y la prominencia ≥ ${k} (criterio propio, sin verificar).`,
     shape: "Rectangularidad / elongación",
     shapeValue: (rect: string, elong: string) => `${rect} / ${elong}`,
     rankItem: (rank: number, target: string) => `${rank}. ${target}`,
@@ -152,7 +157,7 @@ export const es = {
       "La IDF es la de la celda de la capital; aplicarla a las cuencas cerca de Añelo es sin verificar.",
       "Los CN son escenarios de TR-55, no medidos (cita de la tabla: sin verificar).",
       "SCS-CN no está validado en bardas patagónicas: sin verificar.",
-      "Las franjas rectas sobre terreno plano (artefacto del D8, criterio propio, sin verificar) se ocultan por defecto.",
+      "Los frentes de escurrimiento laminar (sin convergencia en el cruce, artefacto del D8 sobre terreno plano, criterio propio, sin verificar) se ocultan por defecto.",
       "No es un sistema de alerta oficial: análisis retrospectivo de lluvias de diseño.",
     ],
   },

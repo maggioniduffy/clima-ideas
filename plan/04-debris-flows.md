@@ -64,12 +64,21 @@ Núcleo: mapa de cuencas por caudal pico. Extensión: un caso HEC-RAS validado y
 - F4.3 zoom (2026-11-21): `MapCanvas` recibe `focus` ({bounds, ifNeeded}) y encuadra con zoom máximo 13 y salto
   directo con `prefers-reduced-motion`. Elegir desde la lista siempre encuadra; un clic en el mapa encuadra solo si
   la cuenca está fuera de vista o se ve demasiado chica.
+- F4.3 cauces (2026-11-21): `channel` por D-infinito (`reports/04/F4.3-channels.md`): área acumulada en el desagüe >= 0,05
+  km² y prominencia >= 3 sobre la mediana de las celdas vecinas que alimentan el destino (±500 m); criterio propio, sin
+  verificar. Separa las franjas finas (prominencia ≈ 1; 237 de las 334 de forma), pero deja como cauce a la 455, la 467
+  y 11 más de más de 2 km² (prominencia 231–1459, contra 5000–9900 de 184, 185, 207 y 146). La capa usa `channel`: 583
+  con cauce. Decisión de Opus (2026-11-21): se exigen las dos reglas (cauce por D-infinito y forma no laminar). Las
+  bandas grandes convergen solo sobre una línea de celdas pegada a la ruta (el terraplén en el DEM), no sobre un cauce
+  natural. Un K de 2500–3000 quedaba ajustado a seis cuencas elegidas a mano. Quedan 476 en el ranking (355 laminares,
+  10 superpuestas); 455, 467 y 468 quedan fuera. Las 97 cuencas en las que las reglas no coinciden quedan sin verificar.
 
 ## Abierto
 
 - F4.3: quedan unas pocas franjas cortas en el cruce RP 5–RP 7 (elongación < 15) que el criterio no atrapa.
-- F4.3: el corte de flujo laminar es propio y sin verificar; una alternativa más física es delinear con un umbral de
-  área de cauce (inicio de cauce) o con D-infinito en lugar de D8.
+- F4.3: los dos criterios (D-infinito y forma) son propios y sin verificar. Falta una referencia independiente
+  (imagen satelital o terreno) para las 97 cuencas en las que las reglas no coinciden y para saber si el agua cruza
+  la ruta en un punto (alcantarilla) o a lo largo de la traza.
 
 - HEC-RAS en Linux: sin verificar (F4.4a). Para confirmarlo hace falta permitir hec.usace.army.mil y que el usuario
   autorice bajar y correr el binario de USACE.

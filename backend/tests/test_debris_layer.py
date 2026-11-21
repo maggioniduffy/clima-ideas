@@ -3,14 +3,14 @@ import math
 from pathlib import Path
 
 import pytest
-from shapely.geometry import box
+from shapely.geometry import Polygon, box
 
 from clima_nqn.layers import debris_catchments as dl
 from clima_nqn.layers.manifest import load_manifest
 from clima_nqn.stages.debris import catchments, scs
 
 
-def _c(i, target, lon, area=1.0, slope=3.0, length=2000.0, geom=None, planar=None):
+def _c(i, target, lon, area=1.0, slope=3.0, length=2000.0, geom=None, planar=None, channel=True):
     geom = geom if geom is not None else box(lon, -38.0, lon + 0.01, -37.99)
     lon = geom.bounds[0]  # distinct outlets so catchments are not deduplicated
     rect, elong = catchments.shape_metrics(geom)
@@ -27,6 +27,9 @@ def _c(i, target, lon, area=1.0, slope=3.0, length=2000.0, geom=None, planar=Non
         rectangularity=rect,
         elongation=elong,
         planar_flow=catchments.is_planar_flow(rect, elong) if planar is None else planar,
+        dinf_acc_km2=area,
+        prominence=8.0 if channel else 1.0,
+        channel=channel,
     )
 
 
@@ -116,7 +119,8 @@ def test_planar_flag_computed_for_old_parquet_and_counted(tmp_path):
     blob = box(-69.2, -38.0, -69.19, -37.99)  # square -> not flagged
     p = catchments.write_parquet([_c(0, "RP7", 0, geom=strip), _c(1, "RP7", 0, geom=blob)], tmp_path / "n.parquet")
     t = pq.read_table(p)
-    old = pa.table({n: t[n] for n in t.column_names if n not in ("rectangularity", "elongation", "planar_flow")})
+    drop = ("rectangularity", "elongation", "planar_flow", "dinf_acc_km2", "prominence", "channel")
+    old = pa.table({n: t[n] for n in t.column_names if n not in drop and not n.startswith("prominence_r")})
     old = old.replace_schema_metadata(t.schema.metadata)
     pq.write_table(old, tmp_path / "old.parquet")
     rows, _ = dl.read_catchments([tmp_path / "old.parquet"])
@@ -124,7 +128,8 @@ def test_planar_flag_computed_for_old_parquet_and_counted(tmp_path):
     out = dl.build([tmp_path / "old.parquet"], tmp_path / "o")
     pk = json.loads((out / "peaks.json").read_text(encoding="utf-8"))
     assert pk["planar_flow"]["n_excluded"] == 1 and pk["n_ranked"] == 1
-    assert pk["planar_flow"]["min_rectangularity"] == 0.85 and "sin verificar" in pk["planar_flow"]["note"]
+    assert pk["planar_flow"]["criterion"] == "shape" and pk["channel"]["method"] == "shape"
+    assert pk["channel"]["shape_rule"]["min_rectangularity"] == 0.85 and "sin verificar" in pk["planar_flow"]["note"]
     gj = json.loads((out / "catchments.geojson").read_text(encoding="utf-8"))
     assert [f["properties"]["planar_flow"] for f in gj["features"]] == [True, False]
 
@@ -147,3 +152,30 @@ def test_overlap_marks_the_smaller_catchment_of_another_target(tmp_path):
     gj = json.loads((out / "catchments.geojson").read_text(encoding="utf-8"))
     assert gj["features"][1]["properties"]["overlaps_id"] == 0 and gj["features"][0]["properties"]["overlaps_id"] is None
     assert "1" in pk["catchments"]  # the excluded one keeps its peaks (still clickable)
+
+
+def test_ranking_needs_channel_and_non_planar_shape(tmp_path):
+    strip = box(-69.0, -38.0, -68.99, -37.9)  # converges (channel) but is a band: shape rule says planar
+    blob = box(-69.2, -38.0, -69.19, -37.99)  # compact, but the front shows no convergence
+    gully = Polygon([(-69.3, -38.0), (-69.28, -37.99), (-69.29, -37.97), (-69.31, -37.985)])  # compact, converges
+    p = catchments.write_parquet(
+        [
+            _c(0, "RP7", 0, geom=strip, channel=True),
+            _c(1, "RP7", 0, geom=blob, channel=False),
+            _c(2, "RP7", 0, geom=gully, channel=True),
+        ],
+        tmp_path / "c.parquet",
+    )
+    rows, _ = dl.read_catchments([p])
+    assert [r["shape_planar"] for r in rows] == [True, False, False]
+    assert [r["planar_flow"] for r in rows] == [True, True, False]
+    out = dl.build([p], tmp_path / "o")
+    pk = json.loads((out / "peaks.json").read_text(encoding="utf-8"))
+    assert pk["channel"]["method"] == "dinf" and pk["channel"]["n_channel"] == 2 and pk["n_ranked"] == 1
+    assert pk["channel"]["min_prominence"] == catchments.CHANNEL_MIN_PROMINENCE and "sin verificar" in pk["channel"]["note"]
+    assert pk["planar_flow"]["criterion"] == "channel+shape" and pk["planar_flow"]["n_excluded"] == 2
+    gj = json.loads((out / "catchments.geojson").read_text(encoding="utf-8"))
+    a, b, c = (f["properties"] for f in gj["features"])
+    assert a["planar_flow"] is True and a["shape_planar"] is True and a["prominence"] == 8.0 and a["dinf_acc_km2"] == 1.0
+    assert b["planar_flow"] is True and b["prominence"] == 1.0
+    assert c["planar_flow"] is False
