@@ -63,19 +63,15 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 ## Próximo
 
 1. F0.11: capas subidas a R2 y probadas con la web local; falta la web en línea con `VITE_DATA_URL` (`odd/tasks/publish.md`).
-2. F3.3: curvas IDF con IMERG (F3.1 hecha: artifact `imerg-neuquen`, 2000-06 a 2025-09).
-3. Fase 5, mitad ríos atmosféricos (F2.5 hecha: `reports/02/F2.5.md`).
-
-## Advisor (hasta 2026-11-17)
-
-Opus consulta a Fable (subagente `advisor`) cuando se traba al resolver o decidir. Cuándo y cómo: `CLAUDE.md`;
-plantilla: `docs/agents.md`. El advisor juzga contra la sección "Rumbo".
+2. F6.4: registro de predicciones congeladas (código y unit, sin depender de F0.11).
+3. Fase 5, mitad ríos atmosféricos: F5.9 (IVT en pronósticos abiertos) y licencia de GEFS antes de F5.1.
+4. Fase 4 núcleo: F4.1 y F4.2 (cuencas chicas y caudal pico SCS-CN con las lluvias de diseño de F3.3).
 
 ## Referencias
 
 | Archivo | Cuándo leerlo |
 |---|---|
-| [docs/agents.md](docs/agents.md) | Al delegar o consultar al advisor: plantillas de prompt |
+| [docs/agents.md](docs/agents.md) | Al delegar: plantillas de prompt |
 | [docs/architecture.md](docs/architecture.md) | Al tocar estructura, contrato de capas, API o tests |
 | [docs/design.md](docs/design.md) | Al tocar UI: tokens, temas, reglas de interfaz |
 | [docs/research/data-access.md](docs/research/data-access.md) | Antes de empezar una fase: estado y licencia de sus datos |
