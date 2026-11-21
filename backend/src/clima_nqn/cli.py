@@ -108,6 +108,19 @@ def debris_catchments(
     typer.echo(f"{n} catchments -> {path}")
 
 
+@debris_app.command("layer")
+def debris_layer(
+    catchments: Annotated[list[Path], typer.Argument(help="Catchment Parquet(s) from `debris catchments`.")],
+    out: Annotated[
+        Path | None, typer.Option(help="Layer directory (default: <data root>/debris-catchments).")
+    ] = None,
+) -> None:
+    """Build the debris-catchments viewer layer: peaks per CN scenario and return period (F4.3)."""
+    from clima_nqn.layers import debris_catchments as layer
+
+    typer.echo(layer.build(catchments, out or layer.DEFAULT_OUT))
+
+
 flow_app = typer.Typer(help="Daily streamflow from SNIH (phase 2).")
 app.add_typer(flow_app, name="flow")
 

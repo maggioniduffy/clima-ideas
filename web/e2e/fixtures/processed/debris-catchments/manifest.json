@@ -1,0 +1,13 @@
+{
+  "id": "debris-catchments",
+  "title": "Aluviones: cuencas chicas",
+  "kind": "polygons",
+  "source": "Cuencas y lluvias de prueba (fixture)",
+  "period": "2000-07-01/2025-06-30",
+  "license": "Copernicus DEM (licencia Copernicus, términos sin verificar); IMERG CC BY 4.0; TR-55 (USDA, dominio público, sin verificar)",
+  "updated_at": "2026-01-01T00:00:00Z",
+  "files": [
+    "catchments.geojson",
+    "peaks.json"
+  ]
+}

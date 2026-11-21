@@ -16,9 +16,9 @@ Núcleo: F4.1–F4.3. Extensión: F4.4–F4.6, solo si F4.4a da bien (ver `plan.
 
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
-| F4.1 | Cuencas chicas con desagüe sobre Rutas 5 y 7 y barrios bajo bardas (pysheds) | Sonnet | GeoParquet de cuencas + unit con DEM sintético |
-| F4.2 | Caudal pico por SCS-CN para cada lluvia de diseño | Sonnet | Unit contra ejemplo de manual |
-| F4.3 | Capa: cuencas ordenadas por caudal pico | Sonnet | e2e: elegir cuenca e inspeccionar |
+| F4.1 ✅ | Cuencas chicas con desagüe sobre Rutas 5 y 7 y barrios bajo bardas (pysheds) | Sonnet | GeoParquet de cuencas + unit con DEM sintético |
+| F4.2 ✅ | Caudal pico por SCS-CN para cada lluvia de diseño | Sonnet | Unit contra ejemplo de manual |
+| F4.3 ✅ | Capa: cuencas ordenadas por caudal pico | Sonnet | e2e: elegir cuenca e inspeccionar |
 | F4.4a ✅ | Prueba de factibilidad: motor 2D de HEC-RAS por línea de comando en Linux sobre un caso de ejemplo, y un evento neuquino con mancha o daños documentados para comparar | Opus | Informe con sí o no para cada punto; con un no, F4.4–F4.6 no se hacen |
 | F4.4 ⏸ | Caso HEC-RAS 2D de un cañadón vs. evento conocido | Opus (difícil) + usuario si requiere GUI | Mancha simulada vs. registro del evento |
 | F4.5 ⏸ | ML (alta): emulador U-Net entrenado con cientos de simulaciones | Sonnet implementa, opencode corre simulaciones y entreno | Error vs. HEC-RAS medido |
@@ -42,8 +42,23 @@ Núcleo: mapa de cuencas por caudal pico. Extensión: un caso HEC-RAS validado y
   pide la GUI. Evento con mancha documentada: no se encontró; abril de 2014 en la capital solo tiene prensa (204,6 mm
   SMN, sin polígono). Decisión de Opus: con el punto 2 en no, F4.4–F4.6 no se abren (Rumbo 2). Se reabren si aparece
   una mancha o un mapa de daños de un evento neuquino; ANUGA (Apache 2.0, Linux) queda anotado como motor alternativo.
+- F4.1 corrida real (2026-11-21): blancos de IGN Argentina por WFS. Las "Rutas 5 y 7" son provinciales (RP 5 y RP 7,
+  capa `ign:vial_provincial`, DVP Neuquén, recortadas a la provincia) y los barrios son las plantas urbanas de
+  Neuquén, Plottier y Centenario (`ign:areas_de_asentamientos_y_edificios_020105`, base de 2010; extensión actual
+  sin verificar). Hay 841 cuencas de 0,1 a 25 km²: RP 7 675, RP 5 83 y plantas urbanas 83.
+- F4.2 y F4.3 (2026-11-21): CN por escenarios de TR-55 (decisión del usuario): matorral desértico en condición pobre,
+  GH B 77, C 85 y D 88, con 85 como central. Son escenarios, no medidos; valores y tabla sin verificar contra el
+  documento. Lluvia de diseño: IDF de F3.3 (celda IMERG de la capital, sin corregir, piso); usarla cerca de Añelo
+  queda sin verificar. Capa `debris-catchments` con mapa por caudal pico, T y CN a elegir, ranking y ficha por
+  cuenca. Hay pytest, vitest y e2e de Playwright. La mayor a T 10 y CN 85 es la cuenca 455 sobre la RP 7 (22,4 km²,
+  14,6 m³/s, rango 8,6–17,8, duración crítica 12 h).
 
 ## Abierto
+
+- F4.3: en el cruce RP 5–RP 7 hay cuencas en franjas rectas y largas, entre ellas la primera del ranking. Parecen
+  un artefacto del D8 sobre zonas planas de la meseta o de la rasterización de la ruta, sin verificar. Revisarlo
+  antes de leer el ranking.
+- F4.3: el mapa no hace zoom a la cuenca elegida, y la columna "T 100†" se corta en dos líneas.
 
 - HEC-RAS en Linux: sin verificar (F4.4a). Para confirmarlo hace falta permitir hec.usace.army.mil y que el usuario
   autorice bajar y correr el binario de USACE.
