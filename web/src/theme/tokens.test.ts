@@ -51,6 +51,12 @@ test.each(["light", "dark"] as const)("%s rain ramp matches tokens.css", (theme)
   tokens.rainRamp[theme].forEach((v, i) => expect(b[`--rain-${i}`]).toBe(v));
 });
 
+test.each(["light", "dark"] as const)("%s debris ramp matches tokens.css", (theme) => {
+  const b = block(`:root[data-theme="${theme}"]`);
+  expect(tokens.debrisRamp[theme]).toHaveLength(5);
+  tokens.debrisRamp[theme].forEach((v, i) => expect(b[`--debris-${i}`]).toBe(v));
+});
+
 test.each(["light", "dark"] as const)("%s relief ramp matches tokens.css", (theme) => {
   const b = block(`:root[data-theme="${theme}"]`);
   expect(tokens.reliefRamp[theme]).toHaveLength(4);

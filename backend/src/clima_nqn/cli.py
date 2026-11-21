@@ -25,6 +25,8 @@ from clima_nqn.stages.ar import enso_extremes as ar_enso_extremes
 from clima_nqn.stages.ar import extremes as ar_extremes
 from clima_nqn.stages.ar import layer as ar_layer
 from clima_nqn.stages.ar import response as ar_response
+from clima_nqn.stages.debris import catchments as debris_catchments_mod
+from clima_nqn.stages.debris import run as debris_run
 from clima_nqn.stages.flood import causes as flood_causes
 from clima_nqn.stages.flood import enso as flood_enso
 from clima_nqn.stages.flood import extremes as flood_extremes
@@ -85,6 +87,38 @@ def dem_build(
     """Decimate tiles to relief.bin (Float32 [lon, lat, elev_m]) with its manifest."""
     path = dem.build_relief(raw, out, step=step)
     typer.echo(f"{path.stat().st_size / 1e6:.2f} MB -> {path}")
+
+
+debris_app = typer.Typer(help="Debris flows (phase 4).")
+app.add_typer(debris_app, name="debris")
+
+
+@debris_app.command("catchments")
+def debris_catchments(
+    targets: Annotated[Path, typer.Argument(help="GeoJSON of road lines / neighbourhood polygons.")],
+    bbox: Annotated[
+        tuple[float, float, float, float], typer.Option(help="lon_min lat_min lon_max lat_max.")
+    ],
+    out: Annotated[Path, typer.Option(help="Output Parquet.")] = debris_run.OUT_PATH,
+    min_area_km2: Annotated[float, typer.Option()] = debris_catchments_mod.DEFAULT_MIN_AREA_KM2,
+    max_area_km2: Annotated[float, typer.Option()] = debris_catchments_mod.DEFAULT_MAX_AREA_KM2,
+) -> None:
+    """Small catchments draining onto the targets (F4.1); downloads GLO-30 tiles if missing."""
+    path, n = debris_run.run(bbox, targets, out, min_area_km2, max_area_km2)
+    typer.echo(f"{n} catchments -> {path}")
+
+
+@debris_app.command("layer")
+def debris_layer(
+    catchments: Annotated[list[Path], typer.Argument(help="Catchment Parquet(s) from `debris catchments`.")],
+    out: Annotated[
+        Path | None, typer.Option(help="Layer directory (default: <data root>/debris-catchments).")
+    ] = None,
+) -> None:
+    """Build the debris-catchments viewer layer: peaks per CN scenario and return period (F4.3)."""
+    from clima_nqn.layers import debris_catchments as layer
+
+    typer.echo(layer.build(catchments, out or layer.DEFAULT_OUT))
 
 
 flow_app = typer.Typer(help="Daily streamflow from SNIH (phase 2).")

@@ -12,9 +12,9 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 | 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | hecha (F1.7 solo 2023; 3 estudios de F1.5 sin verificar; F1.9: ENSO sin diferencia sostenida en extremos); rediseño del visor V5–V8 hecho, capa real sin regenerar |
 | 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | tareas hechas (F2.5: el LSTM empata o gana a GR4J y gana a la persistencia desde 2 días; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa; bandas de CemaNeige y F2.3 sobre cuencas HydroBASINS: sin cambio de conclusión); cierra al publicar la capa |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | hecha (IDF solo con IMERG, sin corregir; sesgo a 24 h 0,92 y 0,67 en extremos; sin señal de ENSO; serie ISD con control de calidad; capa convection-idf publicada) |
-| 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | pendiente |
+| 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | núcleo hecho (476 cuencas con cauce de 841: D-infinito y forma; CN por escenarios TR-55); extensión no se abre (F4.4a: sin mancha de un evento) |
 | 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | pendiente |
-| 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | pendiente |
+| 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | pendiente (F6.4 hecha: registro append-only) |
 
 ## Rumbo (revisión del 2026-11-11)
 
@@ -63,19 +63,13 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 ## Próximo
 
 1. F0.11: capas subidas a R2 y probadas con la web local; falta la web en línea con `VITE_DATA_URL` (`odd/tasks/publish.md`).
-2. F3.3: curvas IDF con IMERG (F3.1 hecha: artifact `imerg-neuquen`, 2000-06 a 2025-09).
-3. Fase 5, mitad ríos atmosféricos (F2.5 hecha: `reports/02/F2.5.md`).
-
-## Advisor (hasta 2026-11-17)
-
-Opus consulta a Fable (subagente `advisor`) cuando se traba al resolver o decidir. Cuándo y cómo: `CLAUDE.md`;
-plantilla: `docs/agents.md`. El advisor juzga contra la sección "Rumbo".
+2. Fase 5, mitad ríos atmosféricos: F5.9 (IVT en pronósticos abiertos) y licencia de GEFS antes de F5.1.
 
 ## Referencias
 
 | Archivo | Cuándo leerlo |
 |---|---|
-| [docs/agents.md](docs/agents.md) | Al delegar o consultar al advisor: plantillas de prompt |
+| [docs/agents.md](docs/agents.md) | Al delegar: plantillas de prompt |
 | [docs/architecture.md](docs/architecture.md) | Al tocar estructura, contrato de capas, API o tests |
 | [docs/design.md](docs/design.md) | Al tocar UI: tokens, temas, reglas de interfaz |
 | [docs/research/data-access.md](docs/research/data-access.md) | Antes de empezar una fase: estado y licencia de sus datos |

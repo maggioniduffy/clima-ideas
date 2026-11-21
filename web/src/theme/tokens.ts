@@ -46,6 +46,11 @@ export const tokens = {
     light: ["#DCE8EC", "#A9C8D6", "#6FA0BD", "#3A6E96", "#1B3A5C"],
     dark: ["#24384A", "#2F5878", "#4A82A8", "#86B4D2", "#D6E8F2"],
   },
+  /** Peak-discharge ramp of the debris-catchments layer, low to high; single-hue violet-grey, neutral (no warning colors); `--debris-0..4` in tokens.css. */
+  debrisRamp: {
+    light: ["#ECE8EE", "#C9BFD3", "#A394B8", "#7A69A0", "#4B3B78"],
+    dark: ["#2B2836", "#443C63", "#6A5C98", "#9C8CC4", "#DCD3F0"],
+  },
   /** Monochrome slate relief ramp (mockup), far/low to peaks (elevations in RELIEF_STOPS_M); `--relief-0..3` in tokens.css. */
   reliefRamp: {
     light: ["#A7AEAF", "#77848A", "#4A5A64", "#2A343B"],

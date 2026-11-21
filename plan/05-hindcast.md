@@ -19,7 +19,7 @@ Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de
 |---|---|---|---|
 | F5.1 | Ingesta de pronósticos para las fechas de eventos y días de control | Sonnet escribe, opencode corre | Zarr por modelo y anticipación |
 | F5.2 | Verificación por días de anticipación, separada en ríos atmosféricos y convección | opencode analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
-| F5.3 | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet; advisor si hace falta (partición temporal) | Brier y PR-AUC en test temporal, no exactitud |
+| F5.3 | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet | Brier y PR-AUC en test temporal, no exactitud |
 | F5.4 | AIFS vs. IFS en los eventos neuquinos | opencode | Tabla por evento y anticipación |
 | F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
 | F5.6 | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |

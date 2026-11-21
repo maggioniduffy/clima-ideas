@@ -457,3 +457,30 @@
 .conv-head .conv-check { flex: 1 1 auto; }
 .conv-col .flood-chart { padding: 0; }
 .conv-panel .conv-note, .conv-panel .flood-warn { font-size: 12px; line-height: 1.3; }
+
+/* Debris-catchments layer (F4.3): selectors reuse .conv-seg; neutral ramp, no emphasis colors */
+.debris-panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.debris-panel h4, .debris-h { margin: var(--space-1) 0 0; font-size: 14px; font-weight: 600; }
+.debris-rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.debris-rank button {
+  display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-2); align-items: center; width: 100%;
+  min-height: 36px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent;
+  color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+.debris-rank button[aria-pressed="true"] { background: var(--raised); box-shadow: inset 4px 0 0 var(--accent); }
+.debris-rank button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.debris-rank-area { color: var(--text-muted); }
+.debris-rank-q { min-width: 80px; text-align: right; }
+.debris-detail { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.debris-kv { margin: 0; }
+.debris-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.debris-table caption { text-align: left; font-weight: 600; font-size: 13px; padding-bottom: var(--space-1); }
+.debris-table th, .debris-table td { padding: 4px 6px; text-align: right; border-bottom: 1px solid var(--border); font-weight: 400; vertical-align: bottom; }
+.debris-table thead th { color: var(--text-muted); font-size: 11px; line-height: 1.2; }
+.debris-table tbody th { text-align: left; white-space: nowrap; }
+.debris-toggle { display: flex; align-items: flex-start; gap: var(--space-2); font-size: 12px; line-height: 1.3; cursor: pointer; }
+.debris-toggle input { margin-top: 2px; }
+.debris-warn { border-left: 3px solid var(--border); padding-left: var(--space-2); }
+.debris-table tr[data-current="true"] td, .debris-table tr[data-current="true"] th { font-weight: 700; }
+.debris-caveats { margin: 0; padding-left: var(--space-4); display: flex; flex-direction: column; gap: 2px; }
+.debris-panel .conv-note { font-size: 12px; line-height: 1.3; }

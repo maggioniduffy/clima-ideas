@@ -56,6 +56,12 @@
   --rain-2: #6FA0BD;
   --rain-3: #3A6E96;
   --rain-4: #1B3A5C;
+  /* Debris-catchments sequential ramp (peak discharge), low to high: single-hue violet-grey, no warning colors */
+  --debris-0: #ECE8EE;
+  --debris-1: #C9BFD3;
+  --debris-2: #A394B8;
+  --debris-3: #7A69A0;
+  --debris-4: #4B3B78;
   --relief-0: #A7AEAF;
   --relief-1: #77848A;
   --relief-2: #4A5A64;
@@ -94,6 +100,12 @@
   --rain-2: #4A82A8;
   --rain-3: #86B4D2;
   --rain-4: #D6E8F2;
+  /* Debris-catchments sequential ramp (peak discharge), low to high: single-hue violet-grey, no warning colors */
+  --debris-0: #2B2836;
+  --debris-1: #443C63;
+  --debris-2: #6A5C98;
+  --debris-3: #9C8CC4;
+  --debris-4: #DCD3F0;
   --relief-0: #4E5F6A;
   --relief-1: #7D8D96;
   --relief-2: #B3BEC4;

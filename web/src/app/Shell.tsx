@@ -13,9 +13,12 @@ import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
 import { CONVECTION_LAYER_ID } from "../layers/convectionIdf";
 import { useConvectionIdf } from "../layers/useConvectionIdf";
+import { DEBRIS_LAYER_ID } from "../layers/debrisCatchments";
+import { useDebrisCatchments } from "../layers/useDebrisCatchments";
 import { useLayers } from "../layers/useLayers";
 import { useTheme } from "../theme/themeStore";
 import { ClockBox } from "./ClockBox";
+import { DebrisLegend } from "./DebrisLegend";
 import { DetailCard } from "./DetailCard";
 import { EventListCard } from "./EventListCard";
 import { Inspector } from "./Inspector";
@@ -140,6 +143,9 @@ export function Shell() {
   const convLayer = s.layers.find((l) => l.id === CONVECTION_LAYER_ID);
   const convActive = !!convLayer && s.activeIds.has(convLayer.id);
   const conv = useConvectionIdf(convLayer, convActive);
+  const debrisLayer = s.layers.find((l) => l.id === DEBRIS_LAYER_ID);
+  const debrisActive = !!debrisLayer && s.activeIds.has(debrisLayer.id);
+  const debris = useDebrisCatchments(debrisLayer, debrisActive);
   const refLayers = useReferenceLayers();
   const arVisible = useMemo(
     () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn, TOP_N, ratios),
@@ -181,10 +187,12 @@ export function Shell() {
       <div className="shell-body">
         <MapCanvas
           markers={conv.markers}
+          focus={debris.focus}
           layers={[
             ...mapLayers.filter((l) => !isFlood(l)),
             ...ar.deckLayers,
             ...conv.deckLayers,
+            ...debris.deckLayers,
             ...mapLayers.filter(isFlood),
             ...refLayers,
           ]}
@@ -192,6 +200,9 @@ export function Shell() {
           <div className="map-legends" data-testid="map-legends">
             {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} count={ar.count} />}
             {convActive && convLayer && conv.status === "ready" && <RainLegend source={convLayer.source} />}
+            {debrisActive && debrisLayer && debris.status === "ready" && (
+              <DebrisLegend domain={debris.domain} source={debrisLayer.source} />
+            )}
           </div>
           <div className="map-clocks" data-testid="map-clocks">
             {ar.selectedEvent && ar.cursorMs != null && (
@@ -235,6 +246,11 @@ export function Shell() {
             convection={
               convActive && convLayer && s.selectedLayer?.id === convLayer.id
                 ? { state: conv, source: convLayer.source, period: convLayer.period }
+                : null
+            }
+            debris={
+              debrisActive && debrisLayer && s.selectedLayer?.id === debrisLayer.id
+                ? { state: debris, source: debrisLayer.source, period: debrisLayer.period }
                 : null
             }
             enso={
