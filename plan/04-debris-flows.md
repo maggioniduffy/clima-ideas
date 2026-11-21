@@ -72,6 +72,9 @@ Núcleo: mapa de cuencas por caudal pico. Extensión: un caso HEC-RAS validado y
   bandas grandes convergen solo sobre una línea de celdas pegada a la ruta (el terraplén en el DEM), no sobre un cauce
   natural. Un K de 2500–3000 quedaba ajustado a seis cuencas elegidas a mano. Quedan 476 en el ranking (355 laminares,
   10 superpuestas); 455, 467 y 468 quedan fuera. Las 97 cuencas en las que las reglas no coinciden quedan sin verificar.
+- Publicación (2026-11-21): capa `debris-catchments` subida al bucket R2 `nqn` (`catchments.geojson`, `peaks.json` y
+  `manifest.json`). El índice `layers.json` se fusionó con el publicado (5 capas) en lugar de regenerarlo, porque la
+  sesión solo tenía esta capa en `data/processed`. La web se desplegó desde `main` (Deploy web, corrida 4, éxito).
 
 ## Abierto
 
