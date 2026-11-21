@@ -1,5 +1,5 @@
 /* Design tokens from docs/design.md. Keep in sync with tokens.ts (tokens.test.ts enforces it).
-   Never pure white or black. */
+   Never pure white or black, except --chart-surface in the light theme. */
 :root {
   --main: #3E505B;
   --secondary: #A4AF69;
@@ -32,6 +32,8 @@
   --accent: #8EB8E5;
   --water: #3A6E8F;
   --casing: #2A343B;
+  /* Charts sit on a plain surface without grain: pure white in light, a flat dark well in dark */
+  --chart-surface: #FFFFFF;
   /* Card texture (.tx): dots + diagonal highlight in light, none in dark */
   --tex: radial-gradient(rgba(42, 52, 59, 0.09) 0.9px, transparent 1.3px);
   --shine: rgba(255, 255, 255, 0.45);
@@ -48,6 +50,12 @@
   --count-2: #B79C70;
   --count-3: #8A6F46;
   --count-4: #55402A;
+  /* Rain sequential ramp (IMERG mm/h, convection layer), low to high: single-hue blue, no warning colors */
+  --rain-0: #DCE8EC;
+  --rain-1: #A9C8D6;
+  --rain-2: #6FA0BD;
+  --rain-3: #3A6E96;
+  --rain-4: #1B3A5C;
   --relief-0: #A7AEAF;
   --relief-1: #77848A;
   --relief-2: #4A5A64;
@@ -67,6 +75,7 @@
   --accent: #FDDA0D;
   --water: #7FA9C6;
   --casing: #16212A;
+  --chart-surface: #121C24;
   --tex: none;
   --shine: transparent;
   --ivt-0: #22384A;
@@ -80,6 +89,11 @@
   --count-2: #76588A;
   --count-3: #A77FA6;
   --count-4: #DDB9C6;
+  --rain-0: #24384A;
+  --rain-1: #2F5878;
+  --rain-2: #4A82A8;
+  --rain-3: #86B4D2;
+  --rain-4: #D6E8F2;
   --relief-0: #4E5F6A;
   --relief-1: #7D8D96;
   --relief-2: #B3BEC4;

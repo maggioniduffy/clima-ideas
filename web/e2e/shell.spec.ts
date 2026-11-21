@@ -54,49 +54,74 @@ test("narrow layout: map uses the width and the layer drawer opens", async ({ pa
   expect((await inspector.boundingBox())!.y + scrollY).toBeGreaterThanOrEqual(mapBox.y + scrollY + mapBox.height);
 });
 
-test("card-row handle resizes the row, the map follows and the height persists", async ({ page }) => {
-  await page.setViewportSize({ width: 1400, height: 1000 });
+test("desktop layout at 1440x900: map left, panels right, timeline across the bottom", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.evaluate(() => localStorage.removeItem("panel-sizes"));
   await page.reload();
-  const row = page.getByTestId("cards-row");
-  const canvas = page.getByTestId("map-canvas");
-  expect(await page.getByTestId("inspector").evaluate((el) => el.parentElement!.dataset.testid)).toBe("cards-row");
-  const h0 = (await row.boundingBox())!.height;
-  const c0 = (await canvas.boundingBox())!.height;
-  const handle = page.getByRole("separator", { name: "Alto del panel de detalle" });
-  const hb = (await handle.boundingBox())!;
-  const x = hb.x + hb.width / 2;
-  const y = hb.y + hb.height / 2;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x, y - 50, { steps: 5 });
-  await page.mouse.move(x, y - 100, { steps: 5 });
-  await page.mouse.up();
-
-  const h1 = (await row.boundingBox())!.height;
-  expect(Math.abs(h1 - (h0 + 100))).toBeLessThanOrEqual(2);
-  const cb = (await canvas.boundingBox())!;
-  expect(Math.abs(cb.height - (c0 - 100))).toBeLessThanOrEqual(2);
-  // deck.gl's canvas follows its container
-  const deckH = await page.evaluate(() => document.querySelector<HTMLCanvasElement>('[data-testid="map-canvas"] canvas')!.clientHeight);
-  expect(Math.abs(deckH - cb.height)).toBeLessThanOrEqual(2);
-
-  await page.reload();
-  expect(Math.abs((await row.boundingBox())!.height - h1)).toBeLessThanOrEqual(1);
-  await page.getByRole("separator", { name: "Alto del panel de detalle" }).dblclick();
-  expect(Math.abs((await row.boundingBox())!.height - h0)).toBeLessThanOrEqual(1);
+  const map = (await page.getByTestId("map-canvas").boundingBox())!;
+  const panels = (await page.getByTestId("panels-slot").boundingBox())!;
+  const timeline = (await page.getByTestId("timeline-slot").boundingBox())!;
+  const top = (await page.getByTestId("topbar").boundingBox())!;
+  expect(map.x + map.width).toBeLessThanOrEqual(panels.x); // map left of the panels
+  expect(panels.width).toBeGreaterThanOrEqual(420);
+  expect(panels.width).toBeLessThanOrEqual(480);
+  expect(map.width).toBeGreaterThan(panels.width * 1.8); // the map takes the remaining width
+  expect(map.y).toBeGreaterThanOrEqual(top.y + top.height);
+  expect(Math.abs(map.y - panels.y)).toBeLessThanOrEqual(1);
+  expect(timeline.y).toBeGreaterThanOrEqual(map.y + map.height); // timeline below both
+  expect(timeline.y).toBeGreaterThanOrEqual(panels.y + panels.height);
+  expect(Math.abs(timeline.x - 8)).toBeLessThanOrEqual(1); // and spans the full width
+  expect(Math.abs(timeline.x + timeline.width - (1440 - 8))).toBeLessThanOrEqual(1);
+  // the layers list and the inspector live in the right column
+  for (const id of ["layers-slot", "inspector"]) {
+    const b = (await page.getByTestId(id).boundingBox())!;
+    expect(b.x).toBeGreaterThanOrEqual(panels.x);
+    expect(b.x + b.width).toBeLessThanOrEqual(panels.x + panels.width + 1);
+  }
+  // the page itself does not scroll
+  expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(0);
 });
 
-test("dragging the layers handle past its minimum hides the panel, the map grows, and it survives a reload", async ({ page }) => {
+test("the panels handle resizes the column, the map and its canvas follow, and the width persists", async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto("/");
   await page.evaluate(() => localStorage.removeItem("panel-sizes"));
   await page.reload();
-  const layers = page.getByTestId("layer-panel");
+  const col = page.getByTestId("panels-slot");
   const canvas = page.getByTestId("map-canvas");
-  const handle = page.getByRole("separator", { name: "Ancho del panel de capas" });
-  await expect(layers).toBeVisible();
+  const w0 = (await col.boundingBox())!.width;
+  const c0 = (await canvas.boundingBox())!.width;
+  const hb = (await page.getByRole("separator", { name: "Ancho de los paneles" }).boundingBox())!;
+  const x = hb.x + hb.width / 2;
+  const y = hb.y + hb.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 50, y, { steps: 5 });
+  await page.mouse.move(x - 100, y, { steps: 5 });
+  await page.mouse.up();
+  const w1 = (await col.boundingBox())!.width;
+  expect(Math.abs(w1 - (w0 + 100))).toBeLessThanOrEqual(2);
+  const cb = (await canvas.boundingBox())!;
+  expect(Math.abs(cb.width - (c0 - 100))).toBeLessThanOrEqual(2);
+  // deck.gl's canvas follows its container after the layout change
+  const deckW = await page.evaluate(() => document.querySelector<HTMLCanvasElement>('[data-testid="map-canvas"] canvas')!.clientWidth);
+  expect(Math.abs(deckW - cb.width)).toBeLessThanOrEqual(2);
+  await page.reload();
+  expect(Math.abs((await col.boundingBox())!.width - w1)).toBeLessThanOrEqual(1);
+  await page.getByRole("separator", { name: "Ancho de los paneles" }).dblclick();
+  expect(Math.abs((await col.boundingBox())!.width - w0)).toBeLessThanOrEqual(1);
+});
+
+test("dragging the panels handle past its minimum hides the column, the map grows, and it survives a reload", async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.removeItem("panel-sizes"));
+  await page.reload();
+  const col = page.getByTestId("panels-slot");
+  const canvas = page.getByTestId("map-canvas");
+  const handle = page.getByRole("separator", { name: "Ancho de los paneles" });
+  await expect(col).toBeVisible();
   const c0 = (await canvas.boundingBox())!.width;
   const hb = (await handle.boundingBox())!;
   const x = hb.x + hb.width / 2;
@@ -104,39 +129,36 @@ test("dragging the layers handle past its minimum hides the panel, the map grows
 
   await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(x - 100, y, { steps: 5 });
-  await page.mouse.move(x - 300, y, { steps: 5 });
+  await page.mouse.move(x + 100, y, { steps: 5 });
+  await page.mouse.move(x + 400, y, { steps: 5 });
   await page.mouse.up();
 
-  await expect(layers).toBeHidden();
+  await expect(col).toBeHidden();
   await expect(handle).toHaveAttribute("aria-valuenow", "0");
   await expect(handle).toHaveAttribute("aria-valuemin", "0");
   const cb = (await canvas.boundingBox())!;
-  expect(cb.width).toBeGreaterThan(c0 + 200);
+  expect(cb.width).toBeGreaterThan(c0 + 300);
   const deckW = await page.evaluate(() => document.querySelector<HTMLCanvasElement>('[data-testid="map-canvas"] canvas')!.clientWidth);
   expect(Math.abs(deckW - cb.width)).toBeLessThanOrEqual(2);
 
   await page.reload();
-  await expect(layers).toBeHidden();
+  await expect(col).toBeHidden();
   await expect(handle).toHaveAttribute("aria-valuenow", "0");
 
-  // drag back out: the panel returns from its minimum upward
-  const hb2 = (await handle.boundingBox())!;
-  const x2 = hb2.x + hb2.width / 2;
-  const y2 = hb2.y + hb2.height / 2;
-  await page.mouse.move(x2, y2);
-  await page.mouse.down();
-  await page.mouse.move(x2 + 100, y2, { steps: 5 });
-  await page.mouse.move(x2 + 240, y2, { steps: 5 });
-  await page.mouse.up();
-  await expect(layers).toBeVisible();
-  expect(Math.abs((await canvas.boundingBox())!.width - c0)).toBeLessThanOrEqual(30);
-
-  // keyboard: Home collapses, Enter restores the default
+  // keyboard: Enter restores the default, Home collapses again
   await handle.focus();
-  await page.keyboard.press("Home");
-  await expect(layers).toBeHidden();
   await page.keyboard.press("Enter");
-  await expect(layers).toBeVisible();
+  await expect(col).toBeVisible();
   expect(Math.abs((await canvas.boundingBox())!.width - c0)).toBeLessThanOrEqual(1);
+  await page.keyboard.press("Home");
+  await expect(col).toBeHidden();
+});
+
+test("a maximized timeline at 900 px high does not make the page scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("panel-sizes", JSON.stringify({ panels: 440, timeline: 420 })));
+  await page.reload();
+  await expect(page.getByTestId("timeline")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(0);
 });

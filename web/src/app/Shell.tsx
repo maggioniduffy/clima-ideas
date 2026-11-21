@@ -11,6 +11,8 @@ import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
+import { CONVECTION_LAYER_ID } from "../layers/convectionIdf";
+import { useConvectionIdf } from "../layers/useConvectionIdf";
 import { useLayers } from "../layers/useLayers";
 import { useTheme } from "../theme/themeStore";
 import { ClockBox } from "./ClockBox";
@@ -20,6 +22,7 @@ import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
 import { MapCanvas } from "./MapCanvas";
 import { MapLegend } from "./MapLegend";
+import { RainClock, RainLegend } from "./RainLegend";
 import { PanelResizer } from "./PanelResizer";
 import {
   clampAll,
@@ -134,6 +137,9 @@ export function Shell() {
   const floodPoint =
     s.selectedLayer?.id === FLOOD_LAYER_ID ? (s.selectedFeatures.find((f) => f.id === s.selectedPointId) ?? null) : null;
   const flood = useFloodStation(floodPoint ? FLOOD_LAYER_ID : null, floodPoint?.id ?? null);
+  const convLayer = s.layers.find((l) => l.id === CONVECTION_LAYER_ID);
+  const convActive = !!convLayer && s.activeIds.has(convLayer.id);
+  const conv = useConvectionIdf(convLayer, convActive);
   const refLayers = useReferenceLayers();
   const arVisible = useMemo(
     () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn, TOP_N, ratios),
@@ -166,15 +172,38 @@ export function Shell() {
       data-drawer={drawer ?? undefined}
       style={
         {
-          "--layers-w": `${sizes.layers}px`,
-          "--cards-h": `${sizes.cards}px`,
+          "--panels-w": `${sizes.panels}px`,
           "--timeline-h": `${sizes.timeline}px`,
         } as CSSProperties
       }
     >
       <TopBar drawer={drawer} onToggleDrawer={toggleDrawer} />
       <div className="shell-body">
-        <div className="layers-slot card tx" data-testid="layers-slot" hidden={collapsed("layers")}>
+        <MapCanvas
+          markers={conv.markers}
+          layers={[
+            ...mapLayers.filter((l) => !isFlood(l)),
+            ...ar.deckLayers,
+            ...conv.deckLayers,
+            ...mapLayers.filter(isFlood),
+            ...refLayers,
+          ]}
+        >
+          <div className="map-legends" data-testid="map-legends">
+            {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} count={ar.count} />}
+            {convActive && convLayer && conv.status === "ready" && <RainLegend source={convLayer.source} />}
+          </div>
+          <div className="map-clocks" data-testid="map-clocks">
+            {ar.selectedEvent && ar.cursorMs != null && (
+              <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />
+            )}
+            {convActive && convLayer && conv.status === "ready" && <RainClock cursorMs={conv.cursorMs} />}
+          </div>
+        </MapCanvas>
+        <PanelResizer className="panel-resizer panel-resizer-panels" orientation="vertical" dir={-1} {...resizer("panels")} />
+        {/* Right column: layer list, inspector, detail card and event list stacked; it scrolls only as a fallback. */}
+        <div className="shell-panels" data-testid="panels-slot" hidden={collapsed("panels")}>
+        <div className="layers-slot card tx" data-testid="layers-slot">
           <LayerPanel
             layers={s.layers}
             status={s.status}
@@ -192,76 +221,64 @@ export function Shell() {
             }
           />
         </div>
-        <PanelResizer className="panel-resizer panel-resizer-layers" orientation="vertical" dir={1} {...resizer("layers")} />
-        <div className="shell-main">
-          <MapCanvas
-            layers={[
-              ...mapLayers.filter((l) => !isFlood(l)),
-              ...ar.deckLayers,
-              ...mapLayers.filter(isFlood),
-              ...refLayers,
-            ]}
-          >
-            {eventsActive && <MapLegend view={ivtView} onViewChange={setIvtView} count={ar.count} />}
-            {ar.selectedEvent && ar.cursorMs != null && (
-              <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />
-            )}
-          </MapCanvas>
-          <PanelResizer className="panel-resizer panel-resizer-cards" orientation="horizontal" dir={-1} {...resizer("cards")} />
-          {/* Card row: inspector, then the detail card (ENSO table or station charts) and the event list. */}
-          <div className="cards-row" data-testid="cards-row" hidden={collapsed("cards")}>
-            <Inspector
-              layer={s.selectedLayer}
-              features={s.selectedFeatures}
-              selectedPointId={s.selectedPointId}
-              onSelectPoint={s.selectPoint}
-              event={{ selected: ar.selectedEvent, loadingFrames: ar.loadingFrames, reading: ar.reading, responses }}
-            />
-            <DetailCard
-              onOpenArEvent={openArEvent}
-              flood={floodPoint ? flood : null}
-              enso={
-                showEnso && eventsLayer && enso.status !== "none"
-                  ? {
-                      status: enso.status,
-                      stats: enso.data,
-                      extremes: ensoExtremes.data,
-                      source: eventsLayer.source,
-                      period: eventsLayer.period,
-                      onClose: () => setEnsoOpen(false),
-                    }
-                  : null
-              }
-            />
-            {eventsActive && (
-              <EventListCard
-                status={ar.status}
-                items={ar.events}
-                shown={arVisible.events}
-                toggles={arToggles}
-                onTogglesChange={setArToggles}
-                sortKey={arSortKey}
-                onSortKeyChange={setArSortKey}
-                topOn={arTopOn}
-                onTopOnChange={setArTopOn}
-                topN={TOP_N}
-                hasResponses={!!responses}
-                selectedEventId={ar.selectedEventId}
-                onSelectEvent={selectEvent}
-              />
-            )}
-          </div>
-          <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
-          <div className="timeline-slot card tx" data-testid="timeline-slot" hidden={collapsed("timeline")}>
-            <Timeline
-              events={eventsActive ? arVisible.filtered : []}
-              peakIds={arVisible.peakIds}
-              period={eventsLayer?.period}
+
+          <Inspector
+            layer={s.selectedLayer}
+            features={s.selectedFeatures}
+            selectedPointId={s.selectedPointId}
+            onSelectPoint={s.selectPoint}
+            event={{ selected: ar.selectedEvent, loadingFrames: ar.loadingFrames, reading: ar.reading, responses }}
+          />
+          <DetailCard
+            onOpenArEvent={openArEvent}
+            flood={floodPoint ? flood : null}
+            convection={
+              convActive && convLayer && s.selectedLayer?.id === convLayer.id
+                ? { state: conv, source: convLayer.source, period: convLayer.period }
+                : null
+            }
+            enso={
+              showEnso && eventsLayer && enso.status !== "none"
+                ? {
+                    status: enso.status,
+                    stats: enso.data,
+                    extremes: ensoExtremes.data,
+                    source: eventsLayer.source,
+                    period: eventsLayer.period,
+                    onClose: () => setEnsoOpen(false),
+                  }
+                : null
+            }
+          />
+          {eventsActive && (
+            <EventListCard
+              status={ar.status}
+              items={ar.events}
+              shown={arVisible.events}
+              toggles={arToggles}
+              onTogglesChange={setArToggles}
+              sortKey={arSortKey}
+              onSortKeyChange={setArSortKey}
+              topOn={arTopOn}
+              onTopOnChange={setArTopOn}
+              topN={TOP_N}
+              hasResponses={!!responses}
               selectedEventId={ar.selectedEventId}
               onSelectEvent={selectEvent}
-              replay={ar.selectedEvent ? ar : null}
             />
-          </div>
+          )}
+        </div>
+        <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
+        <div className="timeline-slot card tx" data-testid="timeline-slot" hidden={collapsed("timeline")}>
+          <Timeline
+            events={eventsActive ? arVisible.filtered : []}
+            peakIds={arVisible.peakIds}
+            period={eventsLayer?.period}
+            selectedEventId={ar.selectedEventId}
+            onSelectEvent={selectEvent}
+            replay={ar.selectedEvent ? ar : null}
+            convection={convActive ? conv : null}
+          />
         </div>
       </div>
       <button

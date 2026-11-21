@@ -4,6 +4,8 @@ import { es } from "../i18n/es";
 import { eventDomain, eventSpans, fractionOf, formatUtc, periodDomain } from "../layers/arEvents";
 import { useTheme } from "../theme/themeStore";
 import type { ArEventsState } from "../layers/useArEvents";
+import type { ConvectionState } from "../layers/useConvectionIdf";
+import { ConvectionReplay } from "./ConvectionReplay";
 
 interface Props {
   /** Only these are drawn (Shell passes the filtered set). */
@@ -15,6 +17,8 @@ interface Props {
   onSelectEvent?: (id: string) => void;
   /** Replay state of the selected event; null when nothing is selected. */
   replay?: ArEventsState | null;
+  /** Storm replay of the convection layer; drawn first in the strip when ready. */
+  convection?: ConvectionState | null;
 }
 
 /** Control icons of the design (16 px grid): skip-back / play / pause / skip-forward. */
@@ -35,23 +39,25 @@ function Icon({ d, stroke = false }: { d: string; stroke?: boolean }) {
 
 const pct = (f: number) => `${(f * 100).toFixed(3)}%`;
 
-export function Timeline({ events = [], peakIds, period, selectedEventId = null, onSelectEvent, replay = null }: Props) {
+export function Timeline({ events = [], peakIds, period, selectedEventId = null, onSelectEvent, replay = null, convection = null }: Props) {
   const domain = useMemo(() => (period ? periodDomain(period) : null), [period]);
   const theme = useTheme();
   const spans = useMemo(() => (domain ? eventSpans(events, domain, theme) : []), [events, domain, theme]);
   const selected = replay?.selectedEvent ?? null;
   const detail = selected ? eventDomain(selected) : null;
 
+  const conv = convection && convection.status === "ready" ? <ConvectionReplay state={convection} /> : null;
   if (!domain || (events.length === 0 && !selected)) {
     return (
       <footer className="shell-timeline" data-testid="timeline">
-        <p className="empty">{es.timeline.empty}</p>
+        {conv ?? <p className="empty">{es.timeline.empty}</p>}
       </footer>
     );
   }
 
   return (
     <footer className="shell-timeline" data-testid="timeline">
+      {conv}
       {replay && selected && (
         <div className="replay-controls" data-testid="replay-controls" data-frame={replay.frame} data-playing={replay.playing}>
           <button

@@ -10,6 +10,7 @@ import typer
 from clima_nqn.api.app import DEFAULT_DATA_ROOT
 from clima_nqn.io import basins as basins_io
 from clima_nqn.io import camels_cl, dem, era5, flow, forcing, imerg, snow
+from clima_nqn.io import isd as isd_io
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.layers import flood_stations
 from clima_nqn.publish import (
@@ -31,6 +32,7 @@ from clima_nqn.stages.flood import hindcast as flood_hindcast
 from clima_nqn.stages.flood import hydro_models as flood_hydro
 from clima_nqn.stages.flood import lstm as flood_lstm
 from clima_nqn.stages.flood import streamflow_eval
+from clima_nqn.stages.stations import qc as station_qc
 
 app = typer.Typer(help="clima-nqn command line interface.")
 
@@ -870,6 +872,21 @@ def convection_idf(
     typer.echo(f"wrote {out}")
 
 
+@convection_app.command("layer")
+def convection_layer(
+    zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(
+        "data/raw/imerg/neuquen.zarr"
+    ),
+    out: Annotated[
+        Path | None, typer.Option(help="Layer directory (default: <data root>/convection-idf).")
+    ] = None,
+) -> None:
+    """Build the convection-idf viewer layer: IDF curves + April 2014 replay (F3.5)."""
+    from clima_nqn.layers import convection_idf
+
+    typer.echo(convection_idf.build(zarr, out or convection_idf.DEFAULT_OUT))
+
+
 @convection_app.command("bias")
 def convection_bias(
     zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(
@@ -1102,3 +1119,28 @@ def publish_cmd(
     client = make_client(cfg["R2_ACCOUNT_ID"], cfg["R2_ACCESS_KEY_ID"], cfg["R2_SECRET_ACCESS_KEY"])
     count, total = publish_layers(data_root, client, cfg["R2_BUCKET"], prefix)
     typer.echo(f"{count} objects, {total / 1e6:.2f} MB -> bucket {cfg['R2_BUCKET']}")
+
+
+stations_app = typer.Typer(help="Station observations with quality control (phase 3).")
+app.add_typer(stations_app, name="stations")
+
+
+@stations_app.command("qc")
+def stations_qc(
+    raw: Annotated[Path, typer.Option(help="Directory of annual ISD files.")] = isd_io.DEFAULT_DIR,
+    out: Annotated[Path, typer.Option(help="Output Parquet directory.")] = station_qc.OUT_DIR,
+    year_from: Annotated[int, typer.Option(help="First year.")] = 2000,
+    year_to: Annotated[int, typer.Option(help="Last year.")] = 2025,
+    download: Annotated[
+        bool, typer.Option(help="Download missing years from the public noaa-isd-pds bucket.")
+    ] = True,
+) -> None:
+    """Classify every ISD 877150 precipitation group (valid/reason) and write the QC and gap Parquet files."""
+    try:
+        qc, gaps, paths = station_qc.build(raw, range(year_from, year_to + 1), out, download)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    typer.echo(f"{len(qc)} groups, {int(qc['valid'].sum())} valid -> {paths['qc']}")
+    for reason, n in qc["reason"].value_counts().items():
+        typer.echo(f"  {reason}: {n}")
+    typer.echo(f"gap summary ({len(gaps)} rows) -> {paths['gaps']}")

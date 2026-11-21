@@ -146,6 +146,15 @@ cd backend && uv run clima-nqn flow layer
   con los cuantiles de validación). Los archivos se agregan a `files` del manifiesto y el detalle de la estación lleva `has_events: true`;
   sin ellos la capa es válida y el panel no muestra la ficha. `flow layer` conserva los `events/` existentes.
 
+Capa `convection-idf` (F3.5), desde el Zarr de IMERG (kind `raster-frames`):
+
+```
+cd backend && uv run python -m clima_nqn.layers.convection_idf   # escribe data/processed/convection-idf (~0,5 MB)
+```
+
+- `idf.json` (IDF GEV/Gumbel con IC 90 % y escenarios ÷ 0,92 y ÷ 0,67), `replay.json` (acumulado en la celda de Neuquén Aero y total de la estación,
+  118 mm 12Z–12Z), `frames/index.json` y `frames/storm-2014-04.bin` (Float32 mm/h semihorario, 144 cuadros, mismo contrato que `ar-events`).
+
 ## API
 
 `GET /health` · `GET /layers` · `GET /layers/{id}` · `GET /layers/{id}/data` · `GET /layers/{id}/frames/{t}` (binario Float32 del conjunto de frames `t`; en `ar-events`, `t` es el id del evento y el índice está en `frames/index.json`)

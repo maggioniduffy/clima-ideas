@@ -1,0 +1,23 @@
+{
+ "units": "mm/h",
+ "variable": "precipitation",
+ "dtype": "float32-le",
+ "layout": "[n_frames, ny, nx]",
+ "step_hours": 0.5,
+ "grid": {
+  "ny": 4,
+  "nx": 6,
+  "lat_min": -39.95,
+  "lat_max": -36.95,
+  "lon_min": -70.15,
+  "lon_max": -65.15
+ },
+ "events": {
+  "storm-2014-04": {
+   "start": "2014-04-06T10:00:00Z",
+   "n_frames": 12,
+   "vmin": 0,
+   "vmax": 27
+  }
+ }
+}

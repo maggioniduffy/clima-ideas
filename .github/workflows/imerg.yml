@@ -363,3 +363,41 @@ jobs:
           path: ${{ (inputs.product || 'final') == 'late' && 'backend/data/raw/imerg/neuquen-late.zarr' || 'backend/data/raw/imerg/neuquen.zarr' }}
           retention-days: 90
           if-no-files-found: error
+      # Durable copy: artifacts expire after 90 days. Zips the combined Zarr (same layout as the artifact zip) to the
+      # private R2 bucket nqn-raw as imerg/<product>-v07/neuquen_<first>_<last>.zarr.zip. Skipped without R2 secrets.
+      - name: Back up combined Zarr to R2
+        working-directory: backend
+        env:
+          PRODUCT: ${{ inputs.product || 'final' }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BACKUP_BUCKET: nqn-raw
+        run: |
+          if [ -z "$R2_ACCOUNT_ID" ] || [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ]; then
+            echo "R2 secrets not set, skipping backup"; exit 0
+          fi
+          if [ "$PRODUCT" = late ]; then SUFFIX=-late; else SUFFIX=; fi
+          STORE="data/raw/imerg/neuquen$SUFFIX.zarr"
+          ZIP="$RUNNER_TEMP/backup.zarr.zip"
+          (cd "$STORE" && zip -qr "$ZIP" .)
+          uv run python - "$STORE" "$ZIP" <<'PY'
+          import hashlib, os, sys
+          import xarray as xr
+          from clima_nqn.publish import make_client
+          store, zpath = sys.argv[1], sys.argv[2]
+          period = xr.open_zarr(store, consolidated=False, chunks=None).attrs["period"]
+          first, last = (p[:7] for p in period.split("/"))
+          key = f"imerg/{os.environ['PRODUCT']}-v07/neuquen_{first}_{last}.zarr.zip"
+          data = open(zpath, "rb").read()
+          sha = hashlib.sha256(data).hexdigest()
+          client = make_client(
+              os.environ["R2_ACCOUNT_ID"], os.environ["R2_ACCESS_KEY_ID"], os.environ["R2_SECRET_ACCESS_KEY"]
+          )
+          bucket = os.environ["R2_BACKUP_BUCKET"]
+          client.put_object(Bucket=bucket, Key=key, Body=data, ContentType="application/zip", Metadata={"sha256": sha})
+          back = client.get_object(Bucket=bucket, Key=key)["Body"].read()
+          if hashlib.sha256(back).hexdigest() != sha:
+              sys.exit(f"checksum mismatch after upload of {key}")
+          print(f"backed up {key}: {len(data)} bytes, sha256 {sha}")
+          PY

@@ -1,0 +1,15 @@
+{
+  "id": "convection-idf",
+  "title": "Convección: curva IDF y temporal de abril de 2014",
+  "kind": "raster-frames",
+  "source": "IMERG falso de prueba",
+  "period": "2000-07-01/2025-06-30",
+  "license": "CC0",
+  "updated_at": "2026-01-01T00:00:00Z",
+  "files": [
+    "idf.json",
+    "replay.json",
+    "frames/index.json",
+    "frames/storm-2014-04.bin"
+  ]
+}
