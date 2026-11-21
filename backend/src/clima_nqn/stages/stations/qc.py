@@ -181,7 +181,8 @@ def gap_summary(qc: pd.DataFrame, start: str | None = None, end: str | None = No
     for p in USED_PERIODS:
         days[f"valid_p{p}"] = days["date"].isin(v.loc[v["period_h"] == p, "date"])
     days["valid_any"] = days["valid_p6"] | days["valid_p24"]
-    days["has_rows"] = days["date"].isin(qc.loc[qc["period_h"].isin(USED_PERIODS), "date"])
+    # any group counts, also unused periods (a day with only those is discarded-only, not missing)
+    days["has_rows"] = days["date"].isin(qc["date"])
     days["discarded_only"] = days["has_rows"] & ~days["valid_any"]
     days["missing"] = ~days["valid_any"]
     days["year"] = days["date"].dt.year
@@ -247,9 +248,10 @@ def build(
         paths = isd.download_years(years, isd_dir)
     else:
         paths = [p for y in years if (p := isd_dir / f"{isd.STATION}-{y}.gz").exists()]
-    qc = apply_qc(isd.load_all_groups(paths))
-    if qc.empty:
+    groups = isd.load_all_groups(paths)
+    if groups.empty:
         raise ValueError(f"no ISD precipitation groups in {isd_dir} for {years[0]}-{years[-1]}")
+    qc = apply_qc(groups)
     gaps = gap_summary(qc)
     first, last = qc["time"].min(), qc["time"].max()
     meta = {

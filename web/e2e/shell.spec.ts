@@ -153,3 +153,12 @@ test("dragging the panels handle past its minimum hides the column, the map grow
   await page.keyboard.press("Home");
   await expect(col).toBeHidden();
 });
+
+test("a maximized timeline at 900 px high does not make the page scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("panel-sizes", JSON.stringify({ panels: 440, timeline: 420 })));
+  await page.reload();
+  await expect(page.getByTestId("timeline")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(0);
+});

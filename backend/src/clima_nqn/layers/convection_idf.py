@@ -78,7 +78,10 @@ SCENARIOS = (
 
 def _write_json(path: Path, obj) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    path.write_text(
+        json.dumps(obj, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
+        encoding="utf-8",
+    )
 
 
 def _iso(ts: pd.Timestamp) -> str:
@@ -86,7 +89,7 @@ def _iso(ts: pd.Timestamp) -> str:
 
 
 def _num(x, nd: int = 2):
-    return None if x is None or (isinstance(x, float) and math.isnan(x)) else round(float(x), nd)
+    return None if x is None or not math.isfinite(float(x)) else round(float(x), nd)
 
 
 def _rows(table: pd.DataFrame, method: str) -> list[dict]:
@@ -218,28 +221,22 @@ def build(
         "lon_max": round(float(xs[-1]), 4),
         "origin": "south-west",
     }
-    frames_dir = out_dir / "frames"
-    frames_dir.mkdir(parents=True, exist_ok=True)
-    (frames_dir / f"{FRAME_SET}.bin").write_bytes(frames.tobytes())
-    _write_json(
-        frames_dir / "index.json",
-        {
-            "units": "mm/h",
-            "variable": "precipitation",
-            "dtype": "float32-le",
-            "layout": "[n_frames, ny, nx], row 0 = south, column 0 = west",
-            "step_hours": 0.5,
-            "grid": grid,
-            "events": {
-                FRAME_SET: {
-                    "start": _iso(stamps[0]),
-                    "n_frames": len(stamps),
-                    "vmin": _num(np.nanmin(frames), 3),
-                    "vmax": _num(np.nanmax(frames), 3),
-                }
-            },
+    frames_index = {
+        "units": "mm/h",
+        "variable": "precipitation",
+        "dtype": "float32-le",
+        "layout": "[n_frames, ny, nx], row 0 = south, column 0 = west",
+        "step_hours": 0.5,
+        "grid": grid,
+        "events": {
+            FRAME_SET: {
+                "start": _iso(stamps[0]),
+                "n_frames": len(stamps),
+                "vmin": _num(np.nanmin(frames), 3),
+                "vmax": _num(np.nanmax(frames), 3),
+            }
         },
-    )
+    }
 
     # Cumulative IMERG at the cell from the comparison start to the end of the replay (value at the end of each step).
     cum_stamps = pd.date_range(cmp_start, storm_end, freq=STEP, inclusive="left")
@@ -282,9 +279,6 @@ def build(
             "mm": [_num(v, 2) for v in cumulative],
         },
     }
-    _write_json(out_dir / "idf.json", idf_json)
-    _write_json(out_dir / "replay.json", replay)
-
     y0, y1 = int(am.index.min()), int(am.index.max())
     manifest = LayerManifest(
         id=LAYER_ID,
@@ -296,6 +290,14 @@ def build(
         updated_at=datetime.now(UTC),
         files=["idf.json", "replay.json", "frames/index.json", f"frames/{FRAME_SET}.bin"],
     )
+
+    # Everything is validated and built: only now write files.
+    frames_dir = out_dir / "frames"
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    (frames_dir / f"{FRAME_SET}.bin").write_bytes(frames.tobytes())
+    _write_json(frames_dir / "index.json", frames_index)
+    _write_json(out_dir / "idf.json", idf_json)
+    _write_json(out_dir / "replay.json", replay)
     (out_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     return out_dir
 

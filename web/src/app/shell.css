@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh; /* fills the window; the right column scrolls only as a fallback */
-  min-height: calc(var(--timeline-h, 148px) + 496px); /* below this the page scrolls: 56 top bar + 8 gaps + 400 map */
+  min-height: calc(var(--timeline-h, 148px) + 480px); /* same budget as limitsFor: 56 top bar + 16 padding + 8 handle + 400 map */
   position: relative;
   background: var(--bg);
   color: var(--text);
@@ -435,7 +435,7 @@
 .conv-replay { flex: 1; min-height: 0; display: flex; gap: var(--space-4); align-items: stretch; }
 .conv-replay h4 { margin: 0; font-size: 13px; }
 .conv-replay-side { flex: none; width: min(620px, 45%); display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
-.conv-replay-side .rain-controls { flex-wrap: nowrap; }
+.conv-replay-side .rain-controls { flex-wrap: wrap; }
 .conv-replay-side .rain-controls .replay-time { flex: none; flex-basis: auto; min-width: 150px; text-align: right; }
 .conv-replay-side .rain-controls button { width: 36px; height: 36px; }
 .conv-replay-side .conv-readout { display: grid; grid-template-columns: 1fr auto 1fr auto; column-gap: var(--space-2); align-items: baseline; font-size: 12px; }

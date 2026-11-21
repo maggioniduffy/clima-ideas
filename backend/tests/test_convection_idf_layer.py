@@ -139,6 +139,28 @@ def test_incomplete_frames_raise(zarr_path, tmp_path):
         cl.build(zarr_path, tmp_path / "l", n_boot=10, storm=late, compare=late)
 
 
+def test_gap_in_comparison_series_writes_nothing(zarr_path, tmp_path):
+    gap_path = tmp_path / "gap.zarr"
+    ds = xr.open_zarr(zarr_path, consolidated=False).load()
+    t = pd.Timestamp(COMPARE[0]) + pd.Timedelta(hours=3)
+    # NaN at the Neuquén cell only: the frames are still complete, the comparison series is not
+    cell = (ds.time == t) & (ds.lat == LATS[2]) & (ds.lon == LONS[2])
+    ds["precipitation"] = ds.precipitation.where(~cell)
+    ds.to_zarr(gap_path, consolidated=False)
+    out = tmp_path / "l"
+    with pytest.raises(ValueError, match="comparison window"):
+        cl.build(gap_path, out, n_boot=10, storm=STORM, compare=COMPARE)
+    assert not out.exists() or not any(out.rglob("*.*"))
+
+
+def test_non_finite_numbers_become_null_and_json_is_strict(tmp_path):
+    assert cl._num(float("inf")) is None and cl._num(float("-inf")) is None
+    assert cl._num(float("nan")) is None and cl._num(np.float32("inf")) is None
+    assert cl._num(1.234) == 1.23
+    with pytest.raises(ValueError):
+        cl._write_json(tmp_path / "x.json", {"a": float("inf")})
+
+
 def test_compare_window_must_be_inside_replay(zarr_path, tmp_path):
     with pytest.raises(ValueError, match="inside"):
         cl.build(

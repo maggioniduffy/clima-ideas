@@ -37,6 +37,7 @@ export function useConvectionIdf(layer: LayerManifest | undefined, active: boole
 
   if (wasActive !== active) {
     setWasActive(active);
+    if (active) setFailed(false); // switching the layer back on retries a failed load
     if (!active) {
       setPlaying(false);
       setFrame(0);

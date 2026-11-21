@@ -279,10 +279,10 @@ test("two resize separators exist and keyboard resizing updates the grid variabl
   expect(screen.getByTestId("resizer-timeline")).toHaveAttribute("aria-orientation", "horizontal");
   // the handle sits left of the column, so ArrowLeft widens it
   fireEvent.keyDown(panels, { key: "ArrowLeft" });
-  expect(screen.getByTestId("shell").style.getPropertyValue("--panels-w")).toBe("456px");
+  expect(panels).toHaveAttribute("aria-valuenow", "456");
   expect(JSON.parse(localStorage.getItem("panel-sizes")!).panels).toBe(456);
   fireEvent.doubleClick(panels);
-  expect(screen.getByTestId("shell").style.getPropertyValue("--panels-w")).toBe("440px");
+  expect(panels).toHaveAttribute("aria-valuenow", "440");
 });
 
 test("Home collapses a panel (hidden, handle stays at 0), Enter restores it, and the state persists", () => {

@@ -48,7 +48,7 @@ function IdfChart({ idf, w, metric, t, showScenarios }: { idf: IdfData; w: numbe
       const v = metricValue(r, metric);
       return v == null ? null : { x: x(r.d), y: y(v) };
     });
-  const bandRows = band.filter((r) => metricLo(r, metric) != null && metricHi(r, metric) != null);
+  const bandRows = band.filter((r) => (metricLo(r, metric) ?? 0) > 0 && (metricHi(r, metric) ?? 0) > 0);
   const yTicks = logTicks(yLo, yHi);
   // duration labels that would overlap the previous one are skipped (the curves still have a point there)
   const shownDurations: number[] = [];

@@ -7,10 +7,10 @@
  "grid": {
   "ny": 4,
   "nx": 6,
-  "lat_min": -40.0,
-  "lat_max": -37.0,
-  "lon_min": -72.0,
-  "lon_max": -67.0
+  "lat_min": -39.95,
+  "lat_max": -36.95,
+  "lon_min": -70.15,
+  "lon_max": -65.15
  },
  "events": {
   "storm-2014-04": {

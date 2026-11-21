@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from clima_nqn.stages.stations import qc as sq
 
@@ -121,3 +122,31 @@ def test_gap_summary_counts():
     assert (feb["days"], feb["days_valid_any"], feb["days_missing"]) == (2, 1, 1)
     yr = gaps[gaps["level"] == "year"].iloc[0]
     assert (yr["days"], yr["days_valid_any"], yr["n_ok"]) == (33, 3, 3)
+
+
+def test_day_with_only_unused_period_is_discarded_not_missing_only():
+    out = sq.apply_qc(
+        groups(
+            [
+                ("2020-01-01 12:00", 6, 3.0, "9", "1", "FM-12", 1),  # valid day
+                (
+                    "2020-01-02 12:00",
+                    3,
+                    1.0,
+                    "9",
+                    "1",
+                    "FM-12",
+                    1,
+                ),  # only a 3 h group: period_not_used
+            ]
+        )
+    )
+    gaps = sq.gap_summary(out, "2020-01-01", "2020-01-03")
+    jan = gaps[(gaps["level"] == "month") & (gaps["month"] == 1)].iloc[0]
+    assert (jan["days_valid_any"], jan["days_discarded_only"], jan["days_missing"]) == (1, 1, 2)
+    assert jan["n_period_not_used"] == 1
+
+
+def test_build_with_empty_raw_dir_raises_value_error(tmp_path):
+    with pytest.raises(ValueError, match="no ISD precipitation groups"):
+        sq.build(tmp_path, years=[2020], out_dir=tmp_path / "out", download=False)

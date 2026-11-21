@@ -96,3 +96,14 @@ test("rain legend shows source, ticks and the clock", () => {
   expect(screen.getByTestId("rain-legend-ticks")).toHaveTextContent("0138≥20");
   expect(screen.getByTestId("rain-clock")).toHaveTextContent("2014-04-06 10:00 UTC");
 });
+
+test("band rows with a non-positive bound are dropped so the log-scale path stays finite", () => {
+  const bad = structuredClone(idf);
+  const main = bad.scenarios.find((s) => s.id === "main") ?? bad.scenarios[0]!;
+  const first = main.gev.find((r) => r.t === 10)!;
+  first.depth_lo = 0;
+  first.intensity_lo = -1;
+  render(<ConvectionPanel state={state({ idf: bad })} source="s" period="p" />);
+  const d = screen.getByTestId("idf-band").getAttribute("d") ?? "";
+  expect(d).not.toMatch(/NaN|Infinity/);
+});
