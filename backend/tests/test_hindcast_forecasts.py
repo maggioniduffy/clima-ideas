@@ -440,7 +440,9 @@ def test_ecmwf_fetch_difference_and_dir_fallback(monkeypatch):
         return httpx.Response(206, content=b"GRIB")
 
     cum = iter([0.020, 0.012])  # metres at step 48, then at step 24
-    monkeypatch.setattr(fc, "grib_fields", lambda blob, area: [({}, _field(0.25) * 0 + next(cum))])
+    monkeypatch.setattr(
+        fc, "grib_fields", lambda blob, area: [({"units": "m"}, _field(0.25) * 0 + next(cum))]
+    )
     f = _fetcher(handler)
     out = f.fetch("ifs", pd.Timestamp("2023-03-01"), 2, "oper")
     assert np.allclose(out, 8.0, atol=1e-3)  # (0.020 - 0.012) m = 8 mm
@@ -481,3 +483,51 @@ def test_cli_cases_and_bad_args(tmp_path):
         ],
     )
     assert res.exit_code != 0
+
+
+# --- units, sanity guard ---------------------------------------------------------------------------
+
+
+def test_tp_unit_from_message_not_model():
+    metres, kgm2 = _field(0.25) * 0 + 0.008, _field(0.25) * 0 + 8.0
+    np.testing.assert_allclose(fc.tp_mm({"units": "m"}, metres), 8.0)
+    np.testing.assert_allclose(fc.tp_mm({"units": "kg m**-2"}, kgm2), 8.0)
+    with pytest.raises(ValueError, match="unknown tp unit"):
+        fc.tp_mm({"units": "furlong"}, metres)
+
+
+def test_box_mean_guard_marks_error(tmp_path, monkeypatch):
+    with pytest.raises(ValueError, match="implausible"):
+        fc.check_box_mean(np.full((21, 15), 3000.0), "x")
+    fc.check_box_mean(np.full((21, 15), 40.0), "x")
+
+    def handler(request):
+        url = str(request.url)
+        if url.endswith(".index"):
+            rec = {
+                "param": "tp",
+                "levtype": "sfc",
+                "step": url.rsplit("-", 3)[1][:-1],
+                "_offset": 0,
+                "_length": 4,
+            }
+            return httpx.Response(200, text=json.dumps(rec) + "\n")
+        return httpx.Response(206, content=b"GRIB")
+
+    monkeypatch.setattr(
+        fc, "grib_fields", lambda blob, area: [({"units": "m"}, _field(0.25) * 0 + 5.0)]
+    )
+    f = _fetcher(handler)  # 5 "m" -> 5000 mm: the guard rejects it, fetch_shard records status 2
+    with pytest.raises(ValueError, match="implausible"):
+        f.fetch("aifs", pd.Timestamp("2025-06-01"), 1, "oper")
+    cases_ = pd.DataFrame(
+        {
+            "case_id": ["a"],
+            "kind": ["event"],
+            "event_id": ["a"],
+            "valid_date": [pd.Timestamp("2025-06-01")],
+        }
+    )
+    path = tmp_path / "g.zarr"
+    res = store.fetch_shard(fc.MODELS["aifs"], cases_, f, path, (1,), 1, log_fn=lambda m: None)
+    assert res["n_error"] == 1 and res["n_ok"] == 0

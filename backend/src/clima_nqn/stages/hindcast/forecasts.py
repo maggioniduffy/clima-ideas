@@ -226,6 +226,25 @@ def to_target_grid(field: xr.DataArray) -> np.ndarray:
     return field.values.astype(np.float32)
 
 
+TP_UNIT_TO_MM = {"m": 1000.0, "kg m**-2": 1.0, "kg m-2": 1.0, "mm": 1.0}
+MAX_DAILY_BOX_MEAN_MM = 500.0  # sanity guard: a larger box mean is a unit/decoding bug
+
+
+def tp_mm(keys: dict, field: xr.DataArray) -> xr.DataArray:
+    """ECMWF ``tp`` in mm from the message's own ``units`` (m or kg m-2); unknown unit raises."""
+    unit = str(keys.get("units"))
+    if unit not in TP_UNIT_TO_MM:
+        raise ValueError(f"unknown tp unit {unit!r}; known: {sorted(TP_UNIT_TO_MM)}")
+    return field * TP_UNIT_TO_MM[unit]
+
+
+def check_box_mean(arr: np.ndarray, what: str) -> None:
+    """Raise when the box mean of a daily field exceeds ``MAX_DAILY_BOX_MEAN_MM`` (marks status 2)."""
+    mean = float(np.nanmean(arr))
+    if mean > MAX_DAILY_BOX_MEAN_MM:
+        raise ValueError(f"{what}: implausible daily box mean {mean:.0f} mm")
+
+
 def _margin_area() -> tuple[float, float, float, float]:
     n, w, s, e = AREA
     return n + MARGIN, w - MARGIN, s - MARGIN, e + MARGIN
@@ -315,6 +334,7 @@ class HttpFetcher:
                 )
             vals = to_target_grid(field)
             total = vals if total is None else total + vals
+        check_box_mean(total, f"gefs {init:%Y-%m-%d} {member} lead {lead}")
         return total
 
     def _tp(self, model: str, init: pd.Timestamp, step: int) -> np.ndarray | None:
@@ -332,8 +352,8 @@ class HttpFetcher:
             blob = self._get(base + ".grib2", (rng[0], rng[0] + rng[1] - 1))
             if blob is None:
                 return None
-            [(_, field)] = grib_fields(blob, _margin_area())
-            return to_target_grid(field * 1000.0)  # m -> mm
+            [(keys, field)] = grib_fields(blob, _margin_area())
+            return to_target_grid(tp_mm(keys, field))
         return None
 
     def _fetch_ecmwf(self, model: str, init: pd.Timestamp, lead: int) -> np.ndarray | None:
@@ -344,4 +364,6 @@ class HttpFetcher:
         prev = None if s0 == 0 else self._tp(model, init, s0)
         if s0 != 0 and prev is None:
             return None
-        return ecmwf_daily(prev, nxt)
+        out = ecmwf_daily(prev, nxt)
+        check_box_mean(out, f"{model} {init:%Y-%m-%d} lead {lead}")
+        return out
