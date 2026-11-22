@@ -185,3 +185,71 @@ def emit_riskday_cmd(
         raise typer.Exit(1) from e
     typer.echo(f"p_dia_riesgo: {len(recs)} predicciones desde {snap.name}")
     typer.echo(f"Cabeza del registro: {reg.verify()}")
+
+
+@forecast_app.command("promote")
+def promote_cmd(
+    status: Path = typer.Option(..., help="Registro de estados JSONL (status/outlook.jsonl)."),
+    region: str = typer.Option(..., help="Región."),
+    lead: list[int] = typer.Option(..., help="Anticipación GEFS (repetible, contiguas desde 1)."),
+    model_version: str = typer.Option(..., help="Versión congelada del modelo."),
+    approved_by: str = typer.Option(..., help="Quién aprueba la promoción (obligatorio)."),
+    approved_on: str = typer.Option(..., help="Fecha de aprobación AAAA-MM-DD (obligatorio)."),
+    scores: Path = typer.Option(..., help="scores/latest.json (forecast score)."),
+    season: int = typer.Option(..., help="Año de la temporada húmeda mayo–septiembre completada."),
+    f58: Path = typer.Option(Path("reports/05/F5.8.json"), help="Veredicto del hindcast."),
+    n_events_pooled: int = typer.Option(
+        None, help="Eventos independientes agrupados; por defecto el campo n_events_pooled de scores."
+    ),
+    variable: str = typer.Option(riskday_model.VAR_RISK),
+    model: str = typer.Option("logistica", help="Nombre del modelo en la tabla de skill."),
+) -> None:
+    """Promueve a «Perspectiva de riesgo» si pasa la compuerta. Solo manual: nunca corre en el workflow."""
+    import hashlib
+
+    from clima_nqn.forecast import status as st
+
+    payload = json.loads(scores.read_text(encoding="utf-8"))
+    raw = f58.read_bytes()
+    try:
+        done = st.promote(
+            st.StatusLog(status),
+            variable=variable,
+            region=region,
+            leads=lead,
+            model_version=model_version,
+            approved_by=approved_by,
+            approved_on=date.fromisoformat(approved_on),
+            f58=json.loads(raw),
+            f58_sha=hashlib.sha256(raw).hexdigest(),
+            score_rows=payload.get("table", []),
+            n_events_pooled=(
+                n_events_pooled if n_events_pooled is not None else payload.get("n_events_pooled")
+            ),
+            season=season,
+            model=model,
+        )
+    except st.PromotionRefused as e:
+        for r in e.reasons:
+            typer.echo(f"No se promueve: {r}", err=True)
+        raise typer.Exit(1) from e
+    typer.echo(f"{len(done)} anticipaciones promovidas en {region}: {[r['lead'] for r in done]}")
+
+
+@forecast_app.command("demote-auto")
+def demote_auto_cmd(
+    status: Path = typer.Option(..., help="Registro de estados JSONL."),
+    scores: Path = typer.Option(..., help="scores/latest.json (forecast score)."),
+    model_version: list[str] = typer.Option(..., help="Versión en uso (repetible)."),
+    season: int = typer.Option(None, help="Temporada evaluada (solo informativo)."),
+) -> None:
+    """Desciende a «Experimental» por BSS prospectivo < 0 o cambio de versión (arrastra las más largas)."""
+    from clima_nqn.forecast import status as st
+
+    payload = json.loads(scores.read_text(encoding="utf-8")) if scores.exists() else {}
+    done = st.demote_auto(
+        st.StatusLog(status), payload.get("table", []), set(model_version), season=season
+    )
+    for r in done:
+        typer.echo(f"{r['region']} anticipación {r['lead']}: {r['reason']}")
+    typer.echo(f"{len(done)} descensos")

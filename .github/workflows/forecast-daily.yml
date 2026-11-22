@@ -114,6 +114,14 @@ jobs:
             --era5t-regions "$STORE/operational/era5t_regions" \
             --registry "$STORE/registry/predictions.jsonl" --out "$STORE/scores/latest"
 
+      - name: Automatic demotion check (F6.8)
+        if: ${{ !cancelled() }}
+        run: |
+          # Only demotes ("Experimental"); promotions are manual (`forecast promote`, needs user approval).
+          [ -f "$STORE/scores/latest.json" ] || { echo "no scores yet"; exit 0; }
+          uv run clima-nqn forecast demote-auto --status "$STORE/status/outlook.jsonl" \
+            --scores "$STORE/scores/latest.json" --model-version riskday-log-v1-$(sha256sum models/riskday-logistic-v1.json | cut -c1-8)
+
       - name: Commit to the data branch (append, no force)
         if: ${{ !cancelled() }}
         run: |
