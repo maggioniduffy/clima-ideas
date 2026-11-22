@@ -1,4 +1,4 @@
-"""Zarr shards for the hindcast forecasts: build, resume, combine (F5.1).
+"""Zarr shards for the hindcast forecasts: build, resume, combine (F5.1, grid parametrizable since F5.3).
 
 A shard store holds ``precip_mm`` (case, lead, member, lat, lon) float32 for a strided subset of the
 model's cases, plus ``status`` (case, lead, member) int8: -1 pending, 0 ok, 1 not published (NaN),
@@ -34,7 +34,10 @@ def shard_path(out: Path, model: str, shard: int, n_shards: int) -> Path:
 
 
 def empty_store(
-    spec: fc.ModelSpec, cases: pd.DataFrame, leads: tuple[int, ...] = fc.LEADS
+    spec: fc.ModelSpec,
+    cases: pd.DataFrame,
+    leads: tuple[int, ...] = fc.LEADS,
+    grid: fc.Grid = fc.F51_GRID,
 ) -> xr.Dataset:
     """All-NaN, all-pending dataset for ``cases`` (columns of ``cases.parquet``)."""
     n, nl, nm = len(cases), len(leads), len(spec.members)
@@ -46,7 +49,7 @@ def empty_store(
         {
             "precip_mm": (
                 ("case", "lead", "member", "lat", "lon"),
-                np.full((n, nl, nm, len(fc.LAT), len(fc.LON)), np.nan, dtype=np.float32),
+                np.full((n, nl, nm, *grid.shape), np.nan, dtype=np.float32),
                 {"units": "mm", "long_name": "precipitation over the 24 h lead window"},
             ),
             "status": (
@@ -60,8 +63,8 @@ def empty_store(
             "case": cases["case_id"].astype(str).to_numpy(),
             "lead": np.array(leads, dtype=np.int8),
             "member": np.array(spec.members, dtype=str),
-            "lat": fc.LAT,
-            "lon": fc.LON,
+            "lat": grid.lat,
+            "lon": grid.lon,
             "valid_date": ("case", valid),
             "kind": ("case", cases["kind"].astype(str).to_numpy()),
             "event_id": ("case", cases["event_id"].fillna("").astype(str).to_numpy()),
@@ -70,7 +73,14 @@ def empty_store(
     return ds
 
 
-def model_attrs(spec: fc.ModelSpec, ds: xr.Dataset, **extra) -> dict:
+def store_grid(ds: xr.Dataset) -> fc.Grid:
+    """Grid of a store from its ``area`` attr (stores written before F5.3 have none: F5.1)."""
+    area = ds.attrs.get("area")
+    return fc.F51_GRID if area is None else fc.grid_from_area(area)
+
+
+def model_attrs(spec: fc.ModelSpec, ds: xr.Dataset, grid: fc.Grid | None = None, **extra) -> dict:
+    grid = grid or store_grid(ds)
     status = ds["status"].values
     return {
         "source": spec.source,
@@ -78,7 +88,9 @@ def model_attrs(spec: fc.ModelSpec, ds: xr.Dataset, **extra) -> dict:
         "period": spec.period,
         "model": spec.name,
         "lead_convention": fc.LEAD_CONVENTION,
-        "grid": "lat -41..-36, lon -71.5..-68, 0.25 deg, ascending, lon in -180..180",
+        "grid": grid.description,
+        "grid_name": grid.name,
+        "area": list(grid.area),  # N, W, S, E
         "notes": spec.notes,
         "created_by": CREATED_BY,
         "n_ok": int((status == fc.STATUS_OK).sum()),
@@ -113,6 +125,8 @@ def _same_layout(a: xr.Dataset, b: xr.Dataset) -> bool:
         list(a["case"].values) == list(b["case"].values)
         and list(a["lead"].values) == list(b["lead"].values)
         and list(a["member"].values) == list(b["member"].values)
+        and np.array_equal(a["lat"].values, b["lat"].values)
+        and np.array_equal(a["lon"].values, b["lon"].values)
     )
 
 
@@ -125,13 +139,14 @@ def fetch_shard(
     workers: int = 16,
     batch_cases: int = BATCH_CASES,
     log_fn: Callable[[str], None] = log.info,
+    grid: fc.Grid = fc.F51_GRID,
 ) -> dict:
     """Fetch every pending (case, lead, member) of ``cases`` into the shard store at ``path``.
 
     ``cases`` is this shard's slice (already eligible for the model). Existing finished entries
     are kept; entries with status error or pending are (re)fetched.
     """
-    ds = empty_store(spec, cases, leads)
+    ds = empty_store(spec, cases, leads, grid)
     if path.exists():
         old = read_store(path)
         if not _same_layout(old, ds):
@@ -181,12 +196,12 @@ def fetch_shard(
                 else:
                     precip[ci, li, mi] = arr
                     status[ci, li, mi] = fc.STATUS_OK
-            ds.attrs = model_attrs(spec, ds)
+            ds.attrs = model_attrs(spec, ds, grid)
             write_store(ds, path)
             log_fn(
                 f"{spec.name}: {b + len(batch)}/{len(todo)} cases, {time.monotonic() - t0:.0f} s"
             )
-    ds.attrs = model_attrs(spec, ds)
+    ds.attrs = model_attrs(spec, ds, grid)
     write_store(ds, path)
     return {
         "cases": len(cases),
@@ -215,11 +230,21 @@ def combine_shards(
     if have != set(range(1, n + 1)) and not allow_partial:
         raise ValueError(f"missing shards {sorted(set(range(1, n + 1)) - have)} of {n}")
     parts = [read_store(p) for p in found]
+    grid = store_grid(parts[0])
+    for p, part in zip(found, parts, strict=True):
+        if (
+            store_grid(part) != grid
+            or not np.array_equal(part["lat"].values, grid.lat)
+            or not np.array_equal(part["lon"].values, grid.lon)
+        ):
+            raise ValueError(
+                f"shards disagree on the grid: {p.name} is not {grid.name} {grid.area}"
+            )
     ds = xr.concat(parts, dim="case", data_vars="all", coords="minimal", compat="override")
     ds = ds.isel(case=np.lexsort((ds["case"].values, ds["valid_date"].values)))
     pending = int((ds["status"].values == fc.STATUS_PENDING).sum())
     if pending and not allow_partial:
         raise ValueError(f"{pending} entries are still pending; run fetch again or allow partial")
-    ds.attrs = model_attrs(spec, ds, n_shards=n, **({"run_id": run_id} if run_id else {}))
+    ds.attrs = model_attrs(spec, ds, grid, n_shards=n, **({"run_id": run_id} if run_id else {}))
     write_store(ds, out_path)
     return ds

@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -13,7 +14,7 @@ import typer
 from clima_nqn.stages.hindcast import cases as cases_mod
 from clima_nqn.stages.hindcast import forecasts as fc
 from clima_nqn.stages.hindcast import observe as observe_mod
-from clima_nqn.stages.hindcast import store
+from clima_nqn.stages.hindcast import riskday_cli, store
 from clima_nqn.stages.hindcast import verify as verify_mod
 
 hindcast_app = typer.Typer(help="Hindcast forecasts for AR events and control days (F5.1).")
@@ -24,6 +25,13 @@ def main() -> None:
     """Hindcast forecasts for AR events and control days (F5.1)."""
 
 
+def _grid(name: str) -> fc.Grid:
+    try:
+        return fc.get_grid(name)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+
 def _model(name: str) -> fc.ModelSpec:
     if name not in fc.MODELS:
         raise typer.BadParameter(f"model must be one of {', '.join(fc.MODELS)}")
@@ -32,11 +40,34 @@ def _model(name: str) -> fc.ModelSpec:
 
 @hindcast_app.command("cases")
 def make_cases(
-    events: Annotated[Path, typer.Option(help="F1.3 events.parquet.")],
+    events: Annotated[Path | None, typer.Option(help="F1.3 events.parquet.")] = None,
     out: Annotated[Path, typer.Option(help="Output cases.parquet.")] = Path("cases.parquet"),
     seed: Annotated[int, typer.Option(help="Seed for the control draw.")] = cases_mod.DEFAULT_SEED,
+    all_days: Annotated[
+        bool, typer.Option("--all-days", help="One case per day (F5.3) instead of events.")
+    ] = False,
+    first: Annotated[
+        datetime, typer.Option(help="--all-days: first valid day (UTC).", formats=["%Y-%m-%d"])
+    ] = datetime(2000, 1, 10),
+    last: Annotated[
+        datetime, typer.Option(help="--all-days: last valid day (UTC).", formats=["%Y-%m-%d"])
+    ] = datetime(2019, 12, 31),
 ) -> None:
-    """Event cases (day of IVT maximum) and seeded control days without AR events within 3 days."""
+    """Event cases (day of IVT maximum) and seeded controls, or with --all-days every day."""
+    if all_days:
+        if events is not None:
+            raise typer.BadParameter("--all-days takes no --events")
+        try:
+            cases = cases_mod.all_days_cases(first, last)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        counts = cases_mod.write_cases(
+            cases, out, 0, source="all-days", rule=cases_mod.ALL_DAYS_RULE
+        )
+        typer.echo(f"{out}: {counts}")
+        return
+    if events is None:
+        raise typer.BadParameter("--events is required unless --all-days")
     cases = cases_mod.build_cases(pd.read_parquet(events), seed)
     counts = cases_mod.write_cases(cases, out, seed, source=str(events))
     typer.echo(f"{out}: {counts}")
@@ -54,11 +85,18 @@ def fetch(
         int | None, typer.Option(help="Smoke test: only the first N cases.")
     ] = None,
     kind: Annotated[
-        str | None, typer.Option(help="Smoke test: only event or control cases.")
+        str | None, typer.Option(help="Smoke test: only event, control or all cases.")
     ] = None,
+    area: Annotated[str, typer.Option(help="Grid: f51 (default, F5.1) or wide (F5.3).")] = "f51",
+    batch_cases: Annotated[
+        int, typer.Option(help="Cases per atomic shard rewrite.")
+    ] = store.BATCH_CASES,
 ) -> None:
     """Fetch the model's forecasts for this shard's cases; resumes and skips finished cases."""
     spec = _model(model)
+    grid = _grid(area)
+    if batch_cases < 1:
+        raise typer.BadParameter("--batch-cases must be >= 1")
     try:
         i, n = fc.parse_shard(shard)
     except ValueError as exc:
@@ -70,9 +108,11 @@ def fetch(
     table = table.iloc[: max_cases if max_cases else None]
     mine = table.iloc[i - 1 :: n].reset_index(drop=True)
     logging.basicConfig(level=logging.WARNING)  # httpx logs every request at INFO
-    fetcher = fc.HttpFetcher()
+    fetcher = fc.HttpFetcher(grid=grid)
     path = store.shard_path(out, model, i, n)
-    res = store.fetch_shard(spec, mine, fetcher, path, lead_list, workers, log_fn=typer.echo)
+    res = store.fetch_shard(
+        spec, mine, fetcher, path, lead_list, workers, batch_cases, log_fn=typer.echo, grid=grid
+    )
     typer.echo(f"{path}: {res}; {fetcher.requests} requests, {fetcher.bytes / 1e6:.1f} MB")
     if res["n_error"]:
         typer.echo(f"WARNING: {res['n_error']} entries failed after retries; rerun to retry them")
@@ -98,25 +138,53 @@ def combine(
 
 @hindcast_app.command("observe")
 def observe(
-    cases: Annotated[Path, typer.Option(help="cases.parquet from `hindcast cases`.")],
     out: Annotated[Path, typer.Option(help="Output era5-obs.zarr.")],
+    cases: Annotated[Path | None, typer.Option(help="cases.parquet from `hindcast cases`.")] = None,
+    first: Annotated[
+        datetime | None, typer.Option(help="First date (with --last).", formats=["%Y-%m-%d"])
+    ] = None,
+    last: Annotated[
+        datetime | None, typer.Option(help="Last date, inclusive.", formats=["%Y-%m-%d"])
+    ] = None,
+    area: Annotated[str, typer.Option(help="Grid: f51 (default, F5.1) or wide (F5.3).")] = "f51",
+    variables: Annotated[
+        str, typer.Option(help="Comma-separated: tp (precip_mm), cp (cp_mm).")
+    ] = "tp",
     workers: Annotated[int, typer.Option(help="Threads for ERA5 chunk reads.")] = 64,
     max_days: Annotated[
         int | None, typer.Option(help="Smoke test: only the first N dates.")
     ] = None,
     csv: Annotated[Path | None, typer.Option(help="Also write date,box_mean_mm here.")] = None,
 ) -> None:
-    """ERA5 daily precipitation (mm) for the valid dates inside any model's period (F5.2)."""
-    dates = observe_mod.eligible_dates(cases_mod.read_cases(cases))
+    """ERA5 daily precipitation (mm) for the dates of --cases (inside any model period) or --first/--last."""
+    grid = _grid(area)
+    codes = [v.strip() for v in variables.split(",") if v.strip()]
+    bad = [c for c in codes if c not in observe_mod.OBS_VARIABLES]
+    if bad or not codes:
+        raise typer.BadParameter(f"--variables must be among {sorted(observe_mod.OBS_VARIABLES)}")
+    if (cases is None) == (first is None and last is None):
+        raise typer.BadParameter("give exactly one of --cases or --first/--last")
+    if cases is not None:
+        dates = observe_mod.eligible_dates(cases_mod.read_cases(cases))
+    else:
+        if first is None or last is None:
+            raise typer.BadParameter("--first and --last go together")
+        if last < first:
+            raise typer.BadParameter("--last is before --first")
+        dates = list(pd.date_range(first, last, freq="D"))
     if max_days:
         dates = dates[:max_days]
     typer.echo(f"{len(dates)} dates")
-    ds = observe_mod.observed_days(dates, workers=workers, log_fn=typer.echo)
+    ds = observe_mod.observed_days(
+        dates, workers=workers, log_fn=typer.echo, grid=grid, variables=codes
+    )
     observe_mod.write_obs(ds, out)
     if csv:
-        box = verify_mod.box_mean(ds["precip_mm"]).to_series()
+        frame = pd.DataFrame({"box_mean_mm": verify_mod.box_mean(ds["precip_mm"]).to_series()})
+        if "cp_mm" in ds:
+            frame["box_mean_cp_mm"] = verify_mod.box_mean(ds["cp_mm"]).to_series()
         csv.parent.mkdir(parents=True, exist_ok=True)
-        box.rename("box_mean_mm").rename_axis("date").round(4).to_csv(csv)
+        frame.rename_axis("date").round(4).to_csv(csv)
     typer.echo(f"{out}: {dict(ds.sizes)}; era5t={ds.attrs['era5t']}")
 
 
@@ -185,3 +253,6 @@ def verify(
     (out / "F5.2.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
     (out / "F5.2.md").write_text(verify_mod.render_md(df, horizons, meta))
     typer.echo(f"{out / 'F5.2.md'}: {len(df)} records")
+
+
+hindcast_app.command("riskday")(riskday_cli.riskday)

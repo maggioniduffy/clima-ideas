@@ -10,6 +10,8 @@ day drawn uniformly from the days of the same calendar month inside the pool yea
 - are not an event-case day and not an earlier control (no duplicates),
 - fall inside the pool period.
 The draw is seeded, so the table is reproducible.
+
+All-days table (F5.3): ``all_days_cases`` gives one case per valid day, ``kind="all"``.
 """
 
 from __future__ import annotations
@@ -47,6 +49,34 @@ RULE = (
     "not repeated. Pools: "
     + ", ".join(f"{p.name} ({p.first:%Y-%m-%d}..{p.last:%Y-%m-%d})" for p in POOLS)
 )
+
+
+ALL_DAYS_FIRST = pd.Timestamp("2000-01-10")  # first day whose lead-10 init (2000-01-01) exists
+ALL_DAYS_LAST = pd.Timestamp("2019-12-31")
+ALL_DAYS_RULE = (
+    "all-days table: one case per UTC valid day, kind 'all' (no events, no controls); "
+    "default period 2000-01-10..2019-12-31, the days of GEFS reforecast whose lead 1..10 inits "
+    "(valid - (L-1)) all lie in 2000-01-01..2019-12-31"
+)
+
+
+def all_days_cases(first=ALL_DAYS_FIRST, last=ALL_DAYS_LAST) -> pd.DataFrame:
+    """One case per UTC day in ``first..last`` (inclusive), same columns as ``build_cases``."""
+    first, last = pd.Timestamp(first).normalize(), pd.Timestamp(last).normalize()
+    if last < first:
+        raise ValueError(f"last {last:%Y-%m-%d} is before first {first:%Y-%m-%d}")
+    days = pd.date_range(first, last, freq="D")
+    out = pd.DataFrame(
+        {
+            "case_id": [f"ALL-{d:%Y%m%d}" for d in days],
+            "kind": "all",
+            "event_id": None,
+            "valid_date": days.astype("datetime64[ns]"),
+            "ivt_max": np.nan,
+        }
+    )
+    out["month"] = out["valid_date"].dt.month.astype("int8")
+    return out[COLUMNS]
 
 
 def forbidden_days(events: pd.DataFrame, guard_days: int = GUARD_DAYS) -> set[pd.Timestamp]:
@@ -121,17 +151,21 @@ def case_counts(cases: pd.DataFrame, pools: tuple[Pool, ...] = POOLS) -> dict:
         "events": int((cases["kind"] == "event").sum()),
         "controls": int((cases["kind"] == "control").sum()),
     }
+    if (cases["kind"] == "all").any():
+        counts["all"] = int((cases["kind"] == "all").sum())
     for pool in pools:
         sel = cases[(cases["valid_date"] >= pool.first) & (cases["valid_date"] <= pool.last)]
         counts[pool.name] = {k: int((sel["kind"] == k).sum()) for k in ("event", "control")}
     return counts
 
 
-def write_cases(cases: pd.DataFrame, path: Path, seed: int, source: str = "") -> dict:
+def write_cases(
+    cases: pd.DataFrame, path: Path, seed: int, source: str = "", rule: str = RULE
+) -> dict:
     counts = case_counts(cases)
     table = pa.Table.from_pandas(cases, preserve_index=False)
     meta = {
-        b"rule": RULE.encode(),
+        b"rule": rule.encode(),
         b"seed": str(seed).encode(),
         b"counts": json.dumps(counts).encode(),
         b"events_source": source.encode(),

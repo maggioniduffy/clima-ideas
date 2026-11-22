@@ -33,9 +33,61 @@ from clima_nqn.io.grib import grib_fields
 log = logging.getLogger(__name__)
 
 LEADS = tuple(range(1, 11))
-AREA = (-36.0, -71.5, -41.0, -68.0)  # N, W, S, E (``grib_fields`` order)
-LAT = np.round(np.arange(-41.0, -36.0 + 1e-6, 0.25), 4)  # ascending
-LON = np.round(np.arange(-71.5, -68.0 + 1e-6, 0.25), 4)  # ascending, -180..180
+STEP = 0.25  # grid spacing of every hindcast grid (deg)
+F51_AREA = (-36.0, -71.5, -41.0, -68.0)  # N, W, S, E (``grib_fields`` order); F5.1 default
+WIDE_AREA = (-36.0, -72.0, -41.25, -67.5)  # F5.3: whole province + Confluencia (22 x 19)
+
+
+@dataclass(frozen=True)
+class Grid:
+    """A regular 0.25 deg lat/lon grid given by its area ``(N, W, S, E)``; ascending, -180..180."""
+
+    name: str
+    area: tuple[float, float, float, float]
+
+    @property
+    def lat(self) -> np.ndarray:
+        n, _, s, _ = self.area
+        return np.round(np.arange(s, n + 1e-6, STEP), 4)
+
+    @property
+    def lon(self) -> np.ndarray:
+        _, w, _, e = self.area
+        return np.round(np.arange(w, e + 1e-6, STEP), 4)
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        return len(self.lat), len(self.lon)
+
+    @property
+    def description(self) -> str:
+        n, w, s, e = self.area
+        return f"lat {s:g}..{n:g}, lon {w:g}..{e:g}, 0.25 deg, ascending, lon in -180..180"
+
+
+F51_GRID = Grid("f51", F51_AREA)
+WIDE_GRID = Grid("wide", WIDE_AREA)
+GRIDS = {g.name: g for g in (F51_GRID, WIDE_GRID)}
+
+
+def get_grid(name: str) -> Grid:
+    if name not in GRIDS:
+        raise ValueError(f"area must be one of {', '.join(GRIDS)}, got {name!r}")
+    return GRIDS[name]
+
+
+def grid_from_area(area) -> Grid:
+    """The named grid with this area, else a ``custom`` one."""
+    area = tuple(float(x) for x in area)
+    for g in GRIDS.values():
+        if g.area == area:
+            return g
+    return Grid("custom", area)  # type: ignore[arg-type]
+
+
+AREA = F51_AREA  # F5.1 defaults, kept for existing callers
+LAT = F51_GRID.lat
+LON = F51_GRID.lon
 MARGIN = 0.5  # extra degrees decoded around AREA so that regridding has neighbours
 GEFS_BASE = "https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast"
 ECMWF_BASE = "https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com"
@@ -216,13 +268,14 @@ def tp_range(index_text: str, step: int) -> tuple[int, int] | None:
     return None
 
 
-def to_target_grid(field: xr.DataArray) -> np.ndarray:
-    """Values on the fixed (LAT, LON) grid: plain selection if the grid matches, else bilinear."""
+def to_target_grid(field: xr.DataArray, grid: Grid = F51_GRID) -> np.ndarray:
+    """Values on ``grid`` (default F5.1): plain selection if the grid matches, else bilinear."""
+    tlat, tlon = grid.lat, grid.lon
     lat, lon = np.round(field["lat"].values, 4), np.round(field["lon"].values, 4)
-    if np.isin(LAT, lat).all() and np.isin(LON, lon).all():
-        field = field.assign_coords(lat=lat, lon=lon).sel(lat=LAT, lon=LON)
+    if np.isin(tlat, lat).all() and np.isin(tlon, lon).all():
+        field = field.assign_coords(lat=lat, lon=lon).sel(lat=tlat, lon=tlon)
     else:
-        field = field.interp(lat=LAT, lon=LON, method="linear")
+        field = field.interp(lat=tlat, lon=tlon, method="linear")
     return field.values.astype(np.float32)
 
 
@@ -245,8 +298,8 @@ def check_box_mean(arr: np.ndarray, what: str) -> None:
         raise ValueError(f"{what}: implausible daily box mean {mean:.0f} mm")
 
 
-def _margin_area() -> tuple[float, float, float, float]:
-    n, w, s, e = AREA
+def _margin_area(area: tuple[float, float, float, float] = AREA) -> tuple[float, ...]:
+    n, w, s, e = area
     return n + MARGIN, w - MARGIN, s - MARGIN, e + MARGIN
 
 
@@ -258,7 +311,10 @@ class FetchError(Exception):
 
 
 class Fetcher(Protocol):
-    """``fetch`` returns mm on the (LAT, LON) grid, ``None`` when not published; may raise FetchError."""
+    """``fetch`` returns mm on the fetcher's grid (default F5.1), ``None`` if not published.
+
+    May raise FetchError.
+    """
 
     def fetch(
         self, model: str, init: pd.Timestamp, lead: int, member: str
@@ -269,8 +325,14 @@ class HttpFetcher:
     """Anonymous HTTPS byte-range reads; thread safe; counts requests and bytes."""
 
     def __init__(
-        self, retries: int = 5, backoff: float = 1.0, timeout: float = 60.0, sleep=time.sleep
+        self,
+        retries: int = 5,
+        backoff: float = 1.0,
+        timeout: float = 60.0,
+        sleep=time.sleep,
+        grid: Grid = F51_GRID,
     ):
+        self.grid = grid
         self.client = httpx.Client(timeout=timeout, follow_redirects=True)
         self.retries, self.backoff, self._sleep = retries, backoff, sleep
         self._lock = threading.Lock()
@@ -327,12 +389,12 @@ class HttpFetcher:
             blob = self._get(url, (msg.start, msg.end))
             if blob is None:
                 return None
-            [(keys, field)] = grib_fields(blob, _margin_area())
+            [(keys, field)] = grib_fields(blob, _margin_area(self.grid.area))
             if keys["stepRange"] != f"{msg.start_h}-{msg.end_h}":
                 raise RuntimeError(
                     f"{url}: want {msg.start_h}-{msg.end_h}, got {keys['stepRange']}"
                 )
-            vals = to_target_grid(field)
+            vals = to_target_grid(field, self.grid)
             total = vals if total is None else total + vals
         check_box_mean(total, f"gefs {init:%Y-%m-%d} {member} lead {lead}")
         return total
@@ -352,8 +414,8 @@ class HttpFetcher:
             blob = self._get(base + ".grib2", (rng[0], rng[0] + rng[1] - 1))
             if blob is None:
                 return None
-            [(keys, field)] = grib_fields(blob, _margin_area())
-            return to_target_grid(tp_mm(keys, field))
+            [(keys, field)] = grib_fields(blob, _margin_area(self.grid.area))
+            return to_target_grid(tp_mm(keys, field), self.grid)
         return None
 
     def _fetch_ecmwf(self, model: str, init: pd.Timestamp, lead: int) -> np.ndarray | None:
