@@ -61,6 +61,10 @@ Nada de k-fold aleatorio: días vecinos y meses de un mismo año ENSO filtran in
 - Unit: ninguna fecha de test, separación incluida, aparece en el entrenamiento de su partición, y ninguna entrada
   tiene fecha de disponibilidad posterior a la de emisión.
 
+Nota F6.9 (2026-11-22): F5.10 muestra que el IVT pronosticado (GEFS c00) conserva acierto 1–2 días más que la
+lluvia (hasta 6–8 días), pero no gradúa la intensidad dentro de los eventos: usarlo como predictor de llegada,
+junto con la lluvia pronosticada (`reports/05/F5.10.md`).
+
 ## Compuerta de evidencia (perspectiva de riesgo)
 
 Decidida el 2026-11-12 (consulta al advisor en `odd/tasks/risk-outlook-rule.md`). Se aplica por variable, por

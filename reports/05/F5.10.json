@@ -1,0 +1,2158 @@
+{
+ "records": [
+  {
+   "variable": "all",
+   "lead": 1,
+   "kind": "all",
+   "metric": "n",
+   "value": 404.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 1,
+   "kind": "event",
+   "metric": "n",
+   "value": 202.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 1,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 332.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 1,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9758847171845898,
+   "lo": 0.9638128002670677,
+   "hi": 0.9875015628861918,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 1,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9792145538524115,
+   "lo": 0.9717643918863644,
+   "hi": 0.9828467382974149,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 1,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.9220599026276556,
+   "lo": 0.889398261691287,
+   "hi": 0.9443545084538085,
+   "n": 202
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 1,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.7367802249448466,
+   "lo": 0.707362021575731,
+   "hi": 0.7646558568080777,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 1,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9757376727771787,
+   "lo": 0.9629624992282998,
+   "hi": 0.9867722411212417,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 1,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.991329782466568,
+   "lo": 0.9882754988118905,
+   "hi": 0.9925807201290618,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 1,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.9687965896384644,
+   "lo": 0.9532014672849872,
+   "hi": 0.9769959441618428,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 1,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.8287494637074998,
+   "lo": 0.8096464297368836,
+   "hi": 0.8453818887860043,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 1,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.8122487991373395,
+   "lo": 0.7646418316431821,
+   "hi": 0.8542728503599927,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 1,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.976427660838496,
+   "lo": 0.96718928223696,
+   "hi": 0.9831167885707263,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 1,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.975074543421543,
+   "lo": 0.9604637745215545,
+   "hi": 0.9823759148598425,
+   "n": 202
+  },
+  {
+   "variable": "precip",
+   "lead": 1,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.7378802400516624,
+   "lo": 0.7043752267078954,
+   "hi": 0.7702023009233689,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 1,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.1636359180472503,
+   "lo": 0.12475115977304317,
+   "hi": 0.2083086518967741,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 1,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.002786893013915548,
+   "lo": -0.007190792121362699,
+   "hi": 0.012237809401389401,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 1,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.0530146407938874,
+   "lo": -0.08580938646153434,
+   "hi": -0.025389478169227493,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 1,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.16348887363983922,
+   "lo": 0.125592523459181,
+   "hi": 0.2052310414406376,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 1,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.01490212162807203,
+   "lo": 0.007253737337336577,
+   "hi": 0.023722583707061644,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 1,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.006277953783078605,
+   "lo": -0.021629897515480705,
+   "hi": 0.010097745908469229,
+   "n": 202
+  },
+  {
+   "variable": "all",
+   "lead": 2,
+   "kind": "all",
+   "metric": "n",
+   "value": 404.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 2,
+   "kind": "event",
+   "metric": "n",
+   "value": 202.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 2,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 332.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 2,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9766444466228801,
+   "lo": 0.9635728315461926,
+   "hi": 0.9886001831014598,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 2,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9700835456134118,
+   "lo": 0.9607573223668742,
+   "hi": 0.9754662705970827,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 2,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.8903571095788296,
+   "lo": 0.8473741412634656,
+   "hi": 0.9198477689088858,
+   "n": 202
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 2,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.6838282389905916,
+   "lo": 0.6473955192850476,
+   "hi": 0.7165840544789719,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 2,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9735565140672483,
+   "lo": 0.9602963761321515,
+   "hi": 0.9857510121370024,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 2,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9830038840543577,
+   "lo": 0.977607549444361,
+   "hi": 0.9858303550879848,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 2,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.9380386926947447,
+   "lo": 0.9139535574155433,
+   "hi": 0.9530012459979494,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 2,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.7570222583567224,
+   "lo": 0.7291650154353907,
+   "hi": 0.7792210239348596,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 2,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7969316733653563,
+   "lo": 0.7469229557391792,
+   "hi": 0.841355342245045,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 2,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9683100395522194,
+   "lo": 0.9593966505807741,
+   "hi": 0.9740529948393443,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 2,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.9707300596347372,
+   "lo": 0.9580853119508687,
+   "hi": 0.9766219419996233,
+   "n": 202
+  },
+  {
+   "variable": "precip",
+   "lead": 2,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.6784009100801734,
+   "lo": 0.6418935405274985,
+   "hi": 0.7136152748045679,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 2,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.17971277325752377,
+   "lo": 0.1371149900946037,
+   "hi": 0.2267270220317075,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 2,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.0017735060611924203,
+   "lo": -0.009004544131410205,
+   "hi": 0.01228957029401951,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 2,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.08037295005590761,
+   "lo": -0.12302306560592005,
+   "hi": -0.048677354442972054,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 2,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.176624840701892,
+   "lo": 0.13550135497306898,
+   "hi": 0.22171442417749862,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 2,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.014693844502138287,
+   "lo": 0.006721326939648891,
+   "hi": 0.023841472829136554,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 2,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.03269136693999253,
+   "lo": -0.056205466971865944,
+   "hi": -0.013955933581412538,
+   "n": 202
+  },
+  {
+   "variable": "all",
+   "lead": 3,
+   "kind": "all",
+   "metric": "n",
+   "value": 404.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 3,
+   "kind": "event",
+   "metric": "n",
+   "value": 202.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 3,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 332.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 3,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9735565140672483,
+   "lo": 0.9603814445358563,
+   "hi": 0.9857549786739651,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 3,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.95664909431969,
+   "lo": 0.9441961079815827,
+   "hi": 0.9641155896950016,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 3,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.8480566297055535,
+   "lo": 0.7926965079889743,
+   "hi": 0.8895867977840234,
+   "n": 202
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 3,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.6231754794557319,
+   "lo": 0.580213305260353,
+   "hi": 0.6610276277138644,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 3,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9712528183511421,
+   "lo": 0.9565534707108151,
+   "hi": 0.983818253852649,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 3,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9701219448388758,
+   "lo": 0.959760055739909,
+   "hi": 0.9758999265739413,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 3,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.8783180558143868,
+   "lo": 0.8321543554958446,
+   "hi": 0.9127890505686058,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 3,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.687275251926672,
+   "lo": 0.6513558675921675,
+   "hi": 0.7201047378151701,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 3,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7935619056955201,
+   "lo": 0.7447985744759084,
+   "hi": 0.839253158923595,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 3,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9527005764242933,
+   "lo": 0.9393125002991782,
+   "hi": 0.9617982471183013,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 3,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.9429888417815877,
+   "lo": 0.9209053341182128,
+   "hi": 0.9549238935959347,
+   "n": 202
+  },
+  {
+   "variable": "precip",
+   "lead": 3,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.6109274408153524,
+   "lo": 0.5645589532577485,
+   "hi": 0.6552049424472309,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 3,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.1799946083717282,
+   "lo": 0.13827514719822281,
+   "hi": 0.22589063561622946,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 3,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.0039485178953967415,
+   "lo": -0.009104187959453178,
+   "hi": 0.016644892348416873,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 3,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.0949322120760342,
+   "lo": -0.14788829132315862,
+   "hi": -0.05089591245472179,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 3,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.17769091265562198,
+   "lo": 0.13789754779526542,
+   "hi": 0.22167208020009632,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 3,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.017421368414582528,
+   "lo": 0.005549030846943112,
+   "hi": 0.030272897145987476,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 3,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.06467078596720088,
+   "lo": -0.10900519482587141,
+   "hi": -0.02643326000150329,
+   "n": 202
+  },
+  {
+   "variable": "all",
+   "lead": 4,
+   "kind": "all",
+   "metric": "n",
+   "value": 403.0,
+   "lo": null,
+   "hi": null,
+   "n": 403
+  },
+  {
+   "variable": "all",
+   "lead": 4,
+   "kind": "event",
+   "metric": "n",
+   "value": 201.0,
+   "lo": null,
+   "hi": null,
+   "n": 403
+  },
+  {
+   "variable": "all",
+   "lead": 4,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 331.0,
+   "lo": null,
+   "hi": null,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 4,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9642135855376582,
+   "lo": 0.9482082028001619,
+   "hi": 0.9789483368076621,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 4,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9320662913045258,
+   "lo": 0.9159274972858289,
+   "hi": 0.9427239739847044,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 4,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.7601882672833873,
+   "lo": 0.6863719783899435,
+   "hi": 0.8177771761373526,
+   "n": 201
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 4,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.5126646907580114,
+   "lo": 0.4585903768553494,
+   "hi": 0.5625551274414075,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 4,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.966405595783459,
+   "lo": 0.9491182129535938,
+   "hi": 0.98095683792402,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 4,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9384089269195232,
+   "lo": 0.9209492925031404,
+   "hi": 0.9502455952147484,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 4,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.7523738450341549,
+   "lo": 0.6666067430505754,
+   "hi": 0.8178129686958476,
+   "n": 201
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 4,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.5444314055618977,
+   "lo": 0.4874491093678016,
+   "hi": 0.5924159742214702,
+   "n": 403
+  },
+  {
+   "variable": "precip",
+   "lead": 4,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7938278902517117,
+   "lo": 0.7453966957456388,
+   "hi": 0.8386055548869191,
+   "n": 403
+  },
+  {
+   "variable": "precip",
+   "lead": 4,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9124404299146159,
+   "lo": 0.8880561332650743,
+   "hi": 0.931431086421058,
+   "n": 403
+  },
+  {
+   "variable": "precip",
+   "lead": 4,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.8825778440802601,
+   "lo": 0.8348958209370426,
+   "hi": 0.9152830437026752,
+   "n": 201
+  },
+  {
+   "variable": "precip",
+   "lead": 4,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.47102135557064073,
+   "lo": 0.40398416955113664,
+   "hi": 0.5323770446273309,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 4,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.1703856952859465,
+   "lo": 0.12950201994119828,
+   "hi": 0.213159176654432,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 4,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.01962586138990985,
+   "lo": -0.003156235199658366,
+   "hi": 0.04411123466615944,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 4,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.12238957679687279,
+   "lo": -0.19290650477893434,
+   "hi": -0.06404021194299095,
+   "n": 201
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 4,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.17257770553174723,
+   "lo": 0.13221711930467284,
+   "hi": 0.21534782934656846,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 4,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.02596849700490722,
+   "lo": 0.004195257873808889,
+   "hi": 0.05136922188275967,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 4,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.13020399904610513,
+   "lo": -0.20763526171650745,
+   "hi": -0.06635858358798212,
+   "n": 201
+  },
+  {
+   "variable": "all",
+   "lead": 5,
+   "kind": "all",
+   "metric": "n",
+   "value": 403.0,
+   "lo": null,
+   "hi": null,
+   "n": 403
+  },
+  {
+   "variable": "all",
+   "lead": 5,
+   "kind": "event",
+   "metric": "n",
+   "value": 202.0,
+   "lo": null,
+   "hi": null,
+   "n": 403
+  },
+  {
+   "variable": "all",
+   "lead": 5,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 331.0,
+   "lo": null,
+   "hi": null,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 5,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9521944731786611,
+   "lo": 0.9303941360128822,
+   "hi": 0.9707614347822756,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 5,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.8929366261721816,
+   "lo": 0.8673029007167712,
+   "hi": 0.913699537355137,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 5,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.6362790602869921,
+   "lo": 0.5321532260142592,
+   "hi": 0.7162347965734464,
+   "n": 202
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 5,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.40535068436715593,
+   "lo": 0.34062307975074524,
+   "hi": 0.46963856579244645,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 5,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9538200088665583,
+   "lo": 0.9337154907080751,
+   "hi": 0.9710670447439251,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 5,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.9079811803730317,
+   "lo": 0.8815219893807957,
+   "hi": 0.9259373130287663,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 5,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.6713668817554976,
+   "lo": 0.5699459786587942,
+   "hi": 0.7552634223721271,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 5,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.4649040615401031,
+   "lo": 0.39090600377172324,
+   "hi": 0.5278490374937429,
+   "n": 403
+  },
+  {
+   "variable": "precip",
+   "lead": 5,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7730899955667209,
+   "lo": 0.7233521259992034,
+   "hi": 0.8184042930398429,
+   "n": 403
+  },
+  {
+   "variable": "precip",
+   "lead": 5,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.8687399398910715,
+   "lo": 0.834026484178942,
+   "hi": 0.8946802569287771,
+   "n": 403
+  },
+  {
+   "variable": "precip",
+   "lead": 5,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.8108810100633619,
+   "lo": 0.7476850671163061,
+   "hi": 0.8559951227258707,
+   "n": 202
+  },
+  {
+   "variable": "precip",
+   "lead": 5,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.3319037310255084,
+   "lo": 0.24569126715504078,
+   "hi": 0.40606695911337026,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 5,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.17910447761194026,
+   "lo": 0.13854565583281825,
+   "hi": 0.2249340806242633,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 5,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.024196686281110158,
+   "lo": -0.006810270078506611,
+   "hi": 0.05858414111572963,
+   "n": 403
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 5,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.17460194977636978,
+   "lo": -0.275992007534787,
+   "hi": -0.08002732534544345,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 5,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.1807300132998374,
+   "lo": 0.1421061035854099,
+   "hi": 0.22378747430555687,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 5,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.039241240481960205,
+   "lo": 0.012668430033806266,
+   "hi": 0.07034582396935112,
+   "n": 403
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 5,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.13951412830786425,
+   "lo": -0.2368550946141457,
+   "hi": -0.044262830172213954,
+   "n": 202
+  },
+  {
+   "variable": "all",
+   "lead": 6,
+   "kind": "all",
+   "metric": "n",
+   "value": 404.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 6,
+   "kind": "event",
+   "metric": "n",
+   "value": 202.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 6,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 332.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 6,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9267963925105381,
+   "lo": 0.9011765724844486,
+   "hi": 0.9494704022631245,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 6,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.8422219502529845,
+   "lo": 0.8049046001116648,
+   "hi": 0.870024670291476,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 6,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.5837143006895267,
+   "lo": 0.48396345650666966,
+   "hi": 0.6695488125045376,
+   "n": 202
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 6,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.27048004946402615,
+   "lo": 0.19109776528043748,
+   "hi": 0.34269818352369363,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 6,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.9285609253994707,
+   "lo": 0.9033698314184786,
+   "hi": 0.9514592427507654,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 6,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.860733652689925,
+   "lo": 0.8228830200448798,
+   "hi": 0.8900923337437624,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 6,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.6251586959560193,
+   "lo": 0.5222045153024806,
+   "hi": 0.7054548641673963,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 6,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.3257055971420786,
+   "lo": 0.24354267054110518,
+   "hi": 0.3992355054843578,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 6,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7428315851387118,
+   "lo": 0.6894811488707341,
+   "hi": 0.7913652463599262,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 6,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.7862468603890054,
+   "lo": 0.7374436713395555,
+   "hi": 0.8274477200824765,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 6,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.7239340887409662,
+   "lo": 0.6320583110040319,
+   "hi": 0.7925515128969605,
+   "n": 202
+  },
+  {
+   "variable": "precip",
+   "lead": 6,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.16549253257634056,
+   "lo": 0.06820219153866833,
+   "hi": 0.2548605555007739,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 6,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.1839648073718263,
+   "lo": 0.13962049513795513,
+   "hi": 0.23576049295148832,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 6,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.055975089863979144,
+   "lo": 0.010976692534225885,
+   "hi": 0.10431932040276574,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 6,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.14021978805143953,
+   "lo": -0.25589310042417074,
+   "hi": -0.01700171591319278,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 6,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.18572934026075882,
+   "lo": 0.14250791666049636,
+   "hi": 0.2323748441173474,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 6,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.07448679230091959,
+   "lo": 0.032378192860811415,
+   "hi": 0.11888473857585834,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 6,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.09877539278494696,
+   "lo": -0.20481037641123206,
+   "hi": 0.0035396135041329737,
+   "n": 202
+  },
+  {
+   "variable": "all",
+   "lead": 7,
+   "kind": "all",
+   "metric": "n",
+   "value": 404.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 7,
+   "kind": "event",
+   "metric": "n",
+   "value": 202.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 7,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 332.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 7,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.881727281639055,
+   "lo": 0.8440468428661992,
+   "hi": 0.9165916746454154,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 7,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.7661716472676269,
+   "lo": 0.712056631873655,
+   "hi": 0.8120056844212659,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 7,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.4279724189340291,
+   "lo": 0.3062577959887524,
+   "hi": 0.5403081094854955,
+   "n": 202
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 7,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.09966955737613181,
+   "lo": -0.00019914424780741413,
+   "hi": 0.19476261971633496,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 7,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.8763846681697873,
+   "lo": 0.8387555253518805,
+   "hi": 0.91090555269954,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 7,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.7815404367957395,
+   "lo": 0.7317747435379627,
+   "hi": 0.8234751425877264,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 7,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.4701389535967201,
+   "lo": 0.349368156730722,
+   "hi": 0.5722459111818556,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 7,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": 0.1423538452229134,
+   "lo": 0.05128763317970903,
+   "hi": 0.2318803950051837,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 7,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7032766395451426,
+   "lo": 0.6465288009074402,
+   "hi": 0.7570606321099342,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 7,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.6911550597396532,
+   "lo": 0.6238931944595301,
+   "hi": 0.7465938709269235,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 7,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.6158903275959472,
+   "lo": 0.517187038610299,
+   "hi": 0.692038562549472,
+   "n": 202
+  },
+  {
+   "variable": "precip",
+   "lead": 7,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.02310314809158065,
+   "lo": -0.1366422341728177,
+   "hi": 0.08038178822462588,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 7,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.17845064209391237,
+   "lo": 0.12955672604696253,
+   "hi": 0.22840713560185333,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 7,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.07501658752797369,
+   "lo": 0.01192153450439706,
+   "hi": 0.1479231846083292,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 7,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.1879179086619181,
+   "lo": -0.3236311597946347,
+   "hi": -0.03709044291967104,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 7,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.1731080286246447,
+   "lo": 0.12808739051977905,
+   "hi": 0.21994254805755425,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 7,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.09038537705608629,
+   "lo": 0.03590001350986888,
+   "hi": 0.15355298095043038,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 7,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.1457513739992271,
+   "lo": -0.2668776607896042,
+   "hi": -0.017782328723896956,
+   "n": 202
+  },
+  {
+   "variable": "all",
+   "lead": 8,
+   "kind": "all",
+   "metric": "n",
+   "value": 404.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 8,
+   "kind": "event",
+   "metric": "n",
+   "value": 202.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 8,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 332.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 8,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.8475149495147535,
+   "lo": 0.8091151627087476,
+   "hi": 0.8852567518634945,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 8,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.6711315623889597,
+   "lo": 0.6089773244404374,
+   "hi": 0.7267082708416767,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 8,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.3704778932165486,
+   "lo": 0.2244991601527588,
+   "hi": 0.502145050410263,
+   "n": 202
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 8,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.061973347115804156,
+   "lo": -0.17070277791961175,
+   "hi": 0.03815476460885962,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 8,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.8558964807371826,
+   "lo": 0.8180980119644692,
+   "hi": 0.892527794112449,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 8,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.6687317017908873,
+   "lo": 0.6025235191218937,
+   "hi": 0.7257905190329619,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 8,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.3005220951360417,
+   "lo": 0.15360786366002727,
+   "hi": 0.43250333108622624,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 8,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.04473828243540279,
+   "lo": -0.15750367313665042,
+   "hi": 0.060328317837873645,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 8,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.6865748456033722,
+   "lo": 0.6345491705841033,
+   "hi": 0.7413912757030715,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 8,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.5741177752533642,
+   "lo": 0.5015174282655414,
+   "hi": 0.6385427426669296,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 8,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.44301341256297094,
+   "lo": 0.31253447527000155,
+   "hi": 0.5443836889191744,
+   "n": 202
+  },
+  {
+   "variable": "precip",
+   "lead": 8,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.23300431008714328,
+   "lo": -0.35065114516439977,
+   "hi": -0.12641965212700143,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 8,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.16094010391138125,
+   "lo": 0.10487686592791969,
+   "hi": 0.21709496906552314,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 8,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.0970137871355955,
+   "lo": 0.017934177724658766,
+   "hi": 0.1781474127228669,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 8,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.07253551934642233,
+   "lo": -0.24011771971498858,
+   "hi": 0.11066641296974958,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 8,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.16932163513381038,
+   "lo": 0.1171414665707216,
+   "hi": 0.2240198491010648,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 8,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.0946139265375231,
+   "lo": 0.01195282613293593,
+   "hi": 0.1729546796980454,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 8,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.14249131742692922,
+   "lo": -0.2976720504084846,
+   "hi": 0.02213716526626264,
+   "n": 202
+  },
+  {
+   "variable": "all",
+   "lead": 9,
+   "kind": "all",
+   "metric": "n",
+   "value": 404.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 9,
+   "kind": "event",
+   "metric": "n",
+   "value": 202.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "all",
+   "lead": 9,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 332.0,
+   "lo": null,
+   "hi": null,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 9,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7912459562787962,
+   "lo": 0.742247564267943,
+   "hi": 0.8348586134185617,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 9,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.5725287209372688,
+   "lo": 0.4992320389733734,
+   "hi": 0.6401814980268741,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 9,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.2270953689899366,
+   "lo": 0.09689187615058924,
+   "hi": 0.34702937836233094,
+   "n": 202
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 9,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.2578663588662402,
+   "lo": -0.3746454955405594,
+   "hi": -0.1465048665111146,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 9,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7712969316733653,
+   "lo": 0.7194785290036038,
+   "hi": 0.8161428938452874,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 9,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.5789379338395906,
+   "lo": 0.4973197827870609,
+   "hi": 0.6468401998577262,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 9,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.31314934308609765,
+   "lo": 0.18947400564241193,
+   "hi": 0.4208117249750999,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 9,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.22016923867165983,
+   "lo": -0.3402600415350655,
+   "hi": -0.10560731246863814,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 9,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.647313988824625,
+   "lo": 0.5847341981452823,
+   "hi": 0.7073305043853348,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 9,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.48982541487320685,
+   "lo": 0.4023801914676114,
+   "hi": 0.5656443029424585,
+   "n": 404
+  },
+  {
+   "variable": "precip",
+   "lead": 9,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.44066157173277337,
+   "lo": 0.3186034974905399,
+   "hi": 0.5520834486680276,
+   "n": 202
+  },
+  {
+   "variable": "precip",
+   "lead": 9,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.3348745805315312,
+   "lo": -0.4658619171700791,
+   "hi": -0.22083829861473556,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 9,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.14393196745417125,
+   "lo": 0.0912047318047681,
+   "hi": 0.19416724106599223,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 9,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.08270330606406195,
+   "lo": -0.005747414181673277,
+   "hi": 0.17596585840810555,
+   "n": 404
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 9,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.21356620274283677,
+   "lo": -0.38160025516836293,
+   "hi": -0.05020208397629387,
+   "n": 202
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 9,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.12398294284874034,
+   "lo": 0.07399142058779329,
+   "hi": 0.17213447492139455,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 9,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.08911251896638372,
+   "lo": 0.0016269857183776216,
+   "hi": 0.1726439201129119,
+   "n": 404
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 9,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.12751222864667572,
+   "lo": -0.265837427445753,
+   "hi": 0.01159815258174525,
+   "n": 202
+  },
+  {
+   "variable": "all",
+   "lead": 10,
+   "kind": "all",
+   "metric": "n",
+   "value": 401.0,
+   "lo": null,
+   "hi": null,
+   "n": 401
+  },
+  {
+   "variable": "all",
+   "lead": 10,
+   "kind": "event",
+   "metric": "n",
+   "value": 199.0,
+   "lo": null,
+   "hi": null,
+   "n": 401
+  },
+  {
+   "variable": "all",
+   "lead": 10,
+   "kind": "all",
+   "metric": "n_episodes",
+   "value": 331.0,
+   "lo": null,
+   "hi": null,
+   "n": 401
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 10,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7342653863376287,
+   "lo": 0.6836120562800152,
+   "hi": 0.7804790862865569,
+   "n": 401
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 10,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.4635934282180475,
+   "lo": 0.3793034097031357,
+   "hi": 0.5344319145908317,
+   "n": 401
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 10,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.2666111363214141,
+   "lo": 0.13941606293297204,
+   "hi": 0.3872361526927969,
+   "n": 199
+  },
+  {
+   "variable": "ivt_max",
+   "lead": 10,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.42889099225480765,
+   "lo": -0.5647605662694629,
+   "hi": -0.31094318399722226,
+   "n": 401
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 10,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.7221254788795463,
+   "lo": 0.6691910292701898,
+   "hi": 0.767623597397371,
+   "n": 401
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 10,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.4695008633270791,
+   "lo": 0.3865974218971383,
+   "hi": 0.543490304737957,
+   "n": 401
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 10,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.31427079113991513,
+   "lo": 0.18114774837643777,
+   "hi": 0.4263028929650477,
+   "n": 199
+  },
+  {
+   "variable": "ivt_mean",
+   "lead": 10,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.3937549386812593,
+   "lo": -0.5290692917717648,
+   "hi": -0.2792442850727615,
+   "n": 401
+  },
+  {
+   "variable": "precip",
+   "lead": 10,
+   "kind": "all",
+   "metric": "auc",
+   "value": 0.592865316682422,
+   "lo": 0.5320120949982452,
+   "hi": 0.6518436249705538,
+   "n": 401
+  },
+  {
+   "variable": "precip",
+   "lead": 10,
+   "kind": "all",
+   "metric": "spearman",
+   "value": 0.42772366461765443,
+   "lo": 0.3356418233311498,
+   "hi": 0.5110943317001332,
+   "n": 401
+  },
+  {
+   "variable": "precip",
+   "lead": 10,
+   "kind": "event",
+   "metric": "spearman",
+   "value": 0.40165508643991527,
+   "lo": 0.2779086462236665,
+   "hi": 0.5112230409602755,
+   "n": 199
+  },
+  {
+   "variable": "precip",
+   "lead": 10,
+   "kind": "all",
+   "metric": "crpss_rank",
+   "value": -0.43920157754984035,
+   "lo": -0.5797914679824367,
+   "hi": -0.3149536085351412,
+   "n": 401
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 10,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.14140006965520668,
+   "lo": 0.08379019995942223,
+   "hi": 0.19756963028282543,
+   "n": 401
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 10,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.03586976360039307,
+   "lo": -0.05573123135914782,
+   "hi": 0.12335126891113395,
+   "n": 401
+  },
+  {
+   "variable": "ivt_max-precip",
+   "lead": 10,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.13504395011850118,
+   "lo": -0.298411472172826,
+   "hi": 0.027296533897317565,
+   "n": 199
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 10,
+   "kind": "all",
+   "metric": "d_auc",
+   "value": 0.12926016219712422,
+   "lo": 0.07511347488045002,
+   "hi": 0.18045531414653734,
+   "n": 401
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 10,
+   "kind": "all",
+   "metric": "d_spearman",
+   "value": 0.041777198709424646,
+   "lo": -0.0518094438369473,
+   "hi": 0.13348806097445323,
+   "n": 401
+  },
+  {
+   "variable": "ivt_mean-precip",
+   "lead": 10,
+   "kind": "event",
+   "metric": "d_spearman",
+   "value": -0.08738429530000014,
+   "lo": -0.2334177896760088,
+   "hi": 0.05236519138603678,
+   "n": 199
+  }
+ ],
+ "horizons": {
+  "ivt_max": {
+   "auc": 10,
+   "spearman": 10,
+   "both": 10
+  },
+  "ivt_mean": {
+   "auc": 10,
+   "spearman": 10,
+   "both": 10
+  },
+  "precip": {
+   "auc": 10,
+   "spearman": 10,
+   "both": 10
+  }
+ },
+ "meta": {
+  "member": "c00",
+  "n_boot": 1000,
+  "seed": 0,
+  "leads": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10
+  ],
+  "n_event": 202,
+  "n_control": 202,
+  "ivt_source": "NOAA GEFSv12 reforecast (noaa-gefs-retrospective, AWS NODD), SPFH/UGRD/VGRD on pressure levels, 00 UTC, 0.25 deg",
+  "ivt_period": "valid 2000-01-02..2019-12-31",
+  "ivt_levels_hpa": [
+   1000,
+   925,
+   850,
+   700,
+   600,
+   500,
+   400,
+   300
+  ],
+  "ivt_steps": "daily IVT of lead L = mean over the forecast hours 24(L-1)+6, +12, +18 and 24L of |Q|, Q = (1/g) * integral of q (u, v) dp over 1000, 925, 850, 700, 600, 500, 400, 300 hPa (trapezoid, Pa)",
+  "precip_source": "NOAA GEFSv12 reforecast (noaa-gefs-retrospective, AWS NODD), APCP, 00 UTC, 0.25 deg",
+  "obs_source": "ERA5 (Copernicus Climate Change Service) via ARCO-ERA5 (Google Cloud public dataset)",
+  "obs_window": "day D = ERA5 hourly tp ending D 01:00..D+1 00:00 UTC, same window as lead L hours (24(L-1), 24L] of the 00 UTC run",
+  "obs_ivt_window": "mean of |Q| (ERA5 viwve, viwvn) at D 06, 12, 18 and D+1 00 UTC",
+  "obs_note": "443 fechas; ERA5T: False"
+ }
+}

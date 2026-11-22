@@ -13,7 +13,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 | 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | tareas hechas (F2.5: el LSTM empata o gana a GR4J y gana a la persistencia desde 2 días; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa; bandas de CemaNeige y F2.3 sobre cuencas HydroBASINS: sin cambio de conclusión); cierra al publicar la capa |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | hecha (IDF solo con IMERG, sin corregir; sesgo a 24 h 0,92 y 0,67 en extremos; sin señal de ENSO; serie ISD con control de calidad; capa convection-idf publicada) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | núcleo hecho y publicado (476 cuencas con cauce de 841: D-infinito y forma; CN por escenarios TR-55); extensión no se abre (F4.4a: sin mancha de un evento) |
-| 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | en curso (F5.1 y F5.9 hechas; F5.4 hecha: AIFS e IFS sin diferencia detectable con 10 eventos; F5.2 mitad ríos atmosféricos: GEFS con habilidad en la cantidad de lluvia de los eventos hasta 7 días y en la discriminación evento/control hasta 10; convección pendiente) |
+| 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | en curso (F5.1 y F5.9 hechas; F5.4 hecha: AIFS e IFS sin diferencia detectable con 10 eventos; F5.10 hecha: IVT con acierto 1–2 días más que la lluvia, no mejor para la intensidad; F5.2 mitad ríos atmosféricos: GEFS con habilidad en la cantidad de lluvia de los eventos hasta 7 días y en la discriminación evento/control hasta 10; convección pendiente) |
 | 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | en curso (F6.1 y F6.4 hechas, F6.5 en código; registro diario con climatología de caudal en `data/forecast-registry`; SNIH sin caudal en tiempo real, 236 días de rezago) |
 
 ## Rumbo (revisión del 2026-11-11)
@@ -62,7 +62,7 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 
 ## Próximo
 
-1. Fase 5, mitad ríos atmosféricos: F5.3 (día de riesgo y mecanismo, en curso: ingesta de todos los días), F5.8 y F5.10.
+1. Fase 5, mitad ríos atmosféricos: F5.3 (día de riesgo y mecanismo, en curso) y F5.8.
 2. Fase 6: el registro diario corre desde `main`; pedir a la AIC caudal en tiempo real.
 
 ## Referencias

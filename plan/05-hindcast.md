@@ -1,6 +1,6 @@
 # Fase 5 — Predicción retrospectiva
 
-Estado: en curso (F5.1 y F5.9 hechas; F5.2 mitad ríos atmosféricos y F5.4 hechas) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
+Estado: en curso (F5.1 y F5.9 hechas; F5.2 mitad ríos atmosféricos, F5.4 y F5.10 hechas) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -26,7 +26,7 @@ Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de
 | F5.7 | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | Haiku analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
 | F5.8 | Tabla de la compuerta de evidencia (`plan/06-forecast.md`, criterios 1–3) para "día de riesgo": por región y anticipación, BSS vs. climatología y vs. regresión logística con IC bootstrap por evento, eventos independientes en test (agrupados también entre regiones), diagrama de confiabilidad, POD y FAR | Haiku corre, Sonnet codifica | Tabla con veredicto por región y anticipación + unit de agrupación de eventos y de anticipaciones contiguas |
 | F5.9 ✅ | Propuesta (2026-11-13): comprobar si el IVT se puede calcular con los niveles de ECMWF open data y GEFS (variables, niveles, resolución, latencia) | Haiku | Anotado en `docs/research/data-access.md` con fuente; si no se puede, F5.10 y F6.9 no se hacen |
-| F5.10 | Propuesta (2026-11-13), depende de F5.9: acierto por anticipación del IVT pronosticado frente a la lluvia pronosticada en los eventos del catálogo F1.3 | Haiku analiza, Sonnet codifica métricas | Curvas de IVT y de lluvia lado a lado, misma métrica y mismos eventos |
+| F5.10 ✅ | Propuesta (2026-11-13), depende de F5.9: acierto por anticipación del IVT pronosticado frente a la lluvia pronosticada en los eventos del catálogo F1.3 | Haiku analiza, Sonnet codifica métricas | Curvas de IVT y de lluvia lado a lado, misma métrica y mismos eventos |
 
 ## Entregable
 
@@ -60,6 +60,12 @@ pasar a la fase 6 como perspectiva y cuáles quedan "Experimental".
 - F5.4 (2026-11-22): `clima-nqn hindcast compare`, informe `reports/05/F5.4.md`. 10 eventos + 16 controles comunes
   (2024-03…2025-11, ambos a 0,25° nativo): sin diferencia detectable entre AIFS e IFS en ninguna anticipación (regla:
   IC excluye 0 y signos p < 0,05). A 7 días, indicio sin verificar de AIFS peor (IC [0,7; 6,8] mm, p 0,11).
+
+- F5.10 (2026-11-22): `clima-nqn hindcast fetch --variable ivt` (GEFS c00, 8 niveles 1000–300 hPa, rama
+  `data/f510-ivt`) y `hindcast verify-ivt`, informe `reports/05/F5.10.md`. Sobre todos los casos, el IVT pronosticado
+  conserva acierto 1–2 días más que la lluvia (Spearman +0,06…+0,10 con IC > 0 a 6–8 días; CRPSS-rango > 0 hasta
+  6–7 días contra 6). Dentro de los eventos, la lluvia ordena mejor la intensidad. El AUC evento contra control
+  favorece al IVT por construcción y no se usa como evidencia.
 
 ## Abierto
 
