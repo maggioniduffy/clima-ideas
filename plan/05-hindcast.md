@@ -1,6 +1,6 @@
 # Fase 5 — Predicción retrospectiva
 
-Estado: en curso (F5.1 y F5.9 hechas) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
+Estado: en curso (F5.1 y F5.9 hechas; F5.2 mitad ríos atmosféricos hecha) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -18,7 +18,7 @@ Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
 | F5.1 ✅ | Ingesta de pronósticos para las fechas de eventos y días de control | Sonnet escribe, Haiku corre | Zarr por modelo y anticipación |
-| F5.2 | Verificación por días de anticipación, separada en ríos atmosféricos y convección | Haiku analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
+| F5.2 ◐ | Verificación por días de anticipación, separada en ríos atmosféricos y convección | Haiku analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
 | F5.3 | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet | Brier y PR-AUC en test temporal, no exactitud |
 | F5.4 | AIFS vs. IFS en los eventos neuquinos | Haiku | Tabla por evento y anticipación |
 | F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
@@ -50,7 +50,18 @@ pasar a la fase 6 como perspectiva y cuáles quedan "Experimental".
   Primera mirada (media de la caja, sin verificar contra lo observado, eso es F5.2): GEFS pronostica 7,8 mm en
   días de evento a 1 día y 3,5 mm a 10 días, contra ~1,7 mm en controles a todas las anticipaciones.
 
+- F5.2, mitad ríos atmosféricos (2026-11-22): `clima-nqn hindcast observe | verify`
+  (`stages/hindcast/observe.py`, `verify.py`), informe `reports/05/F5.2.md` + `.json`, ERA5 de caja por fecha en
+  `reports/05/F5.2-obs.csv`. Referencia ERA5, horas D 01…D+1 00 UTC (misma ventana que la anticipación), media de la
+  caja por cos(lat); IC por bootstrap de episodios. GEFS, eventos: CRPSS vs. climatología con IC > 0 de 1 a 7 días
+  (0,80 → 0,25), cruza 0 de 8 a 10; subestima de forma creciente desde 6 días (−1,5 → −3,7 mm sobre 7,2). IFS: CRPSS
+  de eventos > 0 hasta 5 días (n 23). AIFS (n 10): sin conclusión. ETS/AUC evento vs. control > 0 hasta 10 días en 1,
+  5 y 10 mm: cota optimista por cómo se eligieron los controles.
+
 ## Abierto
+
+- F5.2, mitad convección: F5.1 no tiene casos convectivos y ERA5 no sirve de referencia para convección (F3.4);
+  hace falta un juego de casos de días convectivos de F3 y verificar contra IMERG.
 
 - Licencia de GEFS (2026-11-22, F6.1): NODD abierta con atribución; reforecast GEFSv12 2000–2020 con APCP e IVT calculable.
 - F5.9 (2026-11-22): IVT calculable en GEFS (operativo y reforecast) e IFS/AIFS; detalle en `reports/06/F6.1-latency.md`.

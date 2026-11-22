@@ -1,16 +1,20 @@
 """``clima-nqn hindcast`` commands (F5.1): cases, fetch (shardable), combine."""
 
+import json
 import logging
 import os
 from pathlib import Path
 from typing import Annotated
 
+import numpy as np
 import pandas as pd
 import typer
 
 from clima_nqn.stages.hindcast import cases as cases_mod
 from clima_nqn.stages.hindcast import forecasts as fc
+from clima_nqn.stages.hindcast import observe as observe_mod
 from clima_nqn.stages.hindcast import store
+from clima_nqn.stages.hindcast import verify as verify_mod
 
 hindcast_app = typer.Typer(help="Hindcast forecasts for AR events and control days (F5.1).")
 
@@ -90,3 +94,94 @@ def combine(
     except (FileNotFoundError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     typer.echo(f"{out / (model + '.zarr')}: {dict(ds.sizes)}; {ds.attrs}")
+
+
+@hindcast_app.command("observe")
+def observe(
+    cases: Annotated[Path, typer.Option(help="cases.parquet from `hindcast cases`.")],
+    out: Annotated[Path, typer.Option(help="Output era5-obs.zarr.")],
+    workers: Annotated[int, typer.Option(help="Threads for ERA5 chunk reads.")] = 64,
+    max_days: Annotated[
+        int | None, typer.Option(help="Smoke test: only the first N dates.")
+    ] = None,
+    csv: Annotated[Path | None, typer.Option(help="Also write date,box_mean_mm here.")] = None,
+) -> None:
+    """ERA5 daily precipitation (mm) for the valid dates inside any model's period (F5.2)."""
+    dates = observe_mod.eligible_dates(cases_mod.read_cases(cases))
+    if max_days:
+        dates = dates[:max_days]
+    typer.echo(f"{len(dates)} dates")
+    ds = observe_mod.observed_days(dates, workers=workers, log_fn=typer.echo)
+    observe_mod.write_obs(ds, out)
+    if csv:
+        box = verify_mod.box_mean(ds["precip_mm"]).to_series()
+        csv.parent.mkdir(parents=True, exist_ok=True)
+        box.rename("box_mean_mm").rename_axis("date").round(4).to_csv(csv)
+    typer.echo(f"{out}: {dict(ds.sizes)}; era5t={ds.attrs['era5t']}")
+
+
+def _clean(value):
+    if isinstance(value, float) and np.isnan(value):
+        return None
+    return value
+
+
+@hindcast_app.command("verify")
+def verify(
+    forecasts: Annotated[Path, typer.Option(help="Directory with <model>.zarr from F5.1.")],
+    obs: Annotated[Path, typer.Option(help="era5-obs.zarr from `hindcast observe`.")],
+    out: Annotated[Path, typer.Option(help="Output directory (F5.2.json, F5.2.md).")],
+    models: Annotated[str, typer.Option(help="Comma-separated models.")] = (
+        "gefs-reforecast,ifs,aifs"
+    ),
+    n_boot: Annotated[int, typer.Option(help="Bootstrap resamples.")] = 1000,
+    seed: Annotated[int, typer.Option(help="Bootstrap seed.")] = 0,
+) -> None:
+    """Verify the forecasts against ERA5 per lead: skill, contingency, CRPS, bootstrap CIs (F5.2)."""
+    thresholds, main = (5.0, 1.0, 10.0), 5.0
+    obs_ds = observe_mod.read_obs(obs)
+    obs_box = verify_mod.box_mean(obs_ds["precip_mm"]).to_series()
+    frames, info = [], {}
+    for name in (m.strip() for m in models.split(",") if m.strip()):
+        path = forecasts / f"{name}.zarr"
+        if not path.exists():
+            typer.echo(f"WARNING: {path} missing, skipped")
+            continue
+        ds = store.read_store(path)
+        kinds = verify_mod.str_values(ds["kind"])
+        info[name] = {
+            "source": ds.attrs.get("source", ""),
+            "period": ds.attrs.get("period", ""),
+            "n_event": int((kinds == "event").sum()),
+            "n_control": int((kinds == "control").sum()),
+        }
+        frames.append(
+            verify_mod.verify_model(
+                ds, obs_box, thresholds, main, n_boot, seed, name, obs_ds["precip_mm"]
+            )
+        )
+        typer.echo(f"{name}: verified")
+    if not frames:
+        raise typer.BadParameter(f"no <model>.zarr found in {forecasts}")
+    df = pd.concat(frames, ignore_index=True)
+    horizons = {thr: verify_mod.useful_horizon(df, thr) for thr in thresholds}
+    meta = {
+        "main": main,
+        "thresholds": list(thresholds),
+        "n_boot": n_boot,
+        "seed": seed,
+        "obs_source": obs_ds.attrs.get("source", ""),
+        "obs_window": obs_ds.attrs.get("window", ""),
+        "obs_note": f"{obs_ds.sizes['date']} fechas; ERA5T: {obs_ds.attrs.get('era5t')}",
+        "models": info,
+    }
+    out.mkdir(parents=True, exist_ok=True)
+    records = [{k: _clean(v) for k, v in r.items()} for r in df.to_dict("records")]
+    payload = {
+        "records": records,
+        "horizons": {str(k): v for k, v in horizons.items()},
+        "meta": meta,
+    }
+    (out / "F5.2.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
+    (out / "F5.2.md").write_text(verify_mod.render_md(df, horizons, meta))
+    typer.echo(f"{out / 'F5.2.md'}: {len(df)} records")
