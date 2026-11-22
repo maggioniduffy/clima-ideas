@@ -1,6 +1,6 @@
 # Fase 5 — Predicción retrospectiva
 
-Estado: en curso (F5.1 y F5.9 hechas; F5.2 mitad ríos atmosféricos hecha) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
+Estado: en curso (F5.1 y F5.9 hechas; F5.2 mitad ríos atmosféricos y F5.4 hechas) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -20,7 +20,7 @@ Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de
 | F5.1 ✅ | Ingesta de pronósticos para las fechas de eventos y días de control | Sonnet escribe, Haiku corre | Zarr por modelo y anticipación |
 | F5.2 ◐ | Verificación por días de anticipación, separada en ríos atmosféricos y convección | Haiku analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
 | F5.3 | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet | Brier y PR-AUC en test temporal, no exactitud |
-| F5.4 | AIFS vs. IFS en los eventos neuquinos | Haiku | Tabla por evento y anticipación |
+| F5.4 ✅ | AIFS vs. IFS en los eventos neuquinos | Haiku | Tabla por evento y anticipación |
 | F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
 | F5.6 | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |
 | F5.7 | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | Haiku analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
@@ -57,6 +57,9 @@ pasar a la fase 6 como perspectiva y cuáles quedan "Experimental".
   (0,80 → 0,25), cruza 0 de 8 a 10; subestima de forma creciente desde 6 días (−1,5 → −3,7 mm sobre 7,2). IFS: CRPSS
   de eventos > 0 hasta 5 días (n 23). AIFS (n 10): sin conclusión. ETS/AUC evento vs. control > 0 hasta 10 días en 1,
   5 y 10 mm: cota optimista por cómo se eligieron los controles.
+- F5.4 (2026-11-22): `clima-nqn hindcast compare`, informe `reports/05/F5.4.md`. 10 eventos + 16 controles comunes
+  (2024-03…2025-11, ambos a 0,25° nativo): sin diferencia detectable entre AIFS e IFS en ninguna anticipación (regla:
+  IC excluye 0 y signos p < 0,05). A 7 días, indicio sin verificar de AIFS peor (IC [0,7; 6,8] mm, p 0,11).
 
 ## Abierto
 

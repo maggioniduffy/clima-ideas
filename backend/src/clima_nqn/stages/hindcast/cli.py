@@ -12,6 +12,7 @@ import pandas as pd
 import typer
 
 from clima_nqn.stages.hindcast import cases as cases_mod
+from clima_nqn.stages.hindcast import compare as compare_mod
 from clima_nqn.stages.hindcast import forecasts as fc
 from clima_nqn.stages.hindcast import observe as observe_mod
 from clima_nqn.stages.hindcast import riskday_cli, store
@@ -253,6 +254,54 @@ def verify(
     (out / "F5.2.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
     (out / "F5.2.md").write_text(verify_mod.render_md(df, horizons, meta))
     typer.echo(f"{out / 'F5.2.md'}: {len(df)} records")
+
+
+@hindcast_app.command("compare")
+def compare(
+    forecasts: Annotated[Path, typer.Option(help="Directory with ifs.zarr and aifs.zarr (F5.1).")],
+    obs: Annotated[Path, typer.Option(help="era5-obs.zarr from `hindcast observe`.")],
+    out: Annotated[Path, typer.Option(help="Output directory (F5.4.json, F5.4.md).")],
+    n_boot: Annotated[int, typer.Option(help="Bootstrap resamples.")] = 1000,
+    seed: Annotated[int, typer.Option(help="Bootstrap seed.")] = 0,
+) -> None:
+    """AIFS vs. IFS on the common cases: paired errors, bootstrap CI, sign test (F5.4)."""
+    for name in ("ifs", "aifs"):
+        if not (forecasts / f"{name}.zarr").exists():
+            raise typer.BadParameter(f"{forecasts / (name + '.zarr')} missing")
+    obs_ds = observe_mod.read_obs(obs)
+    obs_box = verify_mod.box_mean(obs_ds["precip_mm"]).to_series()
+    ifs = store.read_store(forecasts / "ifs.zarr")
+    aifs = store.read_store(forecasts / "aifs.zarr")
+    table = compare_mod.paired_table(ifs, aifs, obs_box)
+    if table.empty:
+        raise typer.BadParameter("no common valid cases between ifs and aifs")
+    summary = compare_mod.paired_summary(table, n_boot, seed)
+    first, last = compare_mod.common_period(table)
+    cases_n = table.drop_duplicates("case").groupby("kind")["case"].count()
+    meta = {
+        "n_boot": n_boot,
+        "seed": seed,
+        "obs_source": obs_ds.attrs.get("source", ""),
+        "first": str(first.date()),
+        "last": str(last.date()),
+        "native_025": compare_mod.native_025(table),
+        "n_event": int(cases_n.get("event", 0)),
+        "n_control": int(cases_n.get("control", 0)),
+    }
+    out.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "table": [
+            {k: _clean(v) for k, v in r.items()}
+            for r in table.assign(valid_date=table["valid_date"].dt.strftime("%Y-%m-%d")).to_dict(
+                "records"
+            )
+        ],
+        "summary": [{k: _clean(v) for k, v in r.items()} for r in summary.to_dict("records")],
+        "meta": meta,
+    }
+    (out / "F5.4.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
+    (out / "F5.4.md").write_text(compare_mod.render_md(table, summary, meta))
+    typer.echo(f"{out / 'F5.4.md'}: {len(table)} pairs, {len(summary)} summary rows")
 
 
 hindcast_app.command("riskday")(riskday_cli.riskday)
