@@ -238,3 +238,42 @@ def test_skill_table_for_risk_day_and_flow_cli(tmp_path) -> None:
     assert lg["pod"].notna().sum() >= 1 and (lg["n"] == 1).all()
     clim = table[table["model"] == "climatologia"]
     assert (clim["skill"] == 0).all()
+
+
+def _toy_scores(rows) -> pd.DataFrame:
+    base = {"model": "m", "variable": "p_dia_riesgo", "lead": 1, "status": "scored", "p": 0.5}
+    out = []
+    for region, day, event, model in rows:
+        d = date.fromisoformat(day)
+        out.append(
+            {**base, "station": region, "valid_date": d, "issue_date": d, "event": float(event),
+             "brier": (0.5 - event) ** 2 if model == "m" else (0.1 - event) ** 2, "model": model}
+        )  # fmt: skip
+    return pd.DataFrame(out)
+
+
+def test_pooled_events_not_sum_of_regions() -> None:
+    # same system hits two regions on consecutive days -> 1 pooled event (per-region sum would be 2);
+    # a later separate system -> 2; October event is outside any season but counts overall
+    sc = _toy_scores(
+        [("a", "2027-06-01", 1, "m"), ("a", "2027-06-02", 1, "m"), ("b", "2027-06-02", 1, "m"),
+         ("b", "2027-06-03", 1, "m"), ("a", "2027-07-10", 1, "m"), ("a", "2027-10-05", 1, "m")]
+    )  # fmt: skip
+    ev = scoring.pooled_events(sc)["p_dia_riesgo"]["1"]
+    assert ev == {"overall": 3, "2027": 2}
+
+
+def test_season_table_excludes_off_season_and_flags_complete() -> None:
+    rows = []
+    for i in range(1, 31):  # June days, 10 separated events
+        rows.append(("a", f"2027-06-{i:02d}", int(i % 3 == 0), "m"))
+        rows.append(("a", f"2027-06-{i:02d}", int(i % 3 == 0), "climatologia"))
+    rows.append(("a", "2027-11-01", 1, "m"))  # outside May-Sept: excluded
+    rows.append(("a", "2027-11-01", 1, "climatologia"))
+    t, pooled = scoring.season_table(_toy_scores(rows), today=date(2027, 10, 1), n_boot=50)
+    assert set(t["season"]) == {2027} and t["complete"].all()
+    m = t[t["model"] == "m"].iloc[0]
+    assert m["n"] == 30 and m["n_events"] == 10 and m["n_events_pooled"] == 10
+    assert pooled["p_dia_riesgo"]["1"]["overall"] == 11
+    early, _ = scoring.season_table(_toy_scores(rows), today=date(2027, 9, 30), n_boot=50)
+    assert not early["complete"].any()  # season end must be < today

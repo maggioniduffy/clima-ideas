@@ -30,7 +30,7 @@ def f58(passing=(1, 2, 3)):
     }
 
 
-def rows(skill=0.2, leads=(1, 2, 3)):
+def rows(skill=0.2, leads=(1, 2, 3), season=2027, complete=True, pooled=12):
     return [
         {
             "model": "logistica",
@@ -38,6 +38,9 @@ def rows(skill=0.2, leads=(1, 2, 3)):
             "station": REG,
             "lead": k,
             "n": 100,
+            "season": season,
+            "complete": complete,
+            "n_events_pooled": pooled,
             "skill": skill,
             "skill_ci_low": skill - 0.1,
             "skill_ci_high": skill + 0.1,
@@ -56,8 +59,7 @@ def call(log, leads=(1,), **over):
         "approved_on": date(2027, 10, 15),
         "f58": f58(),
         "f58_sha": "a" * 64,
-        "score_rows": rows(),
-        "n_events_pooled": 12,
+        "season_rows": rows(),
         "season": 2027,
     }
     kw.update(over)
@@ -79,6 +81,7 @@ def test_promotes_in_order_with_evidence(log):
     assert current_state(log, VAR, REG, 3, VER) == OUTLOOK
     ev = recs[0]["evidence"]
     assert ev["hindcast"]["f58_sha256"] == "a" * 64 and ev["prospective"]["n_events_pooled"] == 12
+    assert ev["prospective"]["n_events_pooled_override"] is False
     assert recs[0]["approved_by"] == "usuario" and recs[0]["approved_on"] == "2027-10-15"
     assert log.verify() == recs[-1]["record_hash"]
 
@@ -114,16 +117,29 @@ def test_no_promotion_before_full_season(tmp_path):
 
 def test_no_promotion_with_few_events(log):
     with pytest.raises(PromotionRefused, match="eventos"):
-        call(log, n_events_pooled=9)
+        call(log, season_rows=rows(pooled=9))
     with pytest.raises(PromotionRefused, match="eventos"):
-        call(log, n_events_pooled=None)
+        call(log, season_rows=rows(pooled=None))
+
+
+def test_no_promotion_if_scores_say_season_incomplete(log):
+    with pytest.raises(PromotionRefused, match="completa"):
+        call(log, season_rows=rows(complete=False))
+    with pytest.raises(PromotionRefused, match="sin fila"):
+        call(log, season_rows=rows(season=2026))  # other season is not evidence
+
+
+def test_override_of_pooled_events_is_recorded(log):
+    recs = call(log, season_rows=rows(pooled=3), n_events_pooled_override=15)
+    assert recs[0]["evidence"]["prospective"]["n_events_pooled_override"] is True
+    assert recs[0]["evidence"]["prospective"]["n_events_pooled"] == 15
 
 
 def test_no_promotion_with_negative_bss(log):
     with pytest.raises(PromotionRefused, match="BSS"):
-        call(log, score_rows=rows(skill=-0.01))
+        call(log, season_rows=rows(skill=-0.01))
     with pytest.raises(PromotionRefused, match="sin BSS"):
-        call(log, score_rows=[])
+        call(log, season_rows=[])
 
 
 def test_no_promotion_without_hindcast_pass(log):
@@ -137,6 +153,18 @@ def test_demote_on_negative_season_bss(log):
     assert [r["lead"] for r in done] == [1]
     assert done[0]["to_state"] == EXPERIMENTAL and done[0]["approved_by"] is None
     assert current_state(log, VAR, REG, 1, VER) == EXPERIMENTAL
+
+
+def test_demotion_uses_latest_complete_season_only(log):
+    call(log, leads=(1,))
+    old_bad = rows(skill=-0.5, season=2026)
+    new_ok = rows(skill=0.1, season=2027)
+    assert demote_auto(log, old_bad + new_ok, {VER}) == []
+    in_progress = rows(skill=-0.5, season=2028, complete=False)
+    assert demote_auto(log, new_ok + in_progress, {VER}) == []
+    assert demote_auto(log, [], {VER}) == []  # no season row: no demotion
+    done = demote_auto(log, old_bad + rows(skill=-0.2, season=2027), {VER})
+    assert len(done) == 1 and done[0]["evidence"]["prospective"]["season"] == 2027
 
 
 def test_no_demotion_when_fine(log):

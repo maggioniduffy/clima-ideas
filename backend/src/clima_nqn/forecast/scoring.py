@@ -36,6 +36,8 @@ from clima_nqn.forecast.registry import PredictionRecord, PredictionRegistry
 from clima_nqn.forecast.riskday_model import VAR_RISK
 
 MIN_EVENTS = 10
+SEASON_MONTHS = (5, 9)  # wet season May-September
+SEASON_END = (9, 30)
 P_ALARM = 0.5
 BASELINE = "climatologia"
 SCORE_OF = {VAR_FLOW: "crps", VAR_PROB: "brier", VAR_RISK: "brier"}
@@ -147,6 +149,52 @@ def _independent_events(valid_dates: pd.Series) -> int:
     """Runs of consecutive valid days count as one event."""
     days = sorted({d.toordinal() for d in valid_dates})
     return sum(1 for i, d in enumerate(days) if i == 0 or d - days[i - 1] > 1)
+
+
+def wet_season(valid_date: date) -> int | None:
+    """Year Y of the wet season May-September containing ``valid_date`` (None outside it)."""
+    return valid_date.year if SEASON_MONTHS[0] <= valid_date.month <= SEASON_MONTHS[1] else None
+
+
+def pooled_events(scores: pd.DataFrame) -> dict[str, dict[str, dict[str, int]]]:
+    """Independent events pooled over ALL regions/stations, per variable and lead: runs of consecutive valid
+    days on which ANY region had an event count as one (same rule as ``riskday.event_blocks``). Never the sum
+    of per-region counts. Keys: variable -> str(lead) -> "overall" | str(season year, May-Sept only)."""
+    done = scores[(scores["status"] == "scored") & (scores["event"] == 1)]
+    out: dict[str, dict[str, dict[str, int]]] = {}
+    for (variable, lead), g in done.groupby(["variable", "lead"], sort=True):
+        if variable not in PROB_VARS:
+            continue
+        cell = {"overall": _independent_events(g["valid_date"])}
+        seasons = g["valid_date"].map(wet_season)
+        for y in sorted({int(x) for x in seasons.dropna()}):
+            cell[str(y)] = _independent_events(g.loc[seasons == y, "valid_date"])
+        out.setdefault(variable, {})[str(int(lead))] = cell
+    return out
+
+
+def season_table(
+    scores: pd.DataFrame, today: date, n_boot: int = 2000, seed: int = 0
+) -> tuple[pd.DataFrame, dict[str, dict[str, dict[str, int]]]]:
+    """Skill per model x variable x station x lead x wet season (valid dates May-Sept of year ``season``;
+    other cases are excluded), same method as ``skill_table``, plus ``complete`` (season end 30 Sept <
+    ``today``) and ``n_events_pooled`` (all-region independent events of that variable/lead/season)."""
+    pooled = pooled_events(scores)
+    done = scores[(scores["status"] == "scored") & scores["variable"].isin(PROB_VARS)].copy()
+    done["season"] = done["valid_date"].map(wet_season)
+    parts = []
+    for y in sorted({int(x) for x in done["season"].dropna()}):
+        t = skill_table(done[done["season"] == y], n_boot=n_boot, seed=seed)
+        if t.empty:
+            continue
+        t["season"] = y
+        t["complete"] = date(y, SEASON_END[0], SEASON_END[1]) < today
+        t["n_events_pooled"] = [
+            pooled.get(v, {}).get(str(int(le)), {}).get(str(y), 0)
+            for v, le in zip(t["variable"], t["lead"], strict=True)
+        ]
+        parts.append(t)
+    return (pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()), pooled
 
 
 def _bootstrap_skill(

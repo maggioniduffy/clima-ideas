@@ -150,18 +150,27 @@ def _finite(x: Any) -> float | None:
     return float(x) if isinstance(x, int | float) and math.isfinite(x) else None
 
 
-def _score_row(
-    rows: Iterable[Mapping[str, Any]], model: str, variable: str, region: str, lead: int
+def _season_row(
+    rows: Iterable[Mapping[str, Any]],
+    model: str,
+    variable: str,
+    region: str,
+    lead: int,
+    season: int | None = None,
 ) -> Mapping[str, Any] | None:
+    """Row of scores/latest.json ``seasons``: the given season, or the latest COMPLETE one when None."""
+    best = None
     for r in rows:
         if (
             r.get("model") == model
             and r.get("variable") == variable
             and str(r.get("station")) == region
             and int(r.get("lead", -1)) == int(lead)
+            and (r.get("season") == season if season is not None else r.get("complete"))
+            and (best is None or r["season"] > best["season"])
         ):
-            return r
-    return None
+            best = r
+    return best
 
 
 def promote(
@@ -175,9 +184,9 @@ def promote(
     approved_on: date | None,
     f58: Mapping[str, Any],
     f58_sha: str,
-    score_rows: Iterable[Mapping[str, Any]],
-    n_events_pooled: int | None,
+    season_rows: Iterable[Mapping[str, Any]],
     season: int,
+    n_events_pooled_override: int | None = None,
     model: str = "logistica",
 ) -> list[dict[str, Any]]:
     """Promote ``leads`` (ascending, all or nothing) to "Perspectiva de riesgo"; raise PromotionRefused."""
@@ -195,7 +204,7 @@ def promote(
         raise PromotionRefused(reasons)  # nothing else is examined without approval
 
     now = log.now()
-    rows = list(score_rows)
+    rows = list(season_rows)
     states = _states(log)
     done = {
         k[2]
@@ -215,11 +224,20 @@ def promote(
             why.append(f"anticipación {lead}: no pasa el hindcast F5.8 (criterio 1)")
         if season_end(season) >= now.date():
             why.append(f"la temporada {season} (mayo–septiembre) no terminó (criterio 5)")
-        if n_events_pooled is None or n_events_pooled < MIN_POOLED_EVENTS:
+        row = _season_row(rows, model, variable, region, lead, season)
+        if row is None:
+            why.append(f"anticipación {lead}: sin fila de la temporada {season} en scores")
+        elif not row.get("complete"):
+            why.append(f"la temporada {season} no figura completa en scores (criterio 5)")
+        n_pooled = (
+            n_events_pooled_override
+            if n_events_pooled_override is not None
+            else (row.get("n_events_pooled") if row else None)
+        )
+        if n_pooled is None or n_pooled < MIN_POOLED_EVENTS:
             why.append(
-                f"eventos independientes agrupados {n_events_pooled} < {MIN_POOLED_EVENTS} (criterio 5)"
+                f"eventos independientes agrupados {n_pooled} < {MIN_POOLED_EVENTS} (criterio 5)"
             )
-        row = _score_row(rows, model, variable, region, lead)
         bss = _finite(row.get("skill")) if row else None
         if bss is None:
             why.append(f"anticipación {lead}: sin BSS prospectivo (criterio 5)")
@@ -250,7 +268,8 @@ def promote(
                     "prospective": {
                         "model": model,
                         "n": row.get("n") if row else None,
-                        "n_events_pooled": n_events_pooled,
+                        "n_events_pooled": n_pooled,
+                        "n_events_pooled_override": n_events_pooled_override is not None,
                         "season": season,
                         "bss": bss,
                         "ci": [_finite(row.get("skill_ci_low")), _finite(row.get("skill_ci_high"))],
@@ -267,14 +286,13 @@ def promote(
 
 def demote_auto(
     log: StatusLog,
-    score_rows: Iterable[Mapping[str, Any]],
+    season_rows: Iterable[Mapping[str, Any]],
     versions_in_force: Collection[str],
-    *,
-    season: int | None = None,
 ) -> list[dict[str, Any]]:
     """Automatic demotion (criterion 7). Returns the new records (empty when nothing changes)."""
-    rows = list(score_rows)
+    rows = list(season_rows)
     promoted = {k: v for k, v in _states(log).items() if v["to_state"] == OUTLOOK}
+    seasons: dict[tuple, int] = {}
     trigger: dict[
         tuple, tuple[int, str]
     ] = {}  # (variable, region, version) -> (lowest lead, reason)
@@ -284,10 +302,11 @@ def demote_auto(
             reason = "cambio de versión del modelo o de sus entradas"
         else:
             model = (rec.get("evidence", {}).get("prospective") or {}).get("model", "logistica")
-            row = _score_row(rows, model, variable, region, lead)
+            row = _season_row(rows, model, variable, region, lead)  # latest complete season
             bss = _finite(row.get("skill")) if row else None
             if bss is not None and bss < 0:
-                reason = f"BSS prospectivo {bss:.3f} < 0"
+                reason = f"BSS prospectivo {bss:.3f} < 0 en la temporada {row['season']}"
+                seasons[(variable, region, version)] = int(row["season"])
         if reason:
             k = (variable, region, version)
             if k not in trigger or lead < trigger[k][0]:
@@ -307,7 +326,7 @@ def demote_auto(
                 "from_state": OUTLOOK,
                 "to_state": EXPERIMENTAL,
                 "reason": "descenso automático: " + reason,
-                "evidence": {"prospective": {"season": season}},
+                "evidence": {"prospective": {"season": seasons.get((variable, region, version))}},
                 "approved_by": None,
                 "approved_on": None,
             }
