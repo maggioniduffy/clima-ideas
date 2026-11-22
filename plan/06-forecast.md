@@ -1,6 +1,6 @@
 # Fase 6 — Predicción a futuro (experimental)
 
-Estado: en curso (F6.1, F6.4 y el código de F6.5 hechos; registro diario solo con climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
+Estado: en curso (F6.1, F6.3 de día de riesgo, F6.4 y el código de F6.5 hechos; registro diario con día de riesgo «Experimental» y climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
 
 Mide si los modelos predicen mejor que la climatología algo que todavía no pasó. Desde el 2026-11-12 (`plan.md`,
 Rumbo 7) una variable y anticipación que pasa la compuerta de evidencia se muestra como "Perspectiva de riesgo"
@@ -36,7 +36,7 @@ encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en b
 |---|---|---|---|
 | F6.1 ✅ | Ingesta operativa idempotente de entradas actuales (ERA5T, ERA5-Land, ECMWF open data, GEFS, ONI, caudal); verificar antes la latencia real del caudal en tiempo real (SNIH dice no ser red de alerta; AIC restringida) | Sonnet escribe, Haiku corre | Latencia de caudal medida y anotada en `docs/research/data-access.md` + una corrida trae el último día disponible + unit de idempotencia |
 | F6.2 | Modelo estacional (regresión logística y LightGBM) + baselines, validado según "Validación (F6.2)" | Sonnet implementa, Haiku entrena | RPS y Brier por año de test vs. cada baseline + unit de particiones sin fuga |
-| F6.3 | Corrida de corto plazo: F5.3 y LSTM F2.5 alimentados con pronósticos operativos | Sonnet | Predicción emitida para hoy con incertidumbre |
+| F6.3 ✅ (día de riesgo; caudal bloqueado) | Corrida de corto plazo: F5.3 y LSTM F2.5 alimentados con pronósticos operativos | Sonnet | Predicción emitida para hoy con incertidumbre |
 | F6.4 ✅ | Registro de predicciones congeladas: append-only con fecha de emisión, versión de modelo y hash de entradas | Sonnet | Unit: no se puede editar ni emitir con fecha pasada |
 | F6.5 (código ✅) | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, Haiku corre | Tabla de skill por horizonte + unit de métricas |
 | F6.6 | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
@@ -157,6 +157,13 @@ lo que ya se observó.
   (ingesta, emisión y, los lunes, puntuación), con commit sin force a la rama `data/forecast-registry`. El
   entrenamiento es una foto congelada de SNIH (`training/flow`) cuyo hash va en la versión del modelo. Los
   programados solo corren desde `main`.
+- F6.3 (2026-11-22): `ops ingest --sources gefs_regions,era5t_regions` (GEFS 0,25° operativo, 5 miembros, medias
+  regionales de F5.3; ERA5T regional para puntuar) y `forecast emit-riskday` con la logística congelada
+  (`backend/models/riskday-logistic-v1.json`, ajuste 2000–2014, reproduce el BSS de F5.8 con diferencia 0) más su
+  climatología mensual; 60 registros por día, «Experimental». `forecast score --era5t-regions` puntúa
+  `p_dia_riesgo`. Corre en `forecast-daily.yml`. Caudal (LSTM) no: sin caudal en tiempo real. Informe
+  `reports/06/F6.3.md`.
+
 ## Abierto
 
 - Pronóstico ENSO: IRI ya no ofrece descarga de datos; queda C3S por CDS. Archivo histórico de pronósticos emitidos:
