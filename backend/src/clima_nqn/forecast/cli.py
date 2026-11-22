@@ -111,6 +111,8 @@ def score_cmd(
         pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=scoring.COLUMNS)
     )
     table = scoring.skill_table(scores, n_boot=n_boot, seed=seed)
+    today = datetime.now(UTC).date()
+    seasons, events_pooled = scoring.season_table(scores, today, n_boot=n_boot, seed=seed)
     pending = int((scores["status"] == "pending").sum())
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -120,6 +122,9 @@ def score_cmd(
         "n_boot": n_boot,
         "seed": seed,
         "table": json.loads(table.to_json(orient="records")),
+        "scored_on": today.isoformat(),
+        "seasons": json.loads(seasons.to_json(orient="records")),
+        "events_pooled": events_pooled,
     }
     Path(f"{out}.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8"
@@ -199,7 +204,7 @@ def promote_cmd(
     season: int = typer.Option(..., help="Año de la temporada húmeda mayo–septiembre completada."),
     f58: Path = typer.Option(Path("reports/05/F5.8.json"), help="Veredicto del hindcast."),
     n_events_pooled: int = typer.Option(
-        None, help="Eventos independientes agrupados; por defecto el campo n_events_pooled de scores."
+        None, help="Anula los eventos agrupados de scores (queda registrado como override)."
     ),
     variable: str = typer.Option(riskday_model.VAR_RISK),
     model: str = typer.Option("logistica", help="Nombre del modelo en la tabla de skill."),
@@ -222,10 +227,8 @@ def promote_cmd(
             approved_on=date.fromisoformat(approved_on),
             f58=json.loads(raw),
             f58_sha=hashlib.sha256(raw).hexdigest(),
-            score_rows=payload.get("table", []),
-            n_events_pooled=(
-                n_events_pooled if n_events_pooled is not None else payload.get("n_events_pooled")
-            ),
+            season_rows=payload.get("seasons", []),
+            n_events_pooled_override=n_events_pooled,
             season=season,
             model=model,
         )
@@ -241,14 +244,13 @@ def demote_auto_cmd(
     status: Path = typer.Option(..., help="Registro de estados JSONL."),
     scores: Path = typer.Option(..., help="scores/latest.json (forecast score)."),
     model_version: list[str] = typer.Option(..., help="Versión en uso (repetible)."),
-    season: int = typer.Option(None, help="Temporada evaluada (solo informativo)."),
 ) -> None:
     """Desciende a «Experimental» por BSS prospectivo < 0 o cambio de versión (arrastra las más largas)."""
     from clima_nqn.forecast import status as st
 
     payload = json.loads(scores.read_text(encoding="utf-8")) if scores.exists() else {}
     done = st.demote_auto(
-        st.StatusLog(status), payload.get("table", []), set(model_version), season=season
+        st.StatusLog(status), payload.get("seasons", []), set(model_version)
     )
     for r in done:
         typer.echo(f"{r['region']} anticipación {r['lead']}: {r['reason']}")
