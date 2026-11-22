@@ -9,7 +9,10 @@ Scores
 * ``crps``: CRPS approximated from the recorded quantile set as 2 * mean_tau pinball_tau(y - q_tau) over the
   levels present (0.05, 0.25, 0.5, 0.75, 0.95). Exact for a point forecast (= absolute error); the tails
   beyond the 5-95 % levels are ignored, so it slightly underestimates the CRPS of heavy-tailed forecasts.
-* ``brier``: (p - o)^2 for ``p_caudal_alto``, o = observed flow > the record's threshold.
+* ``brier``: (p - o)^2 for ``p_caudal_alto`` (o = observed flow > the record's ``threshold_m3s``) and for
+  ``p_dia_riesgo`` (o = observed regional daily rain >= the record's ``threshold_mm``). For ``p_dia_riesgo`` the
+  registry ``region`` is a region id (not a station) and ``lead`` is the GEFS lead (``details["gefs_lead"]``;
+  the registry ``lead_days`` is valid - issue day). The column is still called ``station``.
 
 Skill and uncertainty
 ---------------------
@@ -30,11 +33,14 @@ import pandas as pd
 
 from clima_nqn.forecast.baselines import VAR_FLOW, VAR_PROB
 from clima_nqn.forecast.registry import PredictionRecord, PredictionRegistry
+from clima_nqn.forecast.riskday_model import VAR_RISK
 
 MIN_EVENTS = 10
 P_ALARM = 0.5
 BASELINE = "climatologia"
-SCORE_OF = {VAR_FLOW: "crps", VAR_PROB: "brier"}
+SCORE_OF = {VAR_FLOW: "crps", VAR_PROB: "brier", VAR_RISK: "brier"}
+PROB_VARS = (VAR_PROB, VAR_RISK)
+# "station" = station id, or region id for p_dia_riesgo
 GROUP = ["model", "variable", "station", "lead"]
 
 
@@ -61,6 +67,24 @@ def _lookup(observed: pd.Series | Mapping[date, float]) -> dict[date, float]:
     return out
 
 
+def read_regional_observations(directory) -> dict[str, pd.Series]:
+    """Observed regional daily rain (mm) per region from ``<date>.parquet`` snapshots (columns date, region,
+    tp_mm, available_on). ERA5T is revised, so for each (date, region) the value from the newest
+    ``available_on`` wins; NaN values are dropped."""
+    from pathlib import Path
+
+    frames = [pd.read_parquet(p) for p in sorted(Path(directory).glob("*.parquet"))]
+    if not frames:
+        return {}
+    df = pd.concat(frames, ignore_index=True)
+    df = df.dropna(subset=["tp_mm"]).sort_values("available_on", kind="stable")
+    df = df.drop_duplicates(["date", "region"], keep="last")
+    return {
+        str(r): g.assign(date=pd.to_datetime(g["date"])).set_index("date")["tp_mm"].sort_index()
+        for r, g in df.groupby("region")
+    }
+
+
 COLUMNS = [
     "seq", "model", "model_version", "variable", "station", "lead", "issue_date", "valid_date",
     "status", "observed", "threshold", "p", "clim_prob", "event", "abs_error", "crps", "brier",
@@ -75,14 +99,15 @@ def score(
     rows = []
     for r in records:
         y = obs.get(r.valid_date)
-        thr = r.details.get("threshold_m3s")
+        risk = r.variable == VAR_RISK
+        thr = r.details.get("threshold_mm" if risk else "threshold_m3s")
         row = {
             "seq": r.seq,
             "model": r.model_name,
             "model_version": r.model_version,
             "variable": r.variable,
             "station": r.region,
-            "lead": r.lead_days,
+            "lead": r.details.get("gefs_lead", r.lead_days) if risk else r.lead_days,
             "issue_date": r.issued_at.date(),
             "valid_date": r.valid_date,
             "status": "pending",
@@ -97,14 +122,15 @@ def score(
         }
         if y is not None and thr is not None:
             row["status"] = "scored"
-            row["event"] = float(y > thr)
+            event = bool(y >= thr) if risk else bool(y > thr)
+            row["event"] = float(event)
             if r.variable == VAR_FLOW:
                 row["abs_error"] = abs(r.value - y)
                 q = r.details.get("quantiles")
                 if q:
                     row["crps"] = crps_from_quantiles(y, q)
-            elif r.variable == VAR_PROB:
-                row["brier"] = brier(r.value, y > thr)
+            elif r.variable in PROB_VARS:
+                row["brier"] = brier(r.value, event)
         rows.append(row)
     return pd.DataFrame(rows, columns=COLUMNS)
 
@@ -180,7 +206,7 @@ def skill_table(scores: pd.DataFrame, n_boot: int = 2000, seed: int = 0) -> pd.D
                     )
                 elif len(pr) and model == BASELINE:
                     row["skill"] = 0.0
-            if variable == VAR_PROB:
+            if variable in PROB_VARS:
                 alarm, ev = m["p"] > P_ALARM, m["event"] == 1
                 hits, misses, false = (
                     int((alarm & ev).sum()),
@@ -206,7 +232,8 @@ def to_markdown(table: pd.DataFrame, pending: int = 0) -> str:
         "Solo predicciones del registro congelado (F6.4). Skill = 1 − S/S_climatología sobre casos pareados "
         "(CRPS aproximado por cuantiles para caudal; Brier para probabilidad de caudal alto); IC 95 % por "
         "bootstrap de bloques semanales. POD y FAR con p > 0,5. Umbral provisional: p95 del período de "
-        f'entrenamiento. Tablas con menos de {MIN_EVENTS} eventos independientes: "insuficiente". '
+        "entrenamiento. Día de riesgo (p_dia_riesgo): lluvia regional diaria ERA5T ≥ umbral de la región. "
+        f'Tablas con menos de {MIN_EVENTS} eventos independientes: "insuficiente". '
         f"Predicciones pendientes de observación: {pending}."
     )
     lines = [
@@ -220,7 +247,7 @@ def to_markdown(table: pd.DataFrame, pending: int = 0) -> str:
     if table.empty:
         return "\n".join(lines + ["Sin predicciones puntuadas todavía.", ""])
     lines += [
-        "| Modelo | Variable | Estación | Anticip. (d) | n | Eventos | Puntaje medio | Skill | IC 95 % | POD | FAR | Estado |",
+        "| Modelo | Variable | Estación / región | Anticip. (d) | n | Eventos | Puntaje medio | Skill | IC 95 % | POD | FAR | Estado |",
         "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]  # fmt: skip
     for r in table.itertuples():
