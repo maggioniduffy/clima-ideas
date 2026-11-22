@@ -1,0 +1,20 @@
+{
+  "attributes": {
+    "source": "NOAA GEFSv12 reforecast (noaa-gefs-retrospective, AWS NODD), APCP, 00 UTC, 0.25 deg",
+    "license": "NOAA NODD: open to the public, attribution requested, no NOAA endorsement implied",
+    "period": "valid 2000-01-02..2019-12-31",
+    "model": "gefs-reforecast",
+    "lead_convention": "lead L = precipitation over forecast hours (24(L-1), 24L] of the 00 UTC run; valid_date = init_date + L - 1 (UTC day 00-24 h)",
+    "grid": "lat -41..-36, lon -71.5..-68, 0.25 deg, ascending, lon in -180..180",
+    "notes": "inits 2000-01-01..2019-12-31 only (the 2020 prefix holds a single misplaced 2010-07-01 init)",
+    "created_by": "clima-nqn hindcast (F5.1)",
+    "n_ok": 20199,
+    "n_missing": 1,
+    "n_error": 0,
+    "n_pending": 0,
+    "n_shards": 8,
+    "run_id": "44976687235"
+  },
+  "zarr_format": 3,
+  "node_type": "group"
+}

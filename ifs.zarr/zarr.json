@@ -1,0 +1,20 @@
+{
+  "attributes": {
+    "source": "ECMWF open data (AWS mirror ecmwf-forecasts), tp, 00 UTC run, IFS oper (0.4 deg before 2024-02-29, regridded bilinearly)",
+    "license": "CC-BY-4.0 + ECMWF Terms of Use (https://www.ecmwf.int/en/forecasts/datasets/open-data)",
+    "period": "valid 2023-01-28..2025-12-31",
+    "model": "ifs",
+    "lead_convention": "lead L = precipitation over forecast hours (24(L-1), 24L] of the 00 UTC run; valid_date = init_date + L - 1 (UTC day 00-24 h)",
+    "grid": "lat -41..-36, lon -71.5..-68, 0.25 deg, ascending, lon in -180..180",
+    "notes": "single deterministic member",
+    "created_by": "clima-nqn hindcast (F5.1)",
+    "n_ok": 453,
+    "n_missing": 7,
+    "n_error": 0,
+    "n_pending": 0,
+    "n_shards": 1,
+    "run_id": "44976687235"
+  },
+  "zarr_format": 3,
+  "node_type": "group"
+}
