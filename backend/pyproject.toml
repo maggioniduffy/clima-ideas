@@ -22,6 +22,9 @@ dependencies = [
     "harmony-py>=1.8.0",
     "shapely>=2.2.0",
     "pysheds>=0.5",
+    "ecmwf-opendata>=0.3.35",
+    "eccodes>=2.50.1",
+    "eccodeslib>=2.50.0.34",
 ]
 
 [project.scripts]

@@ -123,7 +123,7 @@ def test_append_refuses_tampered_file(reg: PredictionRegistry) -> None:
 
 def test_no_mutating_api(reg: PredictionRegistry) -> None:
     public = {n for n in dir(reg) if not n.startswith("_")}
-    assert public == {"append", "read", "verify", "path"}
+    assert public == {"append", "read", "verify", "path", "now", "append_many"}
 
 
 def test_past_issue_date_rejected(reg: PredictionRegistry) -> None:
@@ -187,3 +187,25 @@ def test_hash_inputs_is_stable() -> None:
     assert hash_inputs({"a": 1, "b": 2}) == hash_inputs({"b": 2, "a": 1})
     assert hash_inputs({"a": 1}) != hash_inputs({"a": 2})
     assert len(hash_inputs({})) == 64
+
+
+def test_append_many_atomic_on_duplicate(reg: PredictionRegistry) -> None:
+    reg.append(draft(lead_days=4, valid_date=date(2027, 6, 14)))
+    before = reg.path.read_text()
+    with pytest.raises(DuplicatePredictionError):
+        reg.append_many([draft(), draft(lead_days=4, valid_date=date(2027, 6, 14))])
+    assert reg.path.read_text() == before
+    with pytest.raises(DuplicatePredictionError):  # duplicate inside the batch
+        reg.append_many([draft(), draft()])
+    assert reg.path.read_text() == before
+
+
+def test_append_many_matches_sequential(tmp_path: Path, clock: Clock) -> None:
+    drafts = [draft(lead_days=n, valid_date=date(2027, 6, 10 + n)) for n in (1, 2, 3)]
+    a = PredictionRegistry(tmp_path / "a.jsonl", clock=clock)
+    b = PredictionRegistry(tmp_path / "b.jsonl", clock=clock)
+    batch = a.append_many(drafts)
+    seq = [b.append(d) for d in drafts]
+    assert batch == seq and a.verify() == b.verify() == batch[-1].record_hash
+    assert a.path.read_text() == b.path.read_text()
+    assert a.append_many([]) == []

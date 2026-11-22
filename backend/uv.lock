@@ -252,6 +252,9 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
+    { name = "eccodes" },
+    { name = "eccodeslib" },
+    { name = "ecmwf-opendata" },
     { name = "fastapi" },
     { name = "gcsfs" },
     { name = "harmony-py" },
@@ -284,6 +287,9 @@ ml = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.44.1" },
+    { name = "eccodes", specifier = ">=2.50.1" },
+    { name = "eccodeslib", specifier = ">=2.50.0.34" },
+    { name = "ecmwf-opendata", specifier = ">=0.3.35" },
     { name = "fastapi" },
     { name = "gcsfs", specifier = ">=2026.10.1" },
     { name = "harmony-py", specifier = ">=1.8.0" },
@@ -434,6 +440,59 @@ wheels = [
 ]
 
 [[package]]
+name = "eccodes"
+version = "2.50.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "cffi" },
+    { name = "findlibs" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/96/eb83541e85ff3943e9d55de17f952814192eccc8a3deb8c1daf25801cddf/eccodes-2.50.1.tar.gz", hash = "sha256:e8e2172e95b60f395adb92fa608db693d47938370d4c870a3eebc0a740237296", size = 2470584, upload-time = "2026-11-11T16:23:51.711Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/d9/2c30fd206ea0f63756eeb97dd3a41053b113fc2f6a574fe9f7a83b7cd4c5/eccodes-2.50.1-cp312-cp312-win_amd64.whl", hash = "sha256:7167c983e4c98cc1090d3f72efa12f4f3649a8ef11086fff64fe7da3e301234e", size = 7557393, upload-time = "2026-11-11T16:23:19.977Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/4f/c8779a841b87ef2aeb737ed557a34722e2df1bad5591083a7cd76a6f8b23/eccodes-2.50.1-py3-none-any.whl", hash = "sha256:2fd6c5f86183ca156778fd9a97425a5e6ff0449d0a11edbe70a96417c3a0cc35", size = 91619, upload-time = "2026-11-11T16:23:50.822Z" },
+]
+
+[[package]]
+name = "eccodeslib"
+version = "2.50.0.34"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "eckitlib" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/0e/3355455535ffcf8d86e82803a10eb72e2da5b2ab67b721d1e9b60fb7d2a3/eccodeslib-2.50.0.34-cp312-cp312-macosx_15_0_arm64.whl", hash = "sha256:d8231224ce4113bc679796c660d9eded924d787f52c0d8ca94398bf5f8f07f97", size = 9058331, upload-time = "2026-11-06T07:27:55.104Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/33/e580d3176a570f0b6319c468407e397c75b86c4c67933c78b07f4e8046e2/eccodeslib-2.50.0.34-cp312-cp312-macosx_15_0_x86_64.whl", hash = "sha256:4cfd92427ff2f767a5ff134e773b969ae874243c5a37fd95452967be600db660", size = 8837464, upload-time = "2026-11-06T07:41:59.147Z" },
+    { url = "https://files.pythonhosted.org/packages/81/07/6c46a6a6a8f79a18779cd32d6b34df2842d96507f13f317c69a094c5ea03/eccodeslib-2.50.0.34-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:2b5ff86be33b23159b01e800378acc29c6389b34e1d9cc2a517af045d7466436", size = 9214117, upload-time = "2026-11-06T07:31:42.229Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/3b/1504128bbee24e483a866c294396452070ba5285c7a3722f701425f8191b/eccodeslib-2.50.0.34-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:e2da2e099f4b7a196cf9dcddeb1b651dd35d0f7fa693dc2ecc24800ad1ec9ba6", size = 8998185, upload-time = "2026-11-06T07:26:49.784Z" },
+]
+
+[[package]]
+name = "eckitlib"
+version = "2.5.0.34"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5f/59/83b2c70656353712955554804b7dd3f395353b8473971558450d9738a4b3/eckitlib-2.5.0.34-cp312-cp312-macosx_15_0_arm64.whl", hash = "sha256:9b30af4079aecce77f5b1c83353a5b61586a7bbb506ede96ceb93a00b0500cbd", size = 6558631, upload-time = "2026-11-06T07:28:00.281Z" },
+    { url = "https://files.pythonhosted.org/packages/26/c7/ba5190b53f9bae58b0bef0fdd89a386989461b9ccfd602cd6494b31365e1/eckitlib-2.5.0.34-cp312-cp312-macosx_15_0_x86_64.whl", hash = "sha256:cd90e8b714027a635dc72bd456e011ced6c104807fe6ab6c57878a4465514462", size = 6612585, upload-time = "2026-11-06T07:42:07.243Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/9b/8be55f0e26b43876380915c11b0a88748878611f4b8dcd88acd1647e7cdf/eckitlib-2.5.0.34-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:e89ce6d92cd7c601e4bdbda87fbe52f27f6390631b85c6ea06b41c7ff6eb3c5b", size = 35218197, upload-time = "2026-11-06T07:31:47.758Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/c7/90e2867b35a2397b4c9bf4486c50a54adc6cfb0c0f8bfc631a1573e0d1aa/eckitlib-2.5.0.34-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:3a28e1a7e2ab1b341e1ffa5688d42a1cf2249eede379b3ec5b4dde044e0cebc4", size = 36168597, upload-time = "2026-11-06T07:27:00.27Z" },
+]
+
+[[package]]
+name = "ecmwf-opendata"
+version = "0.3.35"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "multiurl" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5b/0b/6325a31d6538283549affe7b39d45e1ddfdd3359aa3e5e8713081cf6ea8d/ecmwf_opendata-0.3.35.tar.gz", hash = "sha256:690439816a455745aa107e7dd207eee4a2eb01d6f88bb0be11917286dedbe449", size = 37372, upload-time = "2026-10-16T10:19:46.622Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/44/09d6faa835f595c5b15f57a63296173cff12f853ed2a01f5f7dbc461bff9/ecmwf_opendata-0.3.35-py3-none-any.whl", hash = "sha256:8bf1505db3dd4d98e007c4206bd76aa40c32aa2ac72b4a9af739335c9aa5342b", size = 26453, upload-time = "2026-10-16T10:19:45.546Z" },
+]
+
+[[package]]
 name = "emcee"
 version = "3.1.6"
 source = { registry = "https://pypi.org/simple" }
@@ -469,6 +528,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a1/cf/05bcdacabdc0aec7dc8e19d76281bd82325df62dae3b6430e9ba57397689/filelock-4.2.10.tar.gz", hash = "sha256:fcc3c0cb8bfe7f4b3bb0e231c04b15dbad068cb3c2515f343d8fde4dce93bd5d", size = 670595, upload-time = "2026-11-09T18:58:00.54Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/90/5d0096a325aa0f83ba7a3968bfb485b67e32c947bdf9cd0fcb4b485be718/filelock-4.2.10-py3-none-any.whl", hash = "sha256:9479aaeb4db20b5a53e3da28493edd24720b66b8a0b84030aa56ccdf243d6857", size = 218040, upload-time = "2026-11-09T18:57:59.088Z" },
+]
+
+[[package]]
+name = "findlibs"
+version = "0.1.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/21/60/3199cd48cd54a7cefd0a501654021ac8e8a82f2e6daebe990e8a1d9a8896/findlibs-0.1.5.tar.gz", hash = "sha256:68bc98d26cbd73ea2a20ee11920f60d8ad29c504e2ce82191aafd8ef734cb865", size = 11559, upload-time = "2026-11-04T16:30:22.886Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/de/2c0e2b1dfbcbf745f58652c4b67da9a7b57fe5d1b7ac684703c8a3848d4a/findlibs-0.1.5-py3-none-any.whl", hash = "sha256:48088b276ea3699422fb3921934db05f9eddfb3cd3fb689c39f5127a97350661", size = 10859, upload-time = "2026-11-04T16:30:21.303Z" },
 ]
 
 [[package]]
@@ -1052,6 +1120,21 @@ wheels = [
 ]
 
 [[package]]
+name = "multiurl"
+version = "0.3.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "pytz" },
+    { name = "requests" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d4/4e/f9d2e73ff31721e279600cd7a56c8e2c323c412769883a1f1115932aff5b/multiurl-0.3.10.tar.gz", hash = "sha256:139927318b0a92d7f254d49ca4ea8544a4e3224e615fd2ed79408fe6d2d10e61", size = 20957, upload-time = "2026-11-10T10:53:02.008Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/a2/e8163a02558002dbf337ffde70c8ac9ebfe1803c983da95fb656000619a3/multiurl-0.3.10-py3-none-any.whl", hash = "sha256:752f8eaeeead66443ff114069b06de2b659ac1533734c1b7f229fd3923e16c8c", size = 22606, upload-time = "2026-11-10T10:53:00.927Z" },
+]
+
+[[package]]
 name = "netcdf4"
 version = "1.7.5.1.post1"
 source = { registry = "https://pypi.org/simple" }
@@ -1496,6 +1579,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pytz"
+version = "2026.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/b0/168030b0bfcc334cf09fa3313afdb888d892c8a0027324683d1de0ec277e/pytz-2026.6.tar.gz", hash = "sha256:3b0fc2727707663d6e517936f444fd8a8b240f1fc32f4bf7ee03274245945284", size = 318520, upload-time = "2026-10-29T09:05:47.011Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b6/25/564f3fc5b70c1398d706c51f2b1470d0ea0b1b2f96fee67877b6f5bdf3b6/pytz-2026.6-py2.py3-none-any.whl", hash = "sha256:7fed3fee8fd6bd4a2b7b75a8d56021d0624127bf69bd5691f115db929ac570b3", size = 506321, upload-time = "2026-10-29T09:05:45.14Z" },
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1788,6 +1880,18 @@ wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.15.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:0955c7e3446326293f48af18fad67872fa31dee5a36a87690eb9e5be8b465be3", upload-time = "2026-10-28T13:18:39Z" },
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.15.0%2Bcpu-cp312-cp312-win_amd64.whl", hash = "sha256:5af9fb357790db09e62484b12032304f046c22c4b1895ca88c4cf5987ea369ca", upload-time = "2026-10-28T13:18:45Z" },
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.15.0%2Bcpu-cp312-cp312-win_arm64.whl", hash = "sha256:fe17318e964a6eb4b1380fd6dcd5405264af3e54b10bce7abcce5fa701a3f049", upload-time = "2026-10-28T13:18:48Z" },
+]
+
+[[package]]
+name = "tqdm"
+version = "4.70.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0d/ea/b2a5bd54b28a324dae8211928b2d730b6547500342c7e6c6dea08bd0a485/tqdm-4.70.1.tar.gz", hash = "sha256:cefd0eca11b2a37a3aee776544d4f4ae913f02688135b5556b8788dfa474afc4", size = 171846, upload-time = "2026-09-11T07:25:16.601Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a7/03/921a3d3c75785aca9ebfbfcabfbc3a1be12e2ab5265deb026d55a5a3f83e/tqdm-4.70.1-py3-none-any.whl", hash = "sha256:c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73", size = 80199, upload-time = "2026-09-11T07:25:14.599Z" },
 ]
 
 [[package]]

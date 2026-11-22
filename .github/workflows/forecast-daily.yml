@@ -1,0 +1,115 @@
+# Daily operational forecast job (plan/06-forecast.md: F6.1, F6.4, F6.5).
+# 1. `ops ingest`: snapshots of SNIH flow, ONI, ERA5T, ECMWF open data and GEFS basin precipitation
+#    (forecast runs cannot be downloaded again later, so they are archived every day).
+# 2. `forecast emit`: climatology baseline of daily flow, 1-10 days, frozen in the append-only registry.
+#    Persistence is paused: SNIH has no real-time flow (last value 2026-03-31, reports/06/F6.1-latency.md).
+# 3. Mondays (and manual runs): refresh observed flow from SNIH and `forecast score` the registry.
+# Everything is committed (never force-pushed) to the branch `data/forecast-registry`, so the git history
+# is a second, external proof that no frozen prediction was edited. Scheduled runs only fire from the
+# default branch; on other branches use "Run workflow" (workflow_dispatch).
+name: Forecast daily
+
+on:
+  schedule:
+    - cron: "17 10 * * *" # 10:17 UTC, after the 00 UTC ECMWF and GEFS runs are out
+  workflow_dispatch:
+  push:
+    branches: [fm/nice-maxwell-iiumsl]
+    paths: [.github/workflows/forecast-daily.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: forecast-daily
+  cancel-in-progress: false
+
+env:
+  OUT_BRANCH: data/forecast-registry
+  STATIONS: "12004 12010" # the only stations with SNIH data after 2021 (F6.1)
+  MODELS: climatologia
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+
+      - name: Check out the data branch into store/
+        run: |
+          STORE="$RUNNER_TEMP/store"
+          echo "STORE=$STORE" >> "$GITHUB_ENV"
+          if git ls-remote --exit-code --heads origin "$OUT_BRANCH" > /dev/null; then
+            git clone -q --single-branch --branch "$OUT_BRANCH" \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "$STORE"
+          else
+            mkdir -p "$STORE" && git -C "$STORE" init -q -b "$OUT_BRANCH"
+            git -C "$STORE" remote add origin \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
+            cat > "$STORE/README.md" <<'EOF'
+          Forecast registry and operational inputs (plan/06-forecast.md), written by
+          .github/workflows/forecast-daily.yml. Append-only: never rewrite or force-push this branch.
+          - registry/predictions.jsonl: frozen predictions (F6.4, SHA-256 hash chain); registry/head.txt: head hash.
+          - training/flow: SNIH daily flow snapshot used to fit the baselines (frozen; its hash is in the model version).
+          - operational/<source>/<date>.parquet + manifest.json: daily input snapshots (F6.1).
+          - observed/flow: latest SNIH refresh used for scoring; scores/latest.{json,md}: skill table (F6.5).
+          Sources: SNIH (SIPH) Red Hidrológica Nacional; NOAA CPC ONI; ERA5T (Copernicus C3S, CC-BY 4.0, ARCO-ERA5);
+          ECMWF open data (CC-BY 4.0); NOAA GEFS (NODD open data, attribution requested). Not an official warning.
+          EOF
+          fi
+
+      - name: Frozen training snapshot (first run only)
+        run: |
+          if [ ! -d "$STORE/training/flow" ]; then
+            args=""; for s in $STATIONS; do args="$args --station $s"; done
+            uv run clima-nqn flow fetch --raw "$RUNNER_TEMP/train-raw" $args
+            uv run clima-nqn flow ingest --raw "$RUNNER_TEMP/train-raw" --out "$STORE/training/flow" \
+              --report "$STORE/training/flow-report.md"
+          fi
+          hash=$(cat "$STORE"/training/flow/*.parquet | sha256sum | cut -c1-8)
+          echo "MODEL_VERSION=v1-train$hash" >> "$GITHUB_ENV"
+
+      - name: Operational ingest
+        run: uv run clima-nqn ops ingest --root "$STORE/operational"
+
+      - name: Emit baseline predictions
+        run: |
+          uv run clima-nqn forecast emit --flow-dir "$STORE/training/flow" \
+            --registry "$STORE/registry/predictions.jsonl" \
+            --model-version "$MODEL_VERSION" --models "$MODELS"
+          uv run python -c "from clima_nqn.forecast.registry import PredictionRegistry as R; print(R('$STORE/registry/predictions.jsonl').verify())" \
+            > "$STORE/registry/head.txt"
+
+      - name: Refresh observed flow and score (Mondays and manual runs)
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" != "1" ]; then
+            echo "not Monday: skip scoring"; exit 0
+          fi
+          args=""; for s in $STATIONS; do args="$args --station $s"; done
+          uv run clima-nqn flow fetch --raw "$RUNNER_TEMP/obs-raw" $args
+          uv run clima-nqn flow ingest --raw "$RUNNER_TEMP/obs-raw" --out "$STORE/observed/flow" \
+            --report "$STORE/observed/flow-report.md"
+          uv run clima-nqn forecast score --flow-dir "$STORE/observed/flow" \
+            --registry "$STORE/registry/predictions.jsonl" --out "$STORE/scores/latest"
+
+      - name: Commit to the data branch (append, no force)
+        run: |
+          cd "$STORE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git commit -qm "data: forecast run $(date -u +%F) (${MODEL_VERSION}, run ${GITHUB_RUN_ID})"
+          for i in 1 2 3 4; do
+            git push -q origin "HEAD:refs/heads/$OUT_BRANCH" && exit 0
+            sleep $((2 ** i))
+          done
+          exit 1

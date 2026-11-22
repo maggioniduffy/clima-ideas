@@ -70,6 +70,23 @@ son indicios, no verificación: lo que no se leyó en la página primaria sigue 
 | NASA Global Landslide Catalog | available | https://catalog.data.gov/dataset/global-landslide-catalog-export | CSV, SHP | evento puntual | no indicada | — | 4 |
 | DesInventar Argentina | sin verificar para Neuquén | https://online.desinventar.org | Consulta web | base de prensa desde 1995 (snippet) | sin verificar | — | 4 |
 
+### Entradas operativas medidas (F6.1, 2026-11-22)
+
+Medido desde el contenedor el 2026-11-22; detalle y comandos en `reports/06/F6.1-latency.md`. Reemplaza las filas
+"Licencia GEFS" y "GEFS operativo (latencia/retención)" de arriba.
+
+| Ítem | Estado | URL de acceso | Último dato | Latencia | Retención | Licencia |
+|---|---|---|---|---|---|---|
+| SNIH QMD (tiempo real) | **sin tiempo real** | https://snih.hidricosargentina.gob.ar (LeerDatosHistoricos) | 12004 y 12010: 2026-03-31; 12012 y 11803: 2021-03-31; 12013 y 11804: sin datos 2015–2026 | 236 d (validados y no validados) | sin verificar | sin verificar |
+| ERA5T (ARCO-ERA5) | available | gcp-public-data-arco-era5 | 2026-11-15 23 UTC (`valid_time_stop_era5t`) | 7 d; días enteros con NaN | desde 1940 | CC-BY 4.0 |
+| ONI (CPC) | available | https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt | ASO 2026 | fecha de publicación sin verificar | desde DJF 1950 | sin verificar |
+| ECMWF open data IFS / AIFS | available | https://data.ecmwf.int/forecasts/ ; espejo s3://ecmwf-forecasts | 2026-11-21 12 UTC (IFS), 18 UTC (AIFS) | ~0,25–0,5 d | portal: 12 corridas (~3 d); espejo S3 desde 2023-01-18 | CC-BY-4.0 + ECMWF Terms of Use (https://www.ecmwf.int/en/forecasts/datasets/open-data) |
+| GEFS operativo | available | s3://noaa-gefs-pds | 2026-11-21 18 UTC | ~0,25 d | desde 2017-01-01 | NODD abierto, atribución solicitada, sin implicar endoso (https://registry.opendata.aws/noaa-gefs/) |
+| GEFS reforecast v12 | available | s3://noaa-gefs-retrospective | 2000–2020 | — | — | igual que GEFS (mismo programa NODD; sin verificar en página propia) |
+
+IVT (F5.9): calculable en GEFS operativo (q en `pgrb2b`, u/v en `pgrb2a` + `pgrb2b`, 1000–300 hPa), en el reforecast
+GEFSv12 (`*_pres` + `*_pres_abv700mb`) y en IFS/AIFS con 8 niveles (1000, 925, 850, 700, 600, 500, 400, 300 hPa).
+
 Eventos verificados: remoción en masa en Cerro de la Virgen (RP43, Chos Malal), 1 de agosto de 2023, 4 heridos, sin
 volumen (informe SEGEMAR y prensa). Crecidas del Curí Leuvú y decreto de desastre hídrico (julio 2023): solo snippets.
 

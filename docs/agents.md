@@ -10,11 +10,14 @@ Tests first when a deterministic test applies.
 Return: changed files, commands run with results.
 ```
 
-## opencode
+## Haiku
 
-```bash
-opencode run --title "<ID>" "<prompt>"
+Subagente con `model: haiku` (reemplaza a opencode desde el 2026-11-22): investigación, descargas, corridas largas.
+
 ```
-
-Prompt: objetivo, rutas en alcance, restricciones (no editar código fuera de alcance, no secretos),
-formato de respuesta, y archivo de salida en `reports/<fase>/<ID>.md`.
+Task: plan/NN-x.md, <ID>. Objective: <objetivo>.
+In scope: <rutas>. Do not edit code outside scope; never print or store secrets.
+Unverified facts are marked "sin verificar" with the URL tried.
+Write the report to reports/<fase>/<ID>.md.
+Return: report summary (≤ 15 lines) + commands run with results.
+```
