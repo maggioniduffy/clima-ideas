@@ -8,11 +8,13 @@ from typing import Annotated
 import typer
 
 from clima_nqn.api.app import DEFAULT_DATA_ROOT
+from clima_nqn.forecast.cli import forecast_app
 from clima_nqn.io import basins as basins_io
 from clima_nqn.io import camels_cl, dem, era5, flow, forcing, imerg, snow
 from clima_nqn.io import isd as isd_io
 from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, write_enso
 from clima_nqn.layers import flood_stations
+from clima_nqn.ops.cli import ops_app
 from clima_nqn.publish import (
     make_client,
     plan_uploads,
@@ -49,6 +51,9 @@ def version() -> None:
     """Print the package version."""
     typer.echo("0.1.0")
 
+
+app.add_typer(ops_app, name="ops")
+app.add_typer(forecast_app, name="forecast")
 
 enso_app = typer.Typer(help="Shared ENSO index (NOAA CPC ONI).")
 app.add_typer(enso_app, name="enso")

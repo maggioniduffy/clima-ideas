@@ -79,6 +79,9 @@ class PredictionDraft(BaseModel):
     training_period: str = Field(pattern=_PERIOD)
     inputs: list[InputSource] = Field(min_length=1)
     inputs_sha256: str = Field(pattern=_HEX64)
+    # Free-form JSON payload (quantiles, climatological probability, threshold...). Optional, so older
+    # records without it still validate and verify (the hash covers whatever keys are on disk).
+    details: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("issue_date")
     @classmethod
@@ -132,6 +135,10 @@ class PredictionRegistry:
     def __init__(self, path: Path, clock: Callable[[], datetime] = _utc_now) -> None:
         self.path = Path(path)
         self._clock = clock
+
+    def now(self) -> datetime:
+        """The registry clock, UTC."""
+        return self._clock().astimezone(UTC)
 
     def read(self) -> list[PredictionRecord]:
         """All records in order. Does not verify the chain; call ``verify()`` for that."""

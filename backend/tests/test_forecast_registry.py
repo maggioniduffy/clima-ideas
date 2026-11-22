@@ -123,7 +123,7 @@ def test_append_refuses_tampered_file(reg: PredictionRegistry) -> None:
 
 def test_no_mutating_api(reg: PredictionRegistry) -> None:
     public = {n for n in dir(reg) if not n.startswith("_")}
-    assert public == {"append", "read", "verify", "path"}
+    assert public == {"append", "read", "verify", "path", "now"}
 
 
 def test_past_issue_date_rejected(reg: PredictionRegistry) -> None:
