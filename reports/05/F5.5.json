@@ -1,0 +1,191 @@
+{
+ "id": "hindcast-analogs",
+ "source": "ERA5 (Copernicus) vía ARCO-ERA5; IMERG Final V07 (NASA)",
+ "license": "CC BY 4.0",
+ "period": "1980-01-01/2025-12-31",
+ "k": 10,
+ "regions": [
+  "cordillera_norte",
+  "cordillera_sur",
+  "confluencia"
+ ],
+ "units": {
+  "rain": "mm/día",
+  "ivt_max": "kg m-1 s-1",
+  "distance": "kg m-1 s-1 (anomalías ponderadas)"
+ },
+ "imerg_unavailable": {
+  "cordillera_norte": "IMERG no cubre la región",
+  "cordillera_sur": "IMERG no cubre la región"
+ },
+ "imerg_region_coverage": {
+  "cordillera_norte": 0.0,
+  "cordillera_sur": 0.0,
+  "confluencia": 1.0
+ },
+ "rain_periods": {
+  "imerg": "2000-06-01/2025-09-30",
+  "era5": "2000-01-01/2019-12-31"
+ },
+ "method": {
+  "library": "media diaria de 00/06/12/18 UTC de viwve y viwvn (ERA5, ARCO-ERA5, 0,25°) en N -34 / W -74 / S -43 / E -66",
+  "target": "día UTC del IVT máximo de cada evento F1.3",
+  "distance": "euclídea sobre anomalías (climatología del día del año, ventana ±15 días) ponderadas por sqrt(cos(lat))",
+  "candidates": "±30 días del día del año del evento en cualquier año; se excluyen ±15 días del evento",
+  "one_per_system": "no se eligen dos análogos a ±3 días",
+  "k": 10,
+  "baseline": "10 días al azar de la misma época, misma exclusión y misma regla de un día por sistema; semilla 20261122",
+  "bootstrap": "IC 95 % por percentiles, 1000 remuestreos de eventos, semilla 0"
+ },
+ "n_events": 433,
+ "events_source": "events.parquet",
+ "summary": {
+  "ar_fraction": {
+   "n_events": 433,
+   "analogs": 0.4201,
+   "baseline": 0.0522,
+   "diff": 0.3679,
+   "analogs_ci": [
+    0.3954,
+    0.4476
+   ],
+   "baseline_ci": [
+    0.0453,
+    0.0591
+   ],
+   "diff_ci": [
+    0.343,
+    0.3933
+   ]
+  },
+  "rain": {
+   "cordillera_norte": {
+    "imerg": {
+     "n_events": 0,
+     "analogs": null,
+     "baseline": null,
+     "diff": null,
+     "analogs_ci": [
+      null,
+      null
+     ],
+     "baseline_ci": [
+      null,
+      null
+     ],
+     "diff_ci": [
+      null,
+      null
+     ]
+    },
+    "era5": {
+     "n_events": 430,
+     "analogs": 9.5728,
+     "baseline": 3.2202,
+     "diff": 6.3527,
+     "analogs_ci": [
+      8.3478,
+      10.7889
+     ],
+     "baseline_ci": [
+      2.8345,
+      3.6222
+     ],
+     "diff_ci": [
+      5.1553,
+      7.5806
+     ]
+    }
+   },
+   "cordillera_sur": {
+    "imerg": {
+     "n_events": 0,
+     "analogs": null,
+     "baseline": null,
+     "diff": null,
+     "analogs_ci": [
+      null,
+      null
+     ],
+     "baseline_ci": [
+      null,
+      null
+     ],
+     "diff_ci": [
+      null,
+      null
+     ]
+    },
+    "era5": {
+     "n_events": 430,
+     "analogs": 14.4595,
+     "baseline": 3.9024,
+     "diff": 10.5571,
+     "analogs_ci": [
+      13.4128,
+      15.4922
+     ],
+     "baseline_ci": [
+      3.5363,
+      4.3087
+     ],
+     "diff_ci": [
+      9.5949,
+      11.5041
+     ]
+    }
+   },
+   "confluencia": {
+    "imerg": {
+     "n_events": 433,
+     "analogs": 1.8141,
+     "baseline": 0.757,
+     "diff": 1.0571,
+     "analogs_ci": [
+      1.5746,
+      2.068
+     ],
+     "baseline_ci": [
+      0.6457,
+      0.8656
+     ],
+     "diff_ci": [
+      0.8118,
+      1.329
+     ]
+    },
+    "era5": {
+     "n_events": 430,
+     "analogs": 0.4495,
+     "baseline": 0.642,
+     "diff": -0.1925,
+     "analogs_ci": [
+      0.3603,
+      0.5385
+     ],
+     "baseline_ci": [
+      0.523,
+      0.764
+     ],
+     "diff_ci": [
+      -0.3514,
+      -0.0515
+     ]
+    }
+   }
+  }
+ },
+ "coverage": {
+  "n_analog_days": 4330,
+  "imerg": {
+   "cordillera_norte": 0.0,
+   "cordillera_sur": 0.0,
+   "confluencia": 0.548
+  },
+  "era5": {
+   "cordillera_norte": 0.433,
+   "cordillera_sur": 0.433,
+   "confluencia": 0.433
+  }
+ }
+}

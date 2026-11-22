@@ -932,6 +932,30 @@ def convection_layer(
     typer.echo(convection_idf.build(zarr, out or convection_idf.DEFAULT_OUT))
 
 
+@hindcast_app.command("verification-layer")
+def hindcast_verification_layer(
+    forecasts: Annotated[
+        Path | None, typer.Option(help="F5.1 forecasts directory (default: data/f51-forecasts).")
+    ] = None,
+    reports: Annotated[
+        Path | None,
+        typer.Option(help="Reports directory with F5.2/F5.4/F5.8 JSON (default: reports/05)."),
+    ] = None,
+    out: Annotated[
+        Path | None,
+        typer.Option(help="Layer directory (default: data/processed/hindcast-verification)."),
+    ] = None,
+) -> None:
+    """Build the hindcast-verification viewer layer: event forecasts vs. ERA5, skill curves, evidence gate (F5.6)."""
+    from clima_nqn.layers import hindcast_verification as hv
+
+    typer.echo(
+        hv.build(
+            forecasts or hv.DEFAULT_FORECASTS, reports or hv.DEFAULT_REPORTS, out or hv.DEFAULT_OUT
+        )
+    )
+
+
 @convection_app.command("bias")
 def convection_bias(
     zarr: Annotated[Path, typer.Option(help="IMERG Final Zarr.")] = Path(

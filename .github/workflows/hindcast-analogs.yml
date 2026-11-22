@@ -1,0 +1,160 @@
+# F5.5 (plan/05): ERA5 analogs of every F1.3 event. Manual, plus one run when this file changes on the work branch.
+# Job `plan` lists the years; the matrix job `library` builds the daily IVT of one year (mean of the 00/06/12/18 UTC
+# ARCO-ERA5 viwve, viwvn over the Neuquén box, `clima-nqn hindcast analogs-library --year`); `combine` joins the
+# years into era5-ivt-daily.zarr; `analogs` searches 10 analogs per event, builds the baseline and the report with the
+# events from branch data/f23-ar-events and the rain tables reports/05/F5.5-imerg.csv + F5.3-obs.csv of this checkout,
+# and force-pushes the outputs to the orphan branch `data/f55-analogs` (like data/f53-alldays).
+# Measured 2026-11-22 in the dev container (64 reads in parallel): one month at 00/06/12/18 UTC takes 4-10 s and reads
+# ~1 GB of global ARCO fields (124 steps x 2 variables x 4 MB), so one year takes ~50 s and ~12 GB; 46 years are ~550 GB
+# over 46 jobs. A hosted runner may be several times slower, so the year job gets a 45 min timeout. The analogs job
+# took 7 s for 33 events on 3 years of library; 433 events on 46 years is a few minutes (30 min timeout).
+name: Hindcast analogs (F5.5)
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: 'Library years, e.g. "1980-2025" or "1980-1985,1990"'
+        default: "1980-2025"
+  push: # one full run from the work branch (dispatch needs the file on main)
+    branches: [fm/nice-maxwell-iiumsl]
+    paths: [.github/workflows/hindcast-analogs.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  OUT_BRANCH: data/f55-analogs
+  CATALOG_BRANCH: data/f23-ar-events
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.years.outputs.matrix }}
+    steps:
+      - id: years
+        env:
+          YEARS: ${{ inputs.years || '1980-2025' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+          years = os.environ["YEARS"].replace(" ", "")
+          if not re.fullmatch(r"\d{4}(-\d{4})?(,\d{4}(-\d{4})?)*", years):
+              sys.exit(f"invalid years: {years!r}")
+          out = set()
+          for part in years.split(","):
+              a, _, b = part.partition("-")
+              lo, hi = int(a), int(b or a)
+              if lo > hi or lo < 1980 or hi > 2025:
+                  sys.exit(f"invalid range: {part!r} (allowed 1980-2025)")
+              out.update(range(lo, hi + 1))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("matrix=" + json.dumps({"year": sorted(out)}) + "\n")
+          PY
+
+  library:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    name: library ${{ matrix.year }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: Daily IVT of the year
+        run: uv run clima-nqn hindcast analogs-library --year "${{ matrix.year }}" --out lib --workers 32
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ivt-daily-${{ matrix.year }}
+          path: backend/lib
+          retention-days: 7
+
+  combine:
+    needs: library
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: ivt-daily-*
+          merge-multiple: true
+          path: backend/lib
+      - name: Combine the years
+        run: |
+          mkdir -p out
+          uv run clima-nqn hindcast analogs-library --combine --src lib --out out/era5-ivt-daily.zarr
+          du -sh out/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: library-ivt-daily
+          path: backend/out
+          retention-days: 7
+
+  analogs:
+    needs: combine
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          name: library-ivt-daily
+          path: backend/library
+      - name: Events from the catalog branch
+        run: |
+          git fetch --depth=1 origin "$CATALOG_BRANCH"
+          git show FETCH_HEAD:events.parquet > events.parquet
+      - name: Search analogs
+        run: |
+          mkdir -p out
+          uv run clima-nqn hindcast analogs --library library/era5-ivt-daily.zarr --events events.parquet \
+            --imerg ../reports/05/F5.5-imerg.csv --era5-obs ../reports/05/F5.3-obs.csv --out out
+          cp -r library/era5-ivt-daily.zarr out/era5-ivt-daily.zarr
+          du -sh out/*
+      - name: Commit to the data branch
+        run: |
+          cd out
+          git init -q -b "$OUT_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cat > README.md <<EOF
+          F5.5 ERA5 analogs of the F1.3 events (plan/05-hindcast.md), built by .github/workflows/hindcast-analogs.yml
+          run ${GITHUB_RUN_ID}. Not code; can be deleted after use.
+          Files: era5-ivt-daily.zarr (daily mean of the 00/06/12/18 UTC viwve, viwvn, kg m-1 s-1, box N -34 W -74
+          S -43 E -66 at 0.25 deg), analogs.parquet (one row per event x analog or baseline day, with distance, the
+          F1.3 event touched, daily box-max IVT and regional rain from IMERG and ERA5), analogs.json (the same by
+          event, with the summary; input of the layer hindcast-analogs), F5.5.md and F5.5.json (report).
+          Source: ERA5 (Copernicus Climate Change Service) via ARCO-ERA5 (Google Cloud public dataset), CC-BY 4.0;
+          IMERG Final Run V07 (NASA GES DISC), CC BY 4.0. Period: library 1980-01-01..2025-12-31 (the last
+          year holds what ARCO has); rain from IMERG 2000-06-01..2025-09-30 and ERA5 2000-01-01..2019-12-31, "no data"
+          outside them. Events: branch ${CATALOG_BRANCH} (F1.3).
+          EOF
+          git add -A
+          git commit -qm "data: F5.5 ERA5 analogs from run ${GITHUB_RUN_ID}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$OUT_BRANCH"
