@@ -231,3 +231,19 @@ def test_render_md_structure():
     )  # synthetic test has < 20 events per mechanism somewhere or pooled flag text
     assert "SMN" in md and "Defensa Civil" in md
     assert "," in md  # decimal comma
+
+
+# --- optional ENSO hook (F5.7) -----------------------------------------------------------------------
+
+
+def test_enso_hook_off_by_default_and_adds_columns_when_on():
+    ctx = _synthetic_ctx(n_leads=1)
+    thr = {r: 5.0 for r in rd.REGIONS}
+    off = rd.feature_frame(ctx["members"], "confluencia", 0, thr, ctx["dates"])
+    assert not set(rd.ENSO_COLS) & set(off.columns)
+    dates = pd.date_range("1999-01-01", "2020-12-01", freq="MS")
+    enso = pd.DataFrame({"date": dates, "oni": np.where(dates.year % 2 == 0, 1.0, -1.0)})
+    on = rd.feature_frame(ctx["members"], "confluencia", 0, thr, ctx["dates"], enso=enso, lead=1)
+    pd.testing.assert_frame_equal(on[off.columns], off)
+    assert set(rd.ENSO_COLS) <= set(on.columns)
+    assert set(on["oni_avail"].unique()) == {1.0, -1.0}

@@ -13,6 +13,7 @@ import typer
 
 from clima_nqn.stages.hindcast import cases as cases_mod
 from clima_nqn.stages.hindcast import compare as compare_mod
+from clima_nqn.stages.hindcast import enso_skill as enso_skill_mod
 from clima_nqn.stages.hindcast import forecasts as fc
 from clima_nqn.stages.hindcast import observe as observe_mod
 from clima_nqn.stages.hindcast import riskday_cli, store
@@ -373,3 +374,44 @@ def verify_ivt(
 
 
 hindcast_app.command("riskday")(riskday_cli.riskday)
+
+
+@hindcast_app.command("enso-skill")
+def enso_skill(
+    f52_forecasts: Annotated[
+        Path, typer.Option(help="F5.2 gefs-reforecast.zarr (or the directory that holds it).")
+    ],
+    f52_obs: Annotated[Path, typer.Option(help="era5-obs.zarr of the F5.2 cases.")],
+    out: Annotated[Path, typer.Option(help="Output directory (F5.7.json, F5.7.md).")],
+    f53_forecasts: Annotated[
+        Path | None, typer.Option(help="F5.3 gefs-reforecast.zarr (every-day cases).")
+    ] = None,
+    f53_obs: Annotated[Path | None, typer.Option(help="F5.3 obs-wide.zarr (tp and cp).")] = None,
+    events: Annotated[Path | None, typer.Option(help="F1.3 events.parquet.")] = None,
+    oni: Annotated[
+        Path | None, typer.Option(help="oni.ascii.txt; if omitted it is fetched from NOAA CPC.")
+    ] = None,
+    n_boot: Annotated[int, typer.Option(help="Bootstrap resamples.")] = 1000,
+    seed: Annotated[int, typer.Option(help="Bootstrap seed.")] = 0,
+    skip_part_b: Annotated[bool, typer.Option(help="Run only Part A (F5.2 cases).")] = False,
+) -> None:
+    """Skill by ENSO phase (Part A) and ENSO as classifier input (Part B) (F5.7)."""
+    if not skip_part_b and not (f53_forecasts and f53_obs and events):
+        raise typer.BadParameter("Part B needs --f53-forecasts, --f53-obs and --events")
+    res = enso_skill_mod.run(
+        f52_forecasts,
+        f52_obs,
+        out,
+        f53_forecasts,
+        f53_obs,
+        events,
+        oni,
+        n_boot=n_boot,
+        seed=seed,
+        skip_part_b=skip_part_b,
+    )
+    a, b = res["part_a"], res["part_b"]
+    msg = f"{out}: F5.7.json, F5.7.md; part A signal={a['signal']} (run {a['longest_run']})"
+    if b:
+        msg += f"; part B ENSO adds in {b['n_pass']}/{b['n_total']}"
+    typer.echo(msg)

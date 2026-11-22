@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from clima_nqn.io import enso as enso_io
 from clima_nqn.stages.ar import catalog
 from clima_nqn.stages.ar.extremes import wilson_interval
 from clima_nqn.stages.convection.enso import CONFLUENCIA
@@ -52,6 +53,8 @@ LGBM_GRID = (
 )
 LGBM_MAX_TREES = 400
 LGBM_PATIENCE = 30
+ENSO_COLS = ("oni_avail", "nino_avail", "nina_avail")
+ENSO_LAG_MONTHS = 2  # init in month m -> ONI season centered on m-2 (latest season ended before m)
 
 
 # --- regions, labels, mechanisms ---------------------------------------------------------------
@@ -199,11 +202,53 @@ def _stats(m: np.ndarray, thr: float) -> dict[str, np.ndarray]:
     return {"mean": mean, "max": mx, "std": sd, "frac": frac}
 
 
+def oni_at(dates, enso: pd.DataFrame, lag_months: int = 0) -> np.ndarray:
+    """ONI (3-month season centered on the month of each date, minus ``lag_months``); NaN if not in ``enso``.
+
+    ``enso`` has monthly ``date`` (center month, as ``io.enso.parse_oni``) and ``oni``."""
+    d = pd.to_datetime(np.asarray(dates))
+    key = (d.year * 12 + d.month - 1 - lag_months).to_numpy()
+    ed = pd.to_datetime(enso["date"])
+    table = pd.Series(
+        enso["oni"].to_numpy(dtype=float), index=(ed.dt.year * 12 + ed.dt.month - 1).to_numpy()
+    )
+    return table.reindex(key).to_numpy(dtype=float)
+
+
+def oni_available(valid_dates, lead: int, enso: pd.DataFrame) -> np.ndarray:
+    """ONI known at init: init = valid date - (lead-1) days; init in month m uses the season centered on
+    m-2 (e.g. init in July -> AMJ, centered in May; init in January -> OND of the previous year)."""
+    init = pd.to_datetime(np.asarray(valid_dates)) - pd.Timedelta(days=int(lead) - 1)
+    return oni_at(init, enso, ENSO_LAG_MONTHS)
+
+
+def phase_of(oni: np.ndarray) -> np.ndarray:
+    """'nino' / 'neutral' / 'nina' with the ``io.enso`` thresholds; 'sin dato' where the ONI is NaN."""
+    x = np.asarray(oni, dtype=float)
+    ph = np.array(enso_io.classify_phase(pd.Series(x)), dtype=object)
+    ph[np.isnan(x)] = "sin dato"
+    return ph
+
+
+def phase_by_valid_date(valid_dates, enso: pd.DataFrame) -> np.ndarray:
+    """Phase of the season centered on the month of the valid date (descriptive, not a predictor)."""
+    return phase_of(oni_at(valid_dates, enso, 0))
+
+
 def feature_frame(
-    members: dict[str, np.ndarray], region: str, lead_idx: int, thr: dict[str, float], dates
+    members: dict[str, np.ndarray],
+    region: str,
+    lead_idx: int,
+    thr: dict[str, float],
+    dates,
+    enso: pd.DataFrame | None = None,
+    lead: int | None = None,
 ) -> pd.DataFrame:
     """Inputs for (region, lead): ensemble mean/max/std/fraction>=threshold of the own and the two other
-    regions, month sin/cos. ``members[r]`` is (case, lead, member); NaN members are ignored per row."""
+    regions, month sin/cos. ``members[r]`` is (case, lead, member); NaN members are ignored per row.
+
+    Optional ENSO hook (``enso`` and ``lead`` given): adds ``ENSO_COLS`` (lagged ONI known at init and the
+    El Niño / La Niña one-hots); without it the frame is unchanged."""
     cols: dict[str, np.ndarray] = {}
     for r in (region, *[x for x in REGIONS if x != region]):
         prefix = "own" if r == region else r
@@ -212,6 +257,15 @@ def feature_frame(
     month = pd.to_datetime(np.asarray(dates)).month.to_numpy()
     cols["month_sin"] = np.sin(2 * np.pi * month / 12)
     cols["month_cos"] = np.cos(2 * np.pi * month / 12)
+    if enso is not None:
+        if lead is None:
+            raise ValueError("lead is required with enso")
+        oni = oni_available(dates, lead, enso)
+        if np.isnan(oni).any():
+            raise ValueError("ONI does not cover every init date")
+        cols["oni_avail"] = oni
+        cols["nino_avail"] = (oni >= enso_io.NINO_THRESHOLD).astype(float)
+        cols["nina_avail"] = (oni <= enso_io.NINA_THRESHOLD).astype(float)
     return pd.DataFrame(cols, index=pd.to_datetime(np.asarray(dates)))
 
 
@@ -226,19 +280,23 @@ def climatology_predict(rates: np.ndarray, month: np.ndarray) -> np.ndarray:
     return rates[np.asarray(month, dtype=int) - 1]
 
 
-def _logistic_x(df: pd.DataFrame) -> np.ndarray:
-    return np.column_stack(
-        [
-            np.log1p(np.clip(df["own_mean"].to_numpy(), 0, None)),
-            df["own_frac"].to_numpy(),
-            df["month_sin"].to_numpy(),
-            df["month_cos"].to_numpy(),
-        ]
-    )
+def _logistic_x(df: pd.DataFrame, with_enso: bool = False) -> np.ndarray:
+    cols = [
+        np.log1p(np.clip(df["own_mean"].to_numpy(), 0, None)),
+        df["own_frac"].to_numpy(),
+        df["month_sin"].to_numpy(),
+        df["month_cos"].to_numpy(),
+    ]
+    if with_enso:
+        cols += [df[c].to_numpy() for c in ENSO_COLS]
+    return np.column_stack(cols)
 
 
-def fit_logistic(x_fit: pd.DataFrame, y_fit: np.ndarray, x_new: pd.DataFrame) -> np.ndarray:
-    """Standardized logistic regression (C = 1.0); a single-class fit falls back to its base rate."""
+def fit_logistic(
+    x_fit: pd.DataFrame, y_fit: np.ndarray, x_new: pd.DataFrame, with_enso: bool = False
+) -> np.ndarray:
+    """Standardized logistic regression (C = 1.0); a single-class fit falls back to its base rate.
+    ``with_enso`` adds the ``ENSO_COLS`` inputs (the frames must have them)."""
     from sklearn.linear_model import LogisticRegression
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
@@ -246,8 +304,8 @@ def fit_logistic(x_fit: pd.DataFrame, y_fit: np.ndarray, x_new: pd.DataFrame) ->
     if len(np.unique(y_fit)) < 2:
         return np.full(len(x_new), float(np.mean(y_fit)) if len(y_fit) else 0.0)
     model = make_pipeline(StandardScaler(), LogisticRegression(C=1.0, max_iter=1000))
-    model.fit(_logistic_x(x_fit), y_fit)
-    return model.predict_proba(_logistic_x(x_new))[:, 1]
+    model.fit(_logistic_x(x_fit, with_enso), y_fit)
+    return model.predict_proba(_logistic_x(x_new, with_enso))[:, 1]
 
 
 def lightgbm_available() -> bool:
@@ -449,6 +507,39 @@ def build_context(
     }
 
 
+def _enso_block(
+    probs: dict[str, np.ndarray],
+    extra: dict[str, np.ndarray],
+    y: np.ndarray,
+    ids: np.ndarray,
+    valid_dates,
+    enso: pd.DataFrame,
+    n_boot: int,
+    seed: int,
+) -> dict:
+    """Brier sin/con ENSO and BSS(con vs sin) with event-block CI per model; logistic (sin ENSO) Brier by
+    valid-date phase."""
+    out: dict = {"models": {}, "by_phase": {}}
+    for m, p_con in extra.items():
+        se_sin, se_con = (probs[m] - y) ** 2, (p_con - y) ** 2
+        out["models"][m] = {
+            "brier_sin": float(se_sin.mean()),
+            "brier_con": float(se_con.mean()),
+            "bss_con_vs_sin": _ci_dict(bss_with_ci(se_con, se_sin, ids, n_boot, seed)),
+        }
+    phase = phase_by_valid_date(valid_dates, enso)
+    if "log" in probs:
+        se = (probs["log"] - y) ** 2
+        for ph in ("nino", "neutral", "nina"):
+            sel = phase == ph
+            out["by_phase"][ph] = {
+                "n_days": int(sel.sum()),
+                "n_risk_days": int(y[sel].sum()),
+                "brier_log": float(se[sel].mean()) if sel.any() else float("nan"),
+            }
+    return out
+
+
 def _evaluate(
     ctx: dict,
     q: float,
@@ -457,7 +548,13 @@ def _evaluate(
     seed: int,
     light: bool,
     variants: dict[str, dict] | None = None,
+    enso: pd.DataFrame | None = None,
 ) -> dict:
+    """Score every model per (region, lead) on the test period.
+
+    ``enso`` (optional hook): also fit "con ENSO" logistic / LightGBM (``ENSO_COLS`` added) and report, under
+    ``result["regions"][r][lead]["enso"]``, their Brier, BSS(con vs sin) with event-block CI and the logistic
+    Brier by valid-date phase. The other outputs do not depend on ``enso``."""
     tp, cp, events = ctx["tp"], ctx["cp"], ctx["events"]
     obs_dates = tp.index
     thr = {r: train_threshold(tp[r], q) for r in REGIONS}
@@ -506,7 +603,8 @@ def _evaluate(
             for n, m in mech_var.items()
         }
         for li, lead in enumerate(ctx["leads"]):
-            feat = feature_frame(ctx["members"], r, li, thr, dates)
+            feat_all = feature_frame(ctx["members"], r, li, thr, dates, enso=enso, lead=lead)
+            feat = feat_all[[c for c in feat_all.columns if c not in ENSO_COLS]]
             ok = valid_obs & ~np.isnan(feat["own_mean"].to_numpy())
             tr, va, te = sp["train"] & ok, sp["valid"] & ok, sp["test"] & ok
             if not te.any() or not (tr | va).any():
@@ -525,10 +623,21 @@ def _evaluate(
                     )
                 else:
                     info = {"note": "lightgbm no instalado"}
+            extra: dict[str, np.ndarray] = {}
+            if enso is not None:
+                if "log" in models:
+                    extra["log"] = fit_logistic(
+                        feat_all[fit], y_all[fit], feat_all[te], with_enso=True
+                    )
+                if "lgbm" in models and lightgbm_available():
+                    extra["lgbm"], _ = fit_lightgbm(
+                        feat_all[tr], y_all[tr], feat_all[va], y_all[va], feat_all[te], seed
+                    )
             ids = blocks.reindex(dates[te]).to_numpy()
             if np.isnan(ids.astype(float)).any():  # forecast date outside the observed test days
                 keep = ~np.isnan(ids.astype(float))
                 probs = {k: p[keep] for k, p in probs.items()}
+                extra = {k: p[keep] for k, p in extra.items()}
                 te_idx = np.flatnonzero(te)[keep]
             else:
                 te_idx = np.flatnonzero(te)
@@ -544,6 +653,17 @@ def _evaluate(
                 light,
                 {n: m[te_idx] for n, m in mech_v_r.items()},
             )
+            if enso is not None:
+                res["enso"] = _enso_block(
+                    probs,
+                    extra,
+                    y_all[te_idx].astype(float),
+                    ids,
+                    dates[te_idx],
+                    enso,
+                    n_boot,
+                    seed,
+                )
             res["lgbm_info"] = info
             res["base_rate_fit"] = float(y_all[fit].mean())
             result["regions"][r][str(lead)] = res
@@ -556,14 +676,16 @@ def analyze(
     seed: int = 0,
     quantiles: tuple[float, ...] = (0.95, 0.90, 0.98),
     models: tuple[str, ...] = MODELS,
+    enso: pd.DataFrame | None = None,
 ) -> dict:
-    """Main run at ``quantiles[0]`` (all models, CIs, mechanism variants) + light sensitivity runs."""
+    """Main run at ``quantiles[0]`` (all models, CIs, mechanism variants) + light sensitivity runs.
+    ``enso`` (optional) adds the "con ENSO" comparison to the main run only (see ``_evaluate``)."""
     variants = {
         "ar_pm1": {"ar_pad_days": 1},
         "cp_0.4": {"cp_frac": 0.4},
         "cp_0.6": {"cp_frac": 0.6},
     }
-    main = _evaluate(ctx, quantiles[0], models, n_boot, seed, False, variants)
+    main = _evaluate(ctx, quantiles[0], models, n_boot, seed, False, variants, enso)
     sens_q = {}
     for q in quantiles[1:]:
         sens_q[str(q)] = _evaluate(ctx, q, ("log",), n_boot, seed, True)
