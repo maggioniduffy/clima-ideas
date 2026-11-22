@@ -271,6 +271,50 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+CAP_RULE = (
+    "Tope de probabilidad vigente (F5.8, decisión del usuario 2026-11-22): borde superior del bin de "
+    "confiabilidad más alto con al menos 20 días pronosticados, agrupando los días de test de las "
+    "anticipaciones L-1, L y L+1, y no creciente en L. Por encima del tope se muestra «> tope»."
+)
+
+
+def caps_path(model_path: Path) -> Path:
+    """Sidecar next to the model (``x.json`` -> ``x.caps.json``); the model file itself is never rewritten, so
+    its sha256 (and the ``model_version`` derived from it) does not change when the caps do."""
+    p = Path(model_path)
+    return p.with_name(p.stem + ".caps.json")
+
+
+def caps_from_gate(gate_path: Path) -> dict:
+    """Region -> GEFS lead -> cap in force, read from ``F5.8.json`` (key ``prob_cap_vigente``)."""
+    raw = Path(gate_path).read_bytes()
+    gate = json.loads(raw)
+    caps: dict[str, dict[str, float | None]] = {}
+    for region, leads in gate["regions"].items():
+        caps[region] = {
+            str(k): leads[str(k)].get("prob_cap_vigente") for k in sorted(leads, key=int)
+        }
+    return {
+        "source": Path(gate_path).name,
+        "source_sha256": hashlib.sha256(raw).hexdigest(),
+        "rule": CAP_RULE,
+        "caps": caps,
+    }
+
+
+def write_caps(gate_path: Path, model_path: Path) -> Path:
+    out = caps_path(model_path)
+    out.write_text(
+        json.dumps(caps_from_gate(gate_path), ensure_ascii=False, indent=1), encoding="utf-8"
+    )
+    return out
+
+
+def load_caps(model_path: Path) -> dict | None:
+    p = caps_path(model_path)
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+
 def build_drafts(
     model: dict,
     model_sha: str,
@@ -278,6 +322,7 @@ def build_drafts(
     snapshot_sha: str,
     issue_date: datetime,
     models: tuple[str, ...] = MODELS,
+    caps: dict | None = None,
 ) -> list[PredictionDraft]:
     """Region x lead drafts per requested model (logistica, climatologia) from one GEFS snapshot."""
     unknown = set(models) - set(MODELS)
@@ -312,6 +357,8 @@ def build_drafts(
                 continue
             p, lo, hi, cp, feats = predict(model, region, lead, {region: arr}, valid.month)
             cap = _entry(model, region, lead).get("prob_cap")
+            if caps is not None:
+                cap = caps["caps"].get(region, {}).get(str(lead), cap)
             n = int(_entry(model, region, lead)["clim_n"][valid.month - 1])
             common: dict[str, Any] = {
                 "issue_date": issue_date,
@@ -329,6 +376,7 @@ def build_drafts(
                 **feats,
                 "clim_prob": cp,
                 "prob_cap": cap,
+                **({"prob_cap_rule": caps["rule"]} if caps is not None else {}),
                 "estado": ESTADO,
                 "gefs_init_date": init.isoformat(),
                 "gefs_lead": lead,
@@ -368,6 +416,7 @@ def emit(
     snapshot_path: Path,
     issue_date: datetime | date,
     models: tuple[str, ...] = MODELS,
+    caps: dict | None = None,
 ) -> list[PredictionRecord]:
     """Build and append the risk-day predictions of one GEFS snapshot; returns the appended records.
 
@@ -382,5 +431,7 @@ def emit(
     elif issue_date.tzinfo is None:
         issue_date = issue_date.replace(tzinfo=UTC)
     snap = pd.read_parquet(snapshot_path)
-    drafts = build_drafts(model, model_sha, snap, _file_sha256(snapshot_path), issue_date, models)
+    drafts = build_drafts(
+        model, model_sha, snap, _file_sha256(snapshot_path), issue_date, models, caps
+    )
     return registry.append_many(drafts)

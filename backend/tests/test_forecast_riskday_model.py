@@ -258,3 +258,33 @@ def test_latest_snapshot_picks_newest_not_after_day(tmp_path):
     assert rm.latest_snapshot(tmp_path, TODAY).name == "2026-11-21.parquet"
     with pytest.raises(FileNotFoundError):
         rm.latest_snapshot(tmp_path, date(2026, 1, 1))
+
+
+def test_caps_sidecar_fills_details_and_keeps_model_bytes(tmp_path):
+    gate = {
+        "regions": {
+            r: {str(L): {"prob_cap_vigente": round(1.0 - 0.05 * L, 2)} for L in range(1, 11)}
+            for r in rd.REGIONS
+        }
+    }
+    gate_path = tmp_path / "F5.8.json"
+    gate_path.write_text(json.dumps(gate))
+    model_path = tmp_path / "m.json"
+    model_path.write_text(json.dumps(toy_model()))
+    before = model_path.read_bytes()
+    out = rm.write_caps(gate_path, model_path)
+    assert out == tmp_path / "m.caps.json" and model_path.read_bytes() == before
+    caps = rm.load_caps(model_path)
+    assert caps["source"] == "F5.8.json" and len(caps["source_sha256"]) == 64
+    snap = make_snapshot(tmp_path / "2026-11-22.parquet")
+    recs = rm.emit(registry(tmp_path), toy_model(), "ab" * 32, snap, TODAY, caps=caps)
+    for r in recs:
+        assert r.details["prob_cap"] == round(1.0 - 0.05 * r.details["gefs_lead"], 2)
+        assert r.details["prob_cap_rule"] == rm.CAP_RULE
+    assert rm.load_caps(tmp_path / "other.json") is None
+
+
+def test_emit_without_caps_leaves_details_unchanged(tmp_path):
+    snap = make_snapshot(tmp_path / "2026-11-22.parquet")
+    recs = rm.emit(registry(tmp_path), toy_model(), "ab" * 32, snap, TODAY)
+    assert all("prob_cap_rule" not in r.details for r in recs)

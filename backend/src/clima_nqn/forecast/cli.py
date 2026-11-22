@@ -154,6 +154,18 @@ def riskday_fit_cmd(
     typer.echo(f"{out}: sha256 {sha}; versión {riskday_model.model_version(sha)}")
 
 
+@forecast_app.command("riskday-set-cap")
+def riskday_set_cap_cmd(
+    gate: Path = typer.Option(..., help="reports/05/F5.8.json (campo prob_cap_vigente)."),
+    model: Path = typer.Option(
+        ..., help="JSON del modelo congelado; se escribe <modelo>.caps.json."
+    ),
+) -> None:
+    """Escribe los topes de probabilidad vigentes junto al modelo, sin tocar el JSON del modelo."""
+    out = riskday_model.write_caps(gate, model)
+    typer.echo(f"{out}: topes desde {gate.name}; el modelo no se modifica")
+
+
 @forecast_app.command("emit-riskday")
 def emit_riskday_cmd(
     gefs_regions: Path = typer.Option(..., help="Carpeta con <fecha>.parquet de GEFS por región."),
@@ -184,7 +196,7 @@ def emit_riskday_cmd(
         return
     try:
         snap = riskday_model.latest_snapshot(gefs_regions, day)
-        recs = riskday_model.emit(reg, mdl, sha, snap, day, todo)
+        recs = riskday_model.emit(reg, mdl, sha, snap, day, todo, riskday_model.load_caps(model))
     except (RegistryError, FileNotFoundError, ValueError) as e:
         typer.echo(f"p_dia_riesgo: {e}", err=True)
         raise typer.Exit(1) from e
@@ -249,9 +261,7 @@ def demote_auto_cmd(
     from clima_nqn.forecast import status as st
 
     payload = json.loads(scores.read_text(encoding="utf-8")) if scores.exists() else {}
-    done = st.demote_auto(
-        st.StatusLog(status), payload.get("seasons", []), set(model_version)
-    )
+    done = st.demote_auto(st.StatusLog(status), payload.get("seasons", []), set(model_version))
     for r in done:
         typer.echo(f"{r['region']} anticipación {r['lead']}: {r['reason']}")
     typer.echo(f"{len(done)} descensos")
