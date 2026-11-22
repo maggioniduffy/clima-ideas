@@ -350,7 +350,7 @@ def test_grib_roundtrip_decode_and_crop():
 
 
 def test_gefs25_url_and_idx_span():
-    url = ingest.gefs25_url(RUN.date(), "gep01", 240)
+    url = ingest.gefs25_url(RUN.date(), "p01", 240)
     assert url.endswith("/gefs.20261122/00/atmos/pgrb2sp25/gep01.t00z.pgrb2s.0p25.f240")
     idx = (
         "17:900:d=2026112200:CPOFP:surface:12 hour fcst:ENS=+1\n"

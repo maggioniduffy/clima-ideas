@@ -29,6 +29,7 @@ import contextlib
 import json
 import os
 import tempfile
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -248,9 +249,9 @@ def gefs_url(init_date: date, member: str, step: int) -> str:
 
 
 def gefs25_url(init_date: date, member: str, step: int) -> str:
-    """Operational 0.25 deg surface file: ``atmos/pgrb2sp25/gep01.t00z.pgrb2s.0p25.f024``."""
+    """Operational 0.25 deg surface file of member ``c00``/``p01``..: ``.../pgrb2sp25/gep01.t00z.pgrb2s.0p25.f024``."""
     d = init_date.strftime("%Y%m%d")
-    return f"{GEFS_BASE}/gefs.{d}/00/atmos/pgrb2sp25/{member}.t00z.pgrb2s.0p25.f{step:03d}"
+    return f"{GEFS_BASE}/gefs.{d}/00/atmos/pgrb2sp25/ge{member}.t00z.pgrb2s.0p25.f{step:03d}"
 
 
 def parse_gefs_idx(text: str, span: tuple[int, int] | None = None) -> tuple[int, int | None] | None:
@@ -293,6 +294,25 @@ def fetch_gefs_apcp(init_date: date, member: str, step: int, area) -> xr.DataArr
     return fields[0][1]
 
 
+def _get_retry(
+    client: httpx.Client, url: str, headers: dict | None = None, tries: int = 5
+) -> httpx.Response:
+    """GET with exponential backoff on transport errors and 429/5xx (S3 ``503 Slow Down``)."""
+    for attempt in range(tries):
+        try:
+            resp = client.get(url, headers=headers)
+        except httpx.TransportError:
+            if attempt == tries - 1:
+                raise
+        else:
+            if resp.status_code != 429 and resp.status_code < 500:
+                return resp
+            if attempt == tries - 1:
+                return resp
+        time.sleep(min(2.0**attempt, 16.0))
+    raise AssertionError("unreachable")
+
+
 def fetch_gefs25_apcp(init_date: date, member: str, step: int, area) -> xr.DataArray:
     """6 h ``APCP`` (kg/m2 = mm) over forecast hours (step-6, step] of one operational 0.25 deg member.
 
@@ -302,15 +322,16 @@ def fetch_gefs25_apcp(init_date: date, member: str, step: int, area) -> xr.DataA
     """
     url = gefs25_url(init_date, member, step)
     with httpx.Client(timeout=60.0, follow_redirects=True) as client:
-        idx = client.get(url + ".idx")
-        if idx.status_code in (403, 404):
+        idx = _get_retry(client, url + ".idx")
+        if idx.status_code == 404:
             raise NotAvailable(f"GEFS 0.25 {init_date} 00z {member} f{step:03d} not published")
         idx.raise_for_status()
         rng = parse_gefs_idx(idx.text, span=(step - GEFS25_STEP, step))
         if rng is None:
             raise RuntimeError(f"no surface APCP {step - GEFS25_STEP}-{step} hour acc in {url}.idx")
         start, end = rng
-        resp = client.get(url, headers={"Range": f"bytes={start}-{'' if end is None else end}"})
+        header = {"Range": f"bytes={start}-{'' if end is None else end}"}
+        resp = _get_retry(client, url, headers=header)
         resp.raise_for_status()
     fields = grib_fields(resp.content, area)
     if len(fields) != 1:
