@@ -54,6 +54,7 @@ def test_design_table_picks_critical_duration():
     assert [r.return_period for r in rows] == [10]
     r = rows[0]
     assert r.peak_m3s == max(
-        scs.peak_discharge_m3s(5.0, 80, p, d, scs.scs_lag_h(3000, 80, 5.0)) for (_, d), p in rains.items()
+        scs.peak_discharge_m3s(5.0, 80, p, d, scs.scs_lag_h(3000, 80, 5.0))
+        for (_, d), p in rains.items()
     )
     assert math.isfinite(r.critical_duration_h)

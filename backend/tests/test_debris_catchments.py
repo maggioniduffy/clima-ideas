@@ -63,7 +63,9 @@ def test_v_valley_drains_to_line():
 
 
 def test_area_filter_and_polygon_target():
-    small = C.delineate(v_valley(), TRANSFORM, [("r", _line(30))], min_area_km2=0.01, max_area_km2=0.05)
+    small = C.delineate(
+        v_valley(), TRANSFORM, [("r", _line(30))], min_area_km2=0.01, max_area_km2=0.05
+    )
     assert small == []  # catchment is ~0.25 km2 and exceeds max
     poly = box(LON0, row_lat(31), LON0 + RES * NCOLS, row_lat(29))  # polygon strip
     out = C.delineate(v_valley(), TRANSFORM, [("barrio", poly)], min_area_km2=0.01, max_area_km2=50)
@@ -104,11 +106,16 @@ def test_planar_terrain_gives_flagged_strips():
     out = C.delineate(planar_dem(), TRANSFORM, [("r", line)], min_area_km2=0.0001, max_area_km2=50)
     assert len(out) >= 30
     assert all(b.planar_flow for b in out)
-    assert all(b.rectangularity >= C.PLANAR_RECTANGULARITY and b.elongation >= C.PLANAR_ELONGATION for b in out)
+    assert all(
+        b.rectangularity >= C.PLANAR_RECTANGULARITY and b.elongation >= C.PLANAR_ELONGATION
+        for b in out
+    )
 
 
 def test_v_valley_catchment_is_not_flagged():
-    out = C.delineate(v_valley(), TRANSFORM, [("route_x", _line(30))], min_area_km2=0.01, max_area_km2=50)
+    out = C.delineate(
+        v_valley(), TRANSFORM, [("route_x", _line(30))], min_area_km2=0.01, max_area_km2=50
+    )
     assert len(out) == 1
     b = out[0]
     assert b.rectangularity >= C.PLANAR_RECTANGULARITY  # a box-shaped valley is rectangular...
@@ -123,7 +130,11 @@ def test_shape_metrics_use_a_metric_frame():
     # an L shape is far from its bounding rectangle
     l_shape = box(0, 0, 3, 1).union(box(0, 0, 1, 3))
     assert C.shape_metrics(l_shape)[0] < 0.7
-    assert not C.is_planar_flow(0.62, 8.0) and not C.is_planar_flow(0.95, 2.0) and C.is_planar_flow(0.9, 3.0)
+    assert (
+        not C.is_planar_flow(0.62, 8.0)
+        and not C.is_planar_flow(0.95, 2.0)
+        and C.is_planar_flow(0.9, 3.0)
+    )
     # stair-stepped diagonal strip: low rectangularity, extreme elongation
     assert C.is_planar_flow(0.4, 150.0) and not C.is_planar_flow(0.4, 14.0)
 
@@ -146,17 +157,23 @@ def _plane_line() -> LineString:
 
 
 def test_plane_has_no_channel_outlets():
-    out = C.delineate(planar_dem(), TRANSFORM, [("r", _plane_line())], min_area_km2=0.0001, max_area_km2=50)
+    out = C.delineate(
+        planar_dem(), TRANSFORM, [("r", _plane_line())], min_area_km2=0.0001, max_area_km2=50
+    )
     assert len(out) >= 30
     assert not any(b.channel for b in out)
-    assert max(b.prominence for b in out) < 1.6  # no convergence along the front (low only at the DEM edge)
+    assert (
+        max(b.prominence for b in out) < 1.6
+    )  # no convergence along the front (low only at the DEM edge)
     mid = [b for b in out if 3 < (b.outlet_lon - LON0) / RES < 25]
     assert mid and all(abs(b.prominence - 1.0) < 0.1 for b in mid)
     assert all(b.dinf_acc_km2 > 0 for b in out)
 
 
 def test_v_valley_outlet_is_a_channel():
-    out = C.delineate(v_valley(), TRANSFORM, [("route_x", _line(30))], min_area_km2=0.01, max_area_km2=50)
+    out = C.delineate(
+        v_valley(), TRANSFORM, [("route_x", _line(30))], min_area_km2=0.01, max_area_km2=50
+    )
     assert len(out) == 1
     b = out[0]
     assert b.channel and b.prominence >= 10 and b.dinf_acc_km2 >= C.CHANNEL_MIN_ACC_KM2
@@ -175,7 +192,9 @@ def test_plane_with_one_gully_has_one_channel():
 
 def test_channel_thresholds_are_parameters():
     kw = {"min_area_km2": 0.01, "max_area_km2": 50}
-    strict = C.delineate(v_valley(), TRANSFORM, [("r", _line(30))], channel_min_prominence=1e9, **kw)
+    strict = C.delineate(
+        v_valley(), TRANSFORM, [("r", _line(30))], channel_min_prominence=1e9, **kw
+    )
     assert not strict[0].channel
     big = C.delineate(v_valley(), TRANSFORM, [("r", _line(30))], channel_min_acc_km2=1e3, **kw)
     assert not big[0].channel

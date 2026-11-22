@@ -102,7 +102,9 @@ app.add_typer(debris_app, name="debris")
 
 @debris_app.command("catchments")
 def debris_catchments(
-    targets: Annotated[Path, typer.Argument(help="GeoJSON of road lines / neighbourhood polygons.")],
+    targets: Annotated[
+        Path, typer.Argument(help="GeoJSON of road lines / neighbourhood polygons.")
+    ],
     bbox: Annotated[
         tuple[float, float, float, float], typer.Option(help="lon_min lat_min lon_max lat_max.")
     ],
@@ -117,7 +119,9 @@ def debris_catchments(
 
 @debris_app.command("layer")
 def debris_layer(
-    catchments: Annotated[list[Path], typer.Argument(help="Catchment Parquet(s) from `debris catchments`.")],
+    catchments: Annotated[
+        list[Path], typer.Argument(help="Catchment Parquet(s) from `debris catchments`.")
+    ],
     out: Annotated[
         Path | None, typer.Option(help="Layer directory (default: <data root>/debris-catchments).")
     ] = None,

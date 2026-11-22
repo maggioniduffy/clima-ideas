@@ -359,7 +359,11 @@ def build(
             "scenarios": [dict(sc) for sc in CN_SCENARIOS],
         },
         "method": scs.SOURCE,
-        "catchments_source": {"sources": dem_sources, "periods": dem_periods, "files": cmeta["files"]},
+        "catchments_source": {
+            "sources": dem_sources,
+            "periods": dem_periods,
+            "files": cmeta["files"],
+        },
         "caveats": list(CAVEATS),
         "n_catchments": len(rows),
         "n_ranked": len(rows) - n_planar - n_overlap,
@@ -374,7 +378,9 @@ def build(
             "min_acc_km2": params["channel_min_acc_km2"],
             "min_prominence": params["channel_min_prominence"],
             "radius_m": params["prominence_radius_m"],
-            "n_channel": sum(bool(r.get("channel")) for r in rows) if method == "dinf" else len(rows) - n_planar,
+            "n_channel": sum(bool(r.get("channel")) for r in rows)
+            if method == "dinf"
+            else len(rows) - n_planar,
             "n_shape_planar": n_shape,
             "citation": "sin verificar",
             "note": CHANNEL_NOTE.format(

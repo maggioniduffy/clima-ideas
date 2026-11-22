@@ -73,11 +73,26 @@ PLANAR_STRIP_ELONGATION = 15.0
 CHANNEL_MIN_ACC_KM2 = 0.05
 CHANNEL_MIN_PROMINENCE = 3.0
 PROMINENCE_RADIUS_M = 500.0
-PROMINENCE_RADII_M = (250, 500, 1000)  # radii always stored as ``prominence_r<R>`` for sensitivity analysis
+PROMINENCE_RADII_M = (
+    250,
+    500,
+    1000,
+)  # radii always stored as ``prominence_r<R>`` for sensitivity analysis
 SOURCE = "Copernicus DEM GLO-30 (ESA); cuencas D8 con pysheds"
-PERIOD = "2021-01-01/2021-12-31"  # DEM release period as in io/dem.py (acquisition period sin verificar)
+PERIOD = (
+    "2021-01-01/2021-12-31"  # DEM release period as in io/dem.py (acquisition period sin verificar)
+)
 # pysheds default dirmap order: N, NE, E, SE, S, SW, W, NW -> (drow, dcol)
-_DIRMAP = {64: (-1, 0), 128: (-1, 1), 1: (0, 1), 2: (1, 1), 4: (1, 0), 8: (1, -1), 16: (0, -1), 32: (-1, -1)}
+_DIRMAP = {
+    64: (-1, 0),
+    128: (-1, 1),
+    1: (0, 1),
+    2: (1, 1),
+    4: (1, 0),
+    8: (1, -1),
+    16: (0, -1),
+    32: (-1, -1),
+}
 
 
 @dataclass(frozen=True)
@@ -95,9 +110,15 @@ class Catchment:
     elongation: float  # long / short side of the minimum rotated rectangle (capped at 1000)
     planar_flow: bool  # old shape rule (secondary): likely D8 artifact on planar terrain; see PLANAR_* constants
     dinf_acc_km2: float = float("nan")  # D-infinity accumulated area at the outlet cell
-    prominence: float = float("nan")  # dinf acc at the outlet / median dinf acc of feeder cells within +-R m
-    channel: bool = False  # dinf_acc_km2 >= A_MIN and prominence >= K: a real channel crossing the target
-    prominence_by_r: dict[int, float] = field(default_factory=dict)  # prominence for each PROMINENCE_RADII_M
+    prominence: float = float(
+        "nan"
+    )  # dinf acc at the outlet / median dinf acc of feeder cells within +-R m
+    channel: bool = (
+        False  # dinf_acc_km2 >= A_MIN and prominence >= K: a real channel crossing the target
+    )
+    prominence_by_r: dict[int, float] = field(
+        default_factory=dict
+    )  # prominence for each PROMINENCE_RADII_M
 
 
 def shape_metrics(geom: BaseGeometry) -> tuple[float, float]:
@@ -131,7 +152,12 @@ def _target_ids(targets, shape_, transform: Affine) -> np.ndarray:
     ids = np.zeros(shape_, dtype=np.int32)
     for i, (_, geom) in enumerate(targets, start=1):
         feats = features.rasterize(
-            [(geom, i)], out_shape=shape_, transform=transform, fill=0, all_touched=True, dtype="int32"
+            [(geom, i)],
+            out_shape=shape_,
+            transform=transform,
+            fill=0,
+            all_touched=True,
+            dtype="int32",
         )
         ids = np.where(feats > 0, feats, ids)
     out = ids.copy()
@@ -287,7 +313,9 @@ def delineate(
                 stack.append(d)
     order_arr = np.asarray(order, dtype=np.int64)  # upstream first; reversed = downstream first
 
-    inflow = np.zeros(n, dtype=np.float64)  # catchment area upstream of each cell (own cell included)
+    inflow = np.zeros(
+        n, dtype=np.float64
+    )  # catchment area upstream of each cell (own cell included)
     inflow[:] = np.where(valid & (tid == 0), areas, 0.0)
     for i in order_arr:
         d = down[i]
@@ -296,7 +324,9 @@ def delineate(
 
     is_outlet = valid & (tid == 0) & (down >= 0)
     is_outlet &= np.where(down >= 0, tid[np.clip(down, 0, n - 1)] > 0, False)
-    outlets = np.flatnonzero(is_outlet & (inflow >= min_area_km2 * 1e6) & (inflow <= max_area_km2 * 1e6))
+    outlets = np.flatnonzero(
+        is_outlet & (inflow >= min_area_km2 * 1e6) & (inflow <= max_area_km2 * 1e6)
+    )
     if len(outlets) == 0:
         return []
 
@@ -316,7 +346,8 @@ def delineate(
     outlet_tid = tid[down[outlets]]
     radii = sorted({int(r) for r in PROMINENCE_RADII_M} | {round(prominence_radius_m)})
     prom = {
-        r: outlet_prominence(outlets, outlet_tid, feeders, feeder_tid, acc_km2, xy_m, float(r)) for r in radii
+        r: outlet_prominence(outlets, outlet_tid, feeders, feeder_tid, acc_km2, xy_m, float(r))
+        for r in radii
     }
     main_prom = prom[round(prominence_radius_m)]
 
@@ -404,7 +435,13 @@ def write_parquet(
     geo = {
         "version": "1.0.0",
         "primary_column": "geometry",
-        "columns": {"geometry": {"encoding": "WKB", "geometry_types": ["Polygon", "MultiPolygon"], "crs": "EPSG:4326"}},
+        "columns": {
+            "geometry": {
+                "encoding": "WKB",
+                "geometry_types": ["Polygon", "MultiPolygon"],
+                "crs": "EPSG:4326",
+            }
+        },
     }
     table = pa.table(cols).replace_schema_metadata(
         {
