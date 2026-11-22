@@ -11,12 +11,12 @@ import numpy as np
 import pandas as pd
 import typer
 
+from clima_nqn.stages.hindcast import analogs_cli, gate_cli, riskday_cli, store
 from clima_nqn.stages.hindcast import cases as cases_mod
 from clima_nqn.stages.hindcast import compare as compare_mod
 from clima_nqn.stages.hindcast import enso_skill as enso_skill_mod
 from clima_nqn.stages.hindcast import forecasts as fc
 from clima_nqn.stages.hindcast import observe as observe_mod
-from clima_nqn.stages.hindcast import gate_cli, riskday_cli, store
 from clima_nqn.stages.hindcast import verify as verify_mod
 from clima_nqn.stages.hindcast import verify_ivt as verify_ivt_mod
 
@@ -374,6 +374,10 @@ def verify_ivt(
 
 
 hindcast_app.command("riskday")(riskday_cli.riskday)
+hindcast_app.command("analogs-library")(analogs_cli.analogs_library)
+hindcast_app.command("analogs-imerg")(analogs_cli.analogs_imerg)
+hindcast_app.command("analogs")(analogs_cli.analogs)
+hindcast_app.command("analogs-layer")(analogs_cli.analogs_layer)
 hindcast_app.command("gate")(gate_cli.gate)
 
 
