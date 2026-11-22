@@ -1,6 +1,6 @@
 # Fase 5 — Predicción retrospectiva
 
-Estado: en curso (F5.1 y F5.9 hechas; F5.2 mitad ríos atmosféricos, F5.4 y F5.10 hechas) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
+Estado: en curso (F5.1 y F5.9 hechas; F5.2, F5.3, F5.4, F5.7 y F5.10 hechas) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -18,12 +18,12 @@ Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
 | F5.1 ✅ | Ingesta de pronósticos para las fechas de eventos y días de control | Sonnet escribe, Haiku corre | Zarr por modelo y anticipación |
-| F5.2 ◐ | Verificación por días de anticipación, separada en ríos atmosféricos y convección | Haiku analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
-| F5.3 | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet | Brier y PR-AUC en test temporal, no exactitud |
+| F5.2 ✅ | Verificación por días de anticipación, separada en ríos atmosféricos y convección | Haiku analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
+| F5.3 ✅ | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet | Brier y PR-AUC en test temporal, no exactitud |
 | F5.4 ✅ | AIFS vs. IFS en los eventos neuquinos | Haiku | Tabla por evento y anticipación |
 | F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
 | F5.6 | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |
-| F5.7 | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | Haiku analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
+| F5.7 ✅ | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | Haiku analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
 | F5.8 | Tabla de la compuerta de evidencia (`plan/06-forecast.md`, criterios 1–3) para "día de riesgo": por región y anticipación, BSS vs. climatología y vs. regresión logística con IC bootstrap por evento, eventos independientes en test (agrupados también entre regiones), diagrama de confiabilidad, POD y FAR | Haiku corre, Sonnet codifica | Tabla con veredicto por región y anticipación + unit de agrupación de eventos y de anticipaciones contiguas |
 | F5.9 ✅ | Propuesta (2026-11-13): comprobar si el IVT se puede calcular con los niveles de ECMWF open data y GEFS (variables, niveles, resolución, latencia) | Haiku | Anotado en `docs/research/data-access.md` con fuente; si no se puede, F5.10 y F6.9 no se hacen |
 | F5.10 ✅ | Propuesta (2026-11-13), depende de F5.9: acierto por anticipación del IVT pronosticado frente a la lluvia pronosticada en los eventos del catálogo F1.3 | Haiku analiza, Sonnet codifica métricas | Curvas de IVT y de lluvia lado a lado, misma métrica y mismos eventos |
@@ -66,6 +66,17 @@ pasar a la fase 6 como perspectiva y cuáles quedan "Experimental".
   conserva acierto 1–2 días más que la lluvia (Spearman +0,06…+0,10 con IC > 0 a 6–8 días; CRPSS-rango > 0 hasta
   6–7 días contra 6). Dentro de los eventos, la lluvia ordena mejor la intensidad. El AUC evento contra control
   favorece al IVT por construcción y no se usa como evidencia.
+
+- F5.3 (2026-11-22): `clima-nqn hindcast riskday`, informe `reports/05/F5.3.md`; pronósticos de todos los días en
+  `data/f53-alldays` (364 790 de 364 800 entradas) y medias regionales de ERA5 en `reports/05/F5.3-obs.csv`. La
+  logística le gana a la climatología con IC hasta 9 días (cordillera norte), 10 (sur) y 7 (Confluencia), y
+  LightGBM no le gana a la logística. Río atmosférico: 27–38 % de los días ≥ p95 en la cordillera y 48–69 % con p99;
+  en Confluencia domina la convección (48 %, 87 % en DJF). El contraste por mecanismo dentro de cada región queda
+  sin verificar (< 20 eventos de río atmosférico en test). Cierra también la mitad de convección de F5.2.
+
+- F5.7 (2026-11-22): `clima-nqn hindcast enso-skill`, informe `reports/05/F5.7.md`. Sin señal de ENSO en el acierto
+  por fase (la diferencia Niño − Niña excluye 0 solo a 5 días; la regla pedía 3 contiguas). El ONI conocido a la
+  fecha de la corrida no mejora el clasificador de F5.3 en ninguna de 30 combinaciones.
 
 ## Abierto
 
