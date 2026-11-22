@@ -16,6 +16,8 @@ import { useConvectionIdf } from "../layers/useConvectionIdf";
 import { DEBRIS_LAYER_ID } from "../layers/debrisCatchments";
 import { useDebrisCatchments } from "../layers/useDebrisCatchments";
 import { ANALOGS_LAYER_ID, HINDCAST_LAYER_ID } from "../layers/hindcast";
+import { FORECAST_LAYER_ID } from "../layers/forecast";
+import { useForecastOutlook } from "../layers/useForecastOutlook";
 import { useHindcast } from "../layers/useHindcast";
 import { useLayers } from "../layers/useLayers";
 import { useTheme } from "../theme/themeStore";
@@ -151,6 +153,9 @@ export function Shell() {
   const hindcastLayer = s.layers.find((l) => l.id === HINDCAST_LAYER_ID);
   const hindcastActive = !!hindcastLayer && s.activeIds.has(hindcastLayer.id);
   const hindcast = useHindcast(hindcastLayer, s.layers.find((l) => l.id === ANALOGS_LAYER_ID), hindcastActive);
+  const forecastLayer = s.layers.find((l) => l.id === FORECAST_LAYER_ID);
+  const forecastActive = !!forecastLayer && s.activeIds.has(forecastLayer.id);
+  const forecast = useForecastOutlook(forecastLayer, forecastActive);
   const refLayers = useReferenceLayers();
   const arVisible = useMemo(
     () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn, TOP_N, ratios),
@@ -261,6 +266,11 @@ export function Shell() {
             hindcast={
               hindcastActive && hindcastLayer && s.selectedLayer?.id === hindcastLayer.id
                 ? { state: hindcast, source: hindcastLayer.source, period: hindcastLayer.period, license: hindcastLayer.license }
+                : null
+            }
+            forecast={
+              forecastActive && forecastLayer && s.selectedLayer?.id === forecastLayer.id
+                ? { state: forecast, source: forecastLayer.source, period: forecastLayer.period, license: forecastLayer.license, outlookStatus: forecastLayer.outlook_status }
                 : null
             }
             enso={

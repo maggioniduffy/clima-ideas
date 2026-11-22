@@ -1,5 +1,7 @@
 """F5.8 evidence gate: event pooling, contiguity, Markov persistence without leakage, probability cap, CSV loader."""
 
+import itertools
+
 import numpy as np
 import pandas as pd
 
@@ -132,6 +134,58 @@ def test_cap_from_real_reliability_bins():
     p = np.concatenate([np.full(100, 0.05), np.full(25, 0.55), np.full(3, 0.95)])
     y = np.zeros(len(p))
     assert gate.probability_cap(rd.reliability(p, y)) == 0.6
+
+
+def _rel(ns):
+    return [{"bin": b, "mean_p": b / 10, "obs_freq": b / 10, "n": n} for b, n in enumerate(ns)]
+
+
+def test_pooled_cap_uses_neighbour_leads_and_pools_two_at_edges():
+    # lead 1: top populated bin 3 alone; with lead 2 pooled (edge: only L=1,2) it reaches 20 days
+    rel = {
+        1: _rel([100, 50, 20, 12, 0, 0, 0, 0, 0, 0]),
+        2: _rel([100, 50, 20, 9, 0, 0, 0, 0, 0, 0]),
+        3: _rel([100, 50, 20, 0, 0, 0, 0, 0, 0, 0]),
+    }
+    out = gate.pooled_caps(rel)
+    assert out[1]["cap_pooled"] == 0.4  # 12 + 9 = 21 >= 20 (leads 1, 2 only)
+    assert out[2]["cap_pooled"] == 0.4  # 12 + 9 + 0 pooled over 1..3
+    assert out[3]["cap_pooled"] == 0.3  # leads 2, 3 only: bin 3 has 9
+    # own-lead cap kept for comparison
+    assert out[1]["cap_lead"] == 0.3 and out[2]["cap_lead"] == 0.3
+
+
+def test_pooled_cap_edge_lead_10_pools_two_leads():
+    rel = {9: _rel([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 10: _rel([50, 0, 0, 0, 0, 0, 0, 0, 0, 12])}
+    rel[9][9]["n"] = 8
+    out = gate.pooled_caps(rel)
+    assert out[10]["cap_pooled"] == 1.0  # 12 + 8 = 20 in the top bin
+    assert out[10]["cap_lead"] == 0.1
+
+
+def test_pooled_cap_in_force_is_non_increasing_in_lead():
+    rel = {
+        1: _rel([100, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        2: _rel([100, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        3: _rel([100, 0, 0, 0, 0, 0, 0, 0, 30, 0]),  # pooling alone would raise the cap at L=2..4
+        4: _rel([100, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    }
+    rel[1][5]["n"] = 25  # L=1 cap 0.6 only
+    out = gate.pooled_caps(rel)
+    caps = [out[L]["cap"] for L in sorted(out)]
+    assert all(a >= b for a, b in itertools.pairwise(caps))
+    assert out[3]["cap_pooled"] == 0.9 and out[3]["cap"] <= out[2]["cap"]
+
+
+def test_pooled_cap_ignores_bins_below_20_days():
+    out = gate.pooled_caps(
+        {
+            1: _rel([100, 10, 5, 4, 0, 0, 0, 0, 0, 0]),
+            2: _rel([100, 9, 5, 0, 0, 0, 0, 0, 0, 0]),
+        }
+    )
+    assert out[1]["cap_pooled"] == 0.1  # bin 1 has 10 + 9 = 19 pooled days: ignored; bin 0 only
+    assert out[1]["cap"] == 0.1
 
 
 def test_pod_far():

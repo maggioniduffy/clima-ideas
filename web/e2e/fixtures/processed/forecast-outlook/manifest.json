@@ -1,0 +1,13 @@
+{
+  "id": "forecast-outlook",
+  "title": "Perspectiva de día de riesgo (1–10 días)",
+  "kind": "series",
+  "source": "GEFS operativo y ERA5T falsos de prueba; modelo logístico de juguete (datos falsos de prueba)",
+  "period": "2026-01-01/2026-01-10",
+  "license": "CC0",
+  "updated_at": "2026-01-01T10:17:00Z",
+  "files": [
+    "outlook.json"
+  ],
+  "outlook_status": "mixto"
+}

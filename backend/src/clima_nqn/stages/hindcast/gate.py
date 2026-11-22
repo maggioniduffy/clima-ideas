@@ -122,6 +122,35 @@ def probability_cap(rel: list[dict], min_n: int = MIN_BIN_DAYS) -> float | None:
     return (max(ok) + 1) / bins if ok else None
 
 
+def pooled_caps(rel_by_lead: dict[int, list[dict]], min_n: int = MIN_BIN_DAYS) -> dict[int, dict]:
+    """Probability cap in force per lead (user decision 2026-11-22).
+
+    For each lead L the reliability bins of the test forecasts of leads L-1, L, L+1 (those present) are pooled
+    (day counts summed) and the cap is the upper edge of the highest pooled bin with at least ``min_n`` days; the
+    result is then made non-increasing in L (``cap_L = min(cap_1 .. cap_L)``). Returns per lead ``cap_lead`` (old
+    per-lead cap, kept for comparison), ``cap_pooled`` (before the monotone step) and ``cap`` (in force). A lead
+    without any qualifying pooled bin has no cap (None), and so do all longer leads.
+    """
+    out: dict[int, dict] = {}
+    running: float | None = None
+    dead = False
+    for lead in sorted(rel_by_lead):
+        near = [rel_by_lead[k] for k in (lead - 1, lead, lead + 1) if k in rel_by_lead]
+        bins = len(near[0])
+        pooled = [{"bin": b, "n": sum(rel[b]["n"] for rel in near)} for b in range(bins)]
+        cap_pooled = probability_cap(pooled, min_n)
+        if cap_pooled is None:
+            dead = True
+        if not dead:
+            running = cap_pooled if running is None else min(running, cap_pooled)
+        out[lead] = {
+            "cap_lead": probability_cap(rel_by_lead[lead], min_n),
+            "cap_pooled": cap_pooled,
+            "cap": None if dead else running,
+        }
+    return out
+
+
 def pod_far(p: np.ndarray, y: np.ndarray, thr: float) -> dict:
     """Day-level POD = hits / risk days and FAR = false alarms / forecast-yes days at p >= thr."""
     p, y = np.asarray(p), np.asarray(y)
@@ -274,6 +303,11 @@ def _evaluate_q(ctx: dict, q: float, n_boot: int, seed: int, with_lgbm: bool) ->
             row["lgbm"] = lgbm
             store.setdefault(lead, []).append((y, probs["log"], base_fit))
             result["regions"][r][str(lead)] = row
+        caps = pooled_caps({int(k): v["reliability"] for k, v in result["regions"][r].items()})
+        for lead, c in caps.items():
+            row = result["regions"][r][str(lead)]
+            row["prob_cap_pooled"] = c["cap_pooled"]
+            row["prob_cap_vigente"] = c["cap"]
         final = contiguous(raw)
         for lead, okc in final.items():
             row = result["regions"][r][str(lead)]
@@ -386,6 +420,12 @@ RULE_LINES = [
     (
         "- Tope de probabilidad: borde superior del bin de confiabilidad más alto con al menos 20 días pronosticados "
         "(es la probabilidad máxima que se puede mostrar)."
+    ),
+    (
+        "- Tope vigente (decisión del usuario, 2026-11-22): para cada anticipación L se agrupan los días pronosticados "
+        "de test de L−1, L y L+1 (las que existen entre 1 y 10; en los bordes, dos), se toma el borde superior del "
+        "bin más alto con al menos 20 días y se lo hace no creciente en L (tope_L = mínimo de los topes 1..L). Por "
+        "encima del tope el visor muestra «> tope». El tope por anticipación de arriba se conserva para comparar."
     ),
     (
         "- Veredicto por región y anticipación: pasa si ambos IC (contra climatología y contra Markov) tienen límite "
@@ -561,6 +601,7 @@ def render_md(results: dict) -> str:
                     _ci3(lg.get("bss_lgbm_log")) if "bss_lgbm_log" in lg else "sin dato",
                     "sí" if lg.get("shown") else "no",
                     _pct(m["prob_cap"]) if m["prob_cap"] is not None else "—",
+                    _pct(m["prob_cap_vigente"]) if m.get("prob_cap_vigente") is not None else "—",
                     f"{v._f(_nan(pf5['pod']))} / {v._f(_nan(pf5['far']))} (n={pf5['n_yes']})",
                     f"{v._f(_nan(pf2['pod']))} / {v._f(_nan(pf2['far']))} (n={pf2['n_yes']})",
                 ]
@@ -570,7 +611,8 @@ def render_md(results: dict) -> str:
                 "L (días)",
                 "BSS LGBM vs log. [IC]",
                 "LGBM se muestra",
-                "Tope de probabilidad",
+                "Tope de probabilidad (por L, anterior)",
+                "Tope vigente (L±1, no creciente)",
                 "POD / FAR p ≥ 0,5",
                 "POD / FAR p ≥ 2×base",
             ],

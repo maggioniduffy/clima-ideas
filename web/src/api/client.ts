@@ -10,6 +10,8 @@ export interface LayerManifest {
   license: string;
   updated_at: string;
   files: string[];
+  /** Optional (F6.6): outlook state of a forecast layer. */
+  outlook_status?: string;
 }
 
 export interface PointFeature {

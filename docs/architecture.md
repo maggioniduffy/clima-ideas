@@ -182,6 +182,20 @@ Se suben solo los manifiestos válidos, los archivos de `files` y los frames de 
    (`make publish-dry` lista lo que sube sin red).
 5. En Vercel, `VITE_DATA_URL` = URL pública del bucket, y volver a desplegar.
 
+### Capa `forecast-outlook` y publicación de una sola capa (F6.6)
+
+`clima-nqn forecast outlook-layer --registry … [--scores …] [--status …] --gate ../reports/05/F5.8.json --out
+data/processed/forecast-outlook` escribe `manifest.json` (con `outlook_status` opcional: "Experimental",
+"Perspectiva de riesgo" solo si todas las celdas mostradas están promovidas, o "mixto") y `outlook.json`: la última
+emisión de `p_dia_riesgo` (logística y su climatología) por región y anticipación GEFS, con intervalo 90 %, tope,
+estado de la bitácora de F6.8 (por defecto "Experimental"), hindcast (F5.8) e historial prospectivo (n, eventos,
+skill con IC, POD, FAR; `insufficient` sin puntajes), más los avisos fijos y los enlaces oficiales. Sin colores ni
+niveles en los datos. El enlace de Defensa Civil Neuquén está sin verificar (apunta al portal del gobierno).
+
+`clima-nqn publish --layer <id>` sube solo esa capa y fusiona su entrada en el `layers.json` vivo (lo baja de R2,
+reemplaza o inserta la entrada, ordena por id y lo sube al final). Si no puede leer el índice vivo, se niega sin
+subir nada: el job diario `forecast-daily.yml` nunca reconstruye el catálogo con una sola capa.
+
 ## Tests
 
 - Unit con datos sintéticos de resultado conocido (pytest, vitest).

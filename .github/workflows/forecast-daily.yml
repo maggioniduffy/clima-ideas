@@ -3,6 +3,10 @@
 #    (forecast runs cannot be downloaded again later, so they are archived every day).
 # 2. `forecast emit`: climatology baseline of daily flow, 1-10 days, frozen in the append-only registry.
 #    Persistence is paused: SNIH has no real-time flow (last value 2026-03-31, reports/06/F6.1-latency.md).
+# 2b. `forecast emit-riskday`: frozen F5.3 logistic (fit 2000-2014) on operational GEFS 0.25 (5 members) per
+#     region, plus its monthly climatology, 1-10 days, "Experimental" (F6.3).
+# 2c. Build the `forecast-outlook` viewer layer and publish only it to R2 (merge into the live layers.json;
+#     skipped without R2 secrets).
 # 3. Mondays (and manual runs): refresh observed flow from SNIH and `forecast score` the registry.
 # Everything is committed (never force-pushed) to the branch `data/forecast-registry`, so the git history
 # is a second, external proof that no frozen prediction was edited. Scheduled runs only fire from the
@@ -85,10 +89,21 @@ jobs:
           uv run clima-nqn forecast emit --flow-dir "$STORE/training/flow" \
             --registry "$STORE/registry/predictions.jsonl" \
             --model-version "$MODEL_VERSION" --models "$MODELS"
+
+      - name: Emit risk-day predictions (F6.3, Experimental)
+        if: ${{ !cancelled() }}
+        run: |
+          uv run clima-nqn forecast emit-riskday --gefs-regions "$STORE/operational/gefs_regions" \
+            --model models/riskday-logistic-v1.json --registry "$STORE/registry/predictions.jsonl"
+
+      - name: Registry head hash
+        if: ${{ !cancelled() }}
+        run: |
           uv run python -c "from clima_nqn.forecast.registry import PredictionRegistry as R; print(R('$STORE/registry/predictions.jsonl').verify())" \
             > "$STORE/registry/head.txt"
 
       - name: Refresh observed flow and score (Mondays and manual runs)
+        if: ${{ !cancelled() }}
         run: |
           if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" != "1" ]; then
             echo "not Monday: skip scoring"; exit 0
@@ -98,9 +113,43 @@ jobs:
           uv run clima-nqn flow ingest --raw "$RUNNER_TEMP/obs-raw" --out "$STORE/observed/flow" \
             --report "$STORE/observed/flow-report.md"
           uv run clima-nqn forecast score --flow-dir "$STORE/observed/flow" \
+            --era5t-regions "$STORE/operational/era5t_regions" \
             --registry "$STORE/registry/predictions.jsonl" --out "$STORE/scores/latest"
 
+      - name: Automatic demotion check (F6.8)
+        if: ${{ !cancelled() }}
+        run: |
+          # Only demotes ("Experimental"); promotions are manual (`forecast promote`, needs user approval).
+          [ -f "$STORE/scores/latest.json" ] || { echo "no scores yet"; exit 0; }
+          uv run clima-nqn forecast demote-auto --status "$STORE/status/outlook.jsonl" \
+            --scores "$STORE/scores/latest.json" --model-version riskday-log-v1-$(sha256sum models/riskday-logistic-v1.json | cut -c1-8)
+
+      - name: Build the forecast-outlook viewer layer (F6.6)
+        if: ${{ !cancelled() }}
+        run: |
+          args=""
+          [ -f "$STORE/scores/latest.json" ] && args="$args --scores $STORE/scores/latest.json"
+          [ -f "$STORE/status/outlook.jsonl" ] && args="$args --status $STORE/status/outlook.jsonl"
+          uv run clima-nqn forecast outlook-layer --registry "$STORE/registry/predictions.jsonl" \
+            --gate ../reports/05/F5.8.json --out "$RUNNER_TEMP/layers/forecast-outlook" $args
+
+      - name: Publish only forecast-outlook to R2 (merges into the live layers.json)
+        if: ${{ !cancelled() }}
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET || 'nqn' }} # public layers bucket (pub-89e22e4a….r2.dev)
+        run: |
+          if [ -z "$R2_ACCOUNT_ID" ] || [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_BUCKET" ]; then
+            echo "R2 secrets not set: skipping publish"; exit 0
+          fi
+          [ -f "$RUNNER_TEMP/layers/forecast-outlook/manifest.json" ] || { echo "layer not built: skipping publish"; exit 0; }
+          # --layer never rebuilds layers.json: it reads the live one and refuses if it cannot.
+          uv run clima-nqn publish --root "$RUNNER_TEMP/layers" --layer forecast-outlook
+
       - name: Commit to the data branch (append, no force)
+        if: ${{ !cancelled() }}
         run: |
           cd "$STORE"
           git config user.name "github-actions[bot]"

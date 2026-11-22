@@ -1,5 +1,6 @@
 """F6.5 prospective verification: scores, skill table, bootstrap."""
 
+import json
 from datetime import UTC, date, datetime, timedelta
 
 import numpy as np
@@ -141,3 +142,138 @@ def test_bootstrap_reproducible_with_seed(scores) -> None:
     c = scoring.skill_table(scores, n_boot=300, seed=43)
     pd.testing.assert_frame_equal(a, b)
     assert not a["skill_ci_low"].equals(c["skill_ci_low"])
+
+
+# --- p_dia_riesgo (regional observed series) -----------------------------------------------------
+
+RISK_TODAY = date(2026, 11, 22)
+RISK_NOW = datetime(2026, 11, 22, 12, 0, tzinfo=UTC)
+REGIONS = ("cordillera_norte", "cordillera_sur", "confluencia")
+
+
+def _risk_toy_model() -> dict:
+    coef = [1.0, 2.0, 0.0, 0.0]
+    entry = {
+        "scaler_mean": [0.5, 0.1, 0.0, 0.0], "scaler_scale": [1.0] * 4, "coef": coef,
+        "intercept": -2.0, "boot_coef": [coef] * 3, "boot_intercept": [-2.0] * 3,
+        "threshold_mm": 10.0, "clim_rates": [0.1] * 12, "clim_n": [300] * 12, "prob_cap": None,
+    }  # fmt: skip
+    return {"regions": {r: {str(lead): entry for lead in range(1, 11)} for r in REGIONS}}
+
+
+def _risk_registry(tmp_path):
+    from clima_nqn.forecast import riskday_model as rm
+
+    rows = [
+        {"init_date": RISK_TODAY, "lead": lead, "valid_date": RISK_TODAY + timedelta(days=lead - 1),
+         "member": m, "region": r, "tp_mm": 4.0 + lead, "available_on": datetime(2026, 11, 22, 9)}
+        for r in REGIONS for lead in range(1, 11) for m in ("c00", "p01", "p02")
+    ]  # fmt: skip
+    snap = tmp_path / "2026-11-22.parquet"
+    pd.DataFrame(rows).to_parquet(snap)
+    reg = PredictionRegistry(tmp_path / "risk.jsonl", clock=lambda: RISK_NOW)
+    rm.emit(reg, _risk_toy_model(), "ab" * 32, snap, RISK_TODAY)
+    return reg
+
+
+def test_score_risk_day_brier_against_regional_series(tmp_path) -> None:
+    reg = _risk_registry(tmp_path)
+    # observed regional rain: lead 1 (today) >= threshold (event), lead 2 below, rest unobserved
+    obs = pd.Series({pd.Timestamp("2026-11-22"): 10.0, pd.Timestamp("2026-11-23"): 9.9})
+    recs = [r for r in reg.read() if r.region == "confluencia"]
+    s = scoring.score(recs, obs)
+    done = s[s["status"] == "scored"]
+    assert len(done) == 2 * 2 and set(done["lead"]) == {1, 2}  # lead = GEFS lead, 2 models
+    assert len(s) == 20 and (s[s["status"] == "pending"]["brier"].isna()).all()
+    c = done[done["model"] == "climatologia"].set_index("lead")
+    assert c.loc[1, "event"] == 1.0 and c.loc[1, "brier"] == pytest.approx((0.1 - 1) ** 2)
+    assert c.loc[2, "event"] == 0.0 and c.loc[2, "brier"] == pytest.approx(0.1**2)
+    lg = done[done["model"] == "logistica"].set_index("lead")
+    rec = {(r.model_name, r.details["gefs_lead"]): r for r in recs}
+    assert lg.loc[1, "brier"] == pytest.approx((rec["logistica", 1].value - 1) ** 2)
+    assert lg.loc[2, "brier"] == pytest.approx(rec["logistica", 2].value ** 2)
+    assert (done["threshold"] == 10.0).all()
+
+
+def test_read_regional_observations_newest_snapshot_wins(tmp_path) -> None:
+    d = tmp_path / "era5t"
+    d.mkdir()
+    day = pd.Timestamp("2026-11-20")
+    old = pd.DataFrame({"date": [day, day], "region": ["confluencia", "cordillera_sur"],
+                        "tp_mm": [1.0, 2.0], "available_on": pd.Timestamp("2026-11-27")})  # fmt: skip
+    new = pd.DataFrame({"date": [day], "region": ["confluencia"], "tp_mm": [5.0],
+                        "available_on": pd.Timestamp("2026-11-28")})  # fmt: skip
+    old.to_parquet(d / "2026-11-27.parquet")
+    new.to_parquet(d / "2026-11-28.parquet")
+    obs = scoring.read_regional_observations(d)
+    assert obs["confluencia"][day] == 5.0 and obs["cordillera_sur"][day] == 2.0
+
+
+def test_skill_table_for_risk_day_and_flow_cli(tmp_path) -> None:
+    from typer.testing import CliRunner
+
+    from clima_nqn.forecast.cli import forecast_app
+
+    reg = _risk_registry(tmp_path)
+    era5t = tmp_path / "era5t"
+    era5t.mkdir()
+    days = pd.date_range("2026-11-22", periods=10)
+    rows = [
+        {"date": d, "region": r, "tp_mm": 12.0 if i in (0, 1) else 1.0,
+         "available_on": pd.Timestamp("2026-12-05")}
+        for r in REGIONS for i, d in enumerate(days)
+    ]  # fmt: skip
+    pd.DataFrame(rows).to_parquet(era5t / "2026-12-05.parquet")
+    res = CliRunner().invoke(
+        forecast_app,
+        ["score", "--registry", str(reg.path), "--era5t-regions", str(era5t),
+         "--out", str(tmp_path / "out"), "--n-boot", "20"],
+    )  # fmt: skip
+    assert res.exit_code == 0, res.output
+    payload = json.loads((tmp_path / "out.json").read_text())
+    table = pd.DataFrame(payload["table"])
+    assert payload["pending"] == 0 and set(table["variable"]) == {"p_dia_riesgo"}
+    assert len(table) == 2 * 3 * 10 and set(table["station"]) == set(REGIONS)
+    lg = table[(table["model"] == "logistica") & (table["station"] == "confluencia")]
+    assert lg["pod"].notna().sum() >= 1 and (lg["n"] == 1).all()
+    clim = table[table["model"] == "climatologia"]
+    assert (clim["skill"] == 0).all()
+
+
+def _toy_scores(rows) -> pd.DataFrame:
+    base = {"model": "m", "variable": "p_dia_riesgo", "lead": 1, "status": "scored", "p": 0.5}
+    out = []
+    for region, day, event, model in rows:
+        d = date.fromisoformat(day)
+        out.append(
+            {**base, "station": region, "valid_date": d, "issue_date": d, "event": float(event),
+             "brier": (0.5 - event) ** 2 if model == "m" else (0.1 - event) ** 2, "model": model}
+        )  # fmt: skip
+    return pd.DataFrame(out)
+
+
+def test_pooled_events_not_sum_of_regions() -> None:
+    # same system hits two regions on consecutive days -> 1 pooled event (per-region sum would be 2);
+    # a later separate system -> 2; October event is outside any season but counts overall
+    sc = _toy_scores(
+        [("a", "2027-06-01", 1, "m"), ("a", "2027-06-02", 1, "m"), ("b", "2027-06-02", 1, "m"),
+         ("b", "2027-06-03", 1, "m"), ("a", "2027-07-10", 1, "m"), ("a", "2027-10-05", 1, "m")]
+    )  # fmt: skip
+    ev = scoring.pooled_events(sc)["p_dia_riesgo"]["1"]
+    assert ev == {"overall": 3, "2027": 2}
+
+
+def test_season_table_excludes_off_season_and_flags_complete() -> None:
+    rows = []
+    for i in range(1, 31):  # June days, 10 separated events
+        rows.append(("a", f"2027-06-{i:02d}", int(i % 3 == 0), "m"))
+        rows.append(("a", f"2027-06-{i:02d}", int(i % 3 == 0), "climatologia"))
+    rows.append(("a", "2027-11-01", 1, "m"))  # outside May-Sept: excluded
+    rows.append(("a", "2027-11-01", 1, "climatologia"))
+    t, pooled = scoring.season_table(_toy_scores(rows), today=date(2027, 10, 1), n_boot=50)
+    assert set(t["season"]) == {2027} and t["complete"].all()
+    m = t[t["model"] == "m"].iloc[0]
+    assert m["n"] == 30 and m["n_events"] == 10 and m["n_events_pooled"] == 10
+    assert pooled["p_dia_riesgo"]["1"]["overall"] == 11
+    early, _ = scoring.season_table(_toy_scores(rows), today=date(2027, 9, 30), n_boot=50)
+    assert not early["complete"].any()  # season end must be < today

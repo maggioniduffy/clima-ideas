@@ -26,6 +26,8 @@ class LayerManifest(BaseModel):
     license: str = Field(min_length=1)
     updated_at: datetime
     files: list[str] = Field(min_length=1)
+    # Only the forecast-outlook layer (F6.6): the weakest state of what it shows.
+    outlook_status: Literal["Experimental", "Perspectiva de riesgo", "mixto"] | None = None
 
     @field_validator("id")
     @classmethod

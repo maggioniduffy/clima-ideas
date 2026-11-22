@@ -28,7 +28,7 @@ def ops_ingest(
     ] = None,
     force: Annotated[bool, typer.Option(help="Refetch and rewrite existing snapshots.")] = False,
 ) -> None:
-    """Idempotent ingest of flow, ONI, ERA5T, ECMWF open data and GEFS; exit 1 only if all fail."""
+    """Idempotent ingest of flow, ONI, ERA5T, ECMWF, GEFS and the regional GEFS/ERA5T inputs; exit 1 only if all fail."""
     day = run_date.date() if run_date else date.today()
     names = [s.strip() for s in sources.split(",") if s.strip()] if sources else None
     try:

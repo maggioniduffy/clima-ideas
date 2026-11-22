@@ -14,7 +14,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | hecha (IDF solo con IMERG, sin corregir; sesgo a 24 h 0,92 y 0,67 en extremos; sin señal de ENSO; serie ISD con control de calidad; capa convection-idf publicada) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | núcleo hecho y publicado (476 cuencas con cauce de 841: D-infinito y forma; CN por escenarios TR-55); extensión no se abre (F4.4a: sin mancha de un evento) |
 | 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | hecha (capas hindcast-verification y hindcast-analogs publicadas; F5.8: la logística de día de riesgo pasa el hindcast hasta 9 días en cordillera norte, 10 en sur y 7 en Confluencia; F5.5: el 42 % de los análogos ERA5 de un río atmosférico fue río atmosférico, contra 5 % al azar) |
-| 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | en curso (F6.1 y F6.4 hechas, F6.5 en código; registro diario con climatología de caudal en `data/forecast-registry`; SNIH sin caudal en tiempo real, 236 días de rezago) |
+| 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | en curso (F6.1, F6.3 de día de riesgo, F6.4, F6.6 y F6.8 hechas, F6.5 en código; registro diario con día de riesgo «Experimental» y climatología de caudal en `data/forecast-registry`; SNIH sin caudal en tiempo real, 236 días de rezago) |
 
 ## Rumbo (revisión del 2026-11-11)
 
@@ -62,9 +62,9 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 
 ## Próximo
 
-1. Fase 6: F6.3 con la logística de F5.3 sobre GEFS operativo, emitida como "Experimental" en el registro para juntar
-   la temporada prospectiva (F6.8); revisar el tope de probabilidad de F5.8 antes de F6.6. Desplegar la web desde
-   `main` para que aparezca el tablero de F5.6.
+1. Fase 6, olas 3 y 4: F6.7 + F6.9 (caudal alto, hindcast) y F6.2 estacional sin ENSO (plan de cierre en
+   `plan/06-forecast.md`). Mergear a `main` para que el job diario emita el día de riesgo y aparezca el
+   tablero de F5.6.
 2. Fase 6: el registro diario corre desde `main`; pedir a la AIC caudal en tiempo real.
 
 ## Referencias

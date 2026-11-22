@@ -66,3 +66,11 @@ def test_missing_field_rejected(key: str) -> None:
 def test_extra_field_rejected() -> None:
     with pytest.raises(ValidationError):
         LayerManifest.model_validate({**VALID, "extra": 1})
+
+
+def test_outlook_status_optional_and_restricted() -> None:
+    assert LayerManifest.model_validate(VALID).outlook_status is None
+    for ok in ("Experimental", "Perspectiva de riesgo", "mixto"):
+        assert LayerManifest.model_validate({**VALID, "outlook_status": ok}).outlook_status == ok
+    with pytest.raises(ValidationError):
+        LayerManifest.model_validate({**VALID, "outlook_status": "rojo"})

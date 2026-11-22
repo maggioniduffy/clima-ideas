@@ -1,0 +1,418 @@
+"""F6.6 backend: ``forecast-outlook`` layer from a synthetic registry, scores and status log.
+
+``write_fixture`` regenerates ``web/e2e/fixtures/processed/forecast-outlook``; a test checks the committed
+fixture is exactly what the builder writes (rerun: ``FORECAST_OUTLOOK_WRITE_FIXTURE=1 uv run pytest -k fixture``).
+"""
+
+import json
+import os
+from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+from typer.testing import CliRunner
+
+from clima_nqn.cli import app
+from clima_nqn.forecast import riskday_model as rm
+from clima_nqn.forecast import status as st
+from clima_nqn.forecast.registry import PredictionRegistry
+from clima_nqn.layers import forecast_outlook as fo
+from clima_nqn.layers.manifest import load_manifest
+from clima_nqn.stages.hindcast import riskday as rd
+
+TODAY = date(2026, 1, 1)
+NOW = datetime(2026, 1, 1, 10, 17, tzinfo=UTC)
+MEMBERS = ("c00", "p01", "p02", "p03", "p04")
+SHA = "ab" * 32
+VERSION = rm.model_version(SHA, "log")
+FIXTURE = Path(__file__).resolve().parents[2] / "web/e2e/fixtures/processed/forecast-outlook"
+F58 = Path(__file__).resolve().parents[2] / "reports/05/F5.8.json"
+
+
+def toy_model() -> dict:
+    rng = np.random.default_rng(1)
+    coef = np.array([1.0, 2.0, 0.0, 0.0])
+    entry = lambda: {
+        "scaler_mean": [0.5, 0.1, 0.0, 0.0],
+        "scaler_scale": [1.0] * 4,
+        "coef": coef.tolist(),
+        "intercept": -2.0,
+        "boot_coef": (coef + rng.normal(0, 0.3, (50, 4))).tolist(),
+        "boot_intercept": (-2.0 + rng.normal(0, 0.3, 50)).tolist(),
+        "threshold_mm": 12.5,
+        "clim_rates": [0.05] * 12,
+        "clim_n": [300] * 12,
+        "prob_cap": None,
+    }
+    regions = {r: {str(lead): entry() for lead in rm.LEADS} for r in rd.REGIONS}
+    return {"meta": {"model_name": "logistica"}, "regions": regions}
+
+
+def caps() -> dict:
+    return {
+        "rule": rm.CAP_RULE,
+        "caps": {
+            r: {str(lead): (1.0 if lead <= 4 else 0.3) for lead in rm.LEADS} for r in rd.REGIONS
+        },
+    }
+
+
+def snapshot(path: Path, init: date = TODAY) -> Path:
+    """Wet northern cordillera, dry elsewhere: p is high (above the 0.3 cap) from lead 5 on in the north."""
+    rng = np.random.default_rng(3)
+    rows = []
+    for region in rd.REGIONS:
+        for lead in rm.LEADS:
+            for m in MEMBERS:
+                mm = 30.0 + rng.uniform(0, 5) if region == "cordillera_norte" else rng.uniform(0, 3)
+                rows.append(
+                    {
+                        "init_date": init,
+                        "lead": lead,
+                        "valid_date": init + timedelta(days=lead - 1),
+                        "member": m,
+                        "region": region,
+                        "tp_mm": round(float(mm), 2),
+                        "available_on": datetime(2026, 1, 1, 9, 0),
+                    }
+                )
+    pd.DataFrame(rows).to_parquet(path)
+    return path
+
+
+def make_registry(tmp_path: Path, now: datetime = NOW) -> PredictionRegistry:
+    reg = PredictionRegistry(tmp_path / "reg.jsonl", clock=lambda: now)
+    snap = snapshot(tmp_path / f"{now.date()}.parquet", init=now.date())
+    rm.emit(reg, toy_model(), SHA, snap, now.date(), caps=caps())
+    return reg
+
+
+def scores_payload() -> dict:
+    row = {
+        "model": "logistica",
+        "variable": "p_dia_riesgo",
+        "station": "cordillera_norte",
+        "lead": 1,
+        "n": 40,
+        "n_events": 12,
+        "skill": 0.18,
+        "skill_ci_low": -0.05,
+        "skill_ci_high": 0.37,
+        "pod": 0.6,
+        "far": 0.4,
+        "status": "ok",
+    }
+    thin = {**row, "lead": 2, "n": 9, "n_events": 3, "skill": None, "skill_ci_low": None,
+            "skill_ci_high": None, "pod": None, "far": None, "status": "insuficiente"}  # fmt: skip
+    clim = {**row, "model": "climatologia", "skill": 0.0}
+    return {
+        "table": [row, thin, clim],
+        "events_pooled": {"p_dia_riesgo": {"1": {"overall": 14}, "2": {"overall": 5}}},
+    }
+
+
+def gate() -> dict:
+    cell = lambda ok: {
+        "bss_log_clim": {"value": 0.7, "lo": 0.57, "hi": 0.8},
+        "n_events_pooled": 118,
+        "status": "pasa hindcast (espera prospectiva F6.8)" if ok else "Experimental",
+    }
+    return {"regions": {r: {str(lead): cell(lead <= 7) for lead in rm.LEADS} for r in rd.REGIONS}}
+
+
+def promote_log(tmp_path: Path, leads=(1,), region="cordillera_norte") -> st.StatusLog:
+    log = st.StatusLog(tmp_path / "status.jsonl", clock=lambda: NOW)
+    log.append_many(
+        [
+            {
+                "variable": "p_dia_riesgo",
+                "region": region,
+                "lead": lead,
+                "model_version": VERSION,
+                "from_state": st.EXPERIMENTAL,
+                "to_state": st.OUTLOOK,
+                "reason": "prueba",
+                "evidence": {},
+                "approved_by": "tester",
+                "approved_on": "2026-01-01",
+            }
+            for lead in leads
+        ]
+    )
+    return log
+
+
+def cells(o: dict):
+    return [(r["id"], c) for r in o["regions"] for c in r["leads"]]
+
+
+# --- tests ------------------------------------------------------------------------------------------
+
+
+def test_three_regions_ten_leads_and_header(tmp_path):
+    reg = make_registry(tmp_path)
+    o = fo.build_outlook(reg.read())
+    assert [r["id"] for r in o["regions"]] == list(rd.REGIONS)
+    assert all([c["lead"] for c in r["leads"]] == list(range(1, 11)) for r in o["regions"])
+    assert o["variable"] == "p_dia_riesgo" and o["issue_date"] == "2026-01-01"
+    assert o["gefs_init_date"] == "2026-01-01" and o["issued_at"].startswith("2026-01-01T10:17")
+    assert o["model"] == {
+        "name": "logistica",
+        "version": VERSION,
+        "training_period": "2000-01-01/2014-12-31",
+        "baseline": "climatologia",
+    }
+    assert o["inputs"] and o["inputs"][0]["latency_hours"] == 0.0
+    assert o["regions"][0]["threshold_mm"] == 12.5
+    first = o["regions"][0]["leads"][0]
+    assert first["valid_date"] == "2026-01-01" and first["interval_level"] == 0.9
+    assert (
+        first["clim_p"] == pytest.approx(0.05) and first["clim_low"] <= 0.05 <= first["clim_high"]
+    )
+    assert first["p_low"] <= first["p"] <= first["p_high"]
+    json.dumps(o, allow_nan=False)
+
+
+def test_cap_above_cap_and_p_shown(tmp_path):
+    o = fo.build_outlook(make_registry(tmp_path).read())
+    for _, c in cells(o):
+        assert c["p_shown"] == min(c["p"], c["prob_cap"])
+        assert c["above_cap"] == (c["p"] > c["prob_cap"])
+    north = {c["lead"]: c for c in o["regions"][0]["leads"]}
+    assert north[1]["prob_cap"] == 1.0 and not north[1]["above_cap"]
+    assert north[9]["prob_cap"] == 0.3 and north[9]["above_cap"] and north[9]["p_shown"] == 0.3
+    dry = {c["lead"]: c for c in o["regions"][1]["leads"]}
+    assert not any(c["above_cap"] for c in dry.values())
+    assert "tope" in o["cap_rule"].lower()
+
+
+def test_no_caps_means_null_cap_and_p_shown_equals_p(tmp_path):
+    reg = PredictionRegistry(tmp_path / "r.jsonl", clock=lambda: NOW)
+    rm.emit(reg, toy_model(), SHA, snapshot(tmp_path / "s.parquet"), TODAY)
+    for _, c in cells(fo.build_outlook(reg.read())):
+        assert c["prob_cap"] is None and not c["above_cap"] and c["p_shown"] == c["p"]
+
+
+def test_estado_defaults_experimental_and_promoted_case(tmp_path):
+    recs = make_registry(tmp_path).read()
+    assert {c["estado"] for _, c in cells(fo.build_outlook(recs))} == {"Experimental"}
+    log = promote_log(tmp_path)
+    o = fo.build_outlook(recs, status_log=log)
+    promoted = [(r, c["lead"]) for r, c in cells(o) if c["estado"] == "Perspectiva de riesgo"]
+    assert promoted == [("cordillera_norte", 1)]
+    # a promotion of another frozen version does not count
+    other = st.StatusLog(tmp_path / "o.jsonl", clock=lambda: NOW)
+    other.append_many(
+        [
+            {
+                "variable": "p_dia_riesgo",
+                "region": "cordillera_norte",
+                "lead": 1,
+                "model_version": "riskday-log-v1-zzzz",
+                "from_state": st.EXPERIMENTAL,
+                "to_state": st.OUTLOOK,
+                "reason": "x",
+            }
+        ]
+    )
+    assert {c["estado"] for _, c in cells(fo.build_outlook(recs, status_log=other))} == {
+        "Experimental"
+    }
+
+
+def test_history_insufficient_without_scores_and_filled_with_scores(tmp_path):
+    recs = make_registry(tmp_path).read()
+    for _, c in cells(fo.build_outlook(recs)):
+        assert c["history"] == {
+            "n": 0,
+            "n_events": 0,
+            "n_events_pooled": None,
+            "skill": None,
+            "ci": None,
+            "pod": None,
+            "far": None,
+            "insufficient": True,
+        }
+    o = fo.build_outlook(recs, scores=scores_payload())
+    h = o["regions"][0]["leads"][0]["history"]
+    assert h == {
+        "n": 40,
+        "n_events": 12,
+        "n_events_pooled": 14,
+        "skill": 0.18,
+        "ci": [-0.05, 0.37],
+        "pod": 0.6,
+        "far": 0.4,
+        "insufficient": False,
+    }
+    thin = o["regions"][0]["leads"][1]["history"]
+    assert thin["insufficient"] and thin["n"] == 9 and thin["skill"] is None and thin["ci"] is None
+    assert thin["n_events_pooled"] == 5
+    assert o["regions"][1]["leads"][0]["history"]["n"] == 0  # no row for that region
+
+
+def test_hindcast_from_gate_and_null_when_missing(tmp_path):
+    recs = make_registry(tmp_path).read()
+    h = fo.build_outlook(recs, gate=gate())["regions"][0]["leads"][0]["hindcast"]
+    assert h == {
+        "bss_clim": 0.7,
+        "ci": [0.57, 0.8],
+        "verdict": "pasa hindcast (espera prospectiva F6.8)",
+        "n_events_pooled": 118,
+    }
+    assert fo.build_outlook(recs)["regions"][0]["leads"][0]["hindcast"] is None
+
+
+def test_notices_and_links(tmp_path):
+    o = fo.build_outlook(make_registry(tmp_path).read())
+    assert o["notices"]["official"].startswith("No es una alerta oficial. Ante una diferencia")
+    assert o["notices"]["audience"] == "Para usuarios técnicos; no indica qué hacer."
+    assert set(o["notices"]["states"]) == {"Experimental", "Perspectiva de riesgo"}
+    assert [x["label"] for x in o["official_links"]] == [
+        "SMN — avisos",
+        "AIC",
+        "Defensa Civil Neuquén",
+    ]
+    assert all(x["url"].startswith("https://") for x in o["official_links"])
+    assert o["history_note"].startswith("Historial prospectivo")
+    assert "color" not in json.dumps(o).lower()
+
+
+def test_latest_issue_date_wins(tmp_path):
+    reg = make_registry(tmp_path)
+    nxt = NOW + timedelta(days=1)
+    reg2 = PredictionRegistry(reg.path, clock=lambda: nxt)
+    rm.emit(reg2, toy_model(), SHA, snapshot(tmp_path / "n.parquet", init=nxt.date()), nxt.date())
+    o = fo.build_outlook(reg2.read())
+    assert o["issue_date"] == "2026-01-02" and o["gefs_init_date"] == "2026-01-02"
+
+
+def test_empty_registry_raises(tmp_path):
+    with pytest.raises(fo.OutlookError):
+        fo.build_outlook([])
+
+
+@pytest.mark.parametrize(
+    ("leads", "expected"),
+    [((), "Experimental"), ((1,), "mixto")],
+)
+def test_manifest_outlook_status_experimental_and_mixed(tmp_path, leads, expected):
+    reg = make_registry(tmp_path)
+    log = promote_log(tmp_path, leads) if leads else None
+    out = fo.build(reg.path, tmp_path / "out", status=log.path if log else None)
+    m = load_manifest(out / "manifest.json")
+    assert m.outlook_status == expected and m.id == "forecast-outlook" and m.kind == "series"
+    assert m.files == ["outlook.json"] and m.period == "2026-01-01/2026-01-10"
+
+
+def test_manifest_status_promoted_when_every_cell_promoted(tmp_path):
+    reg = make_registry(tmp_path)
+    log = st.StatusLog(tmp_path / "all.jsonl", clock=lambda: NOW)
+    for region in rd.REGIONS:
+        promote_log_into(log, region)
+    out = fo.build(reg.path, tmp_path / "out", status=log.path)
+    assert load_manifest(out / "manifest.json").outlook_status == "Perspectiva de riesgo"
+
+
+def promote_log_into(log: st.StatusLog, region: str) -> None:
+    log.append_many(
+        [
+            {
+                "variable": "p_dia_riesgo",
+                "region": region,
+                "lead": lead,
+                "model_version": VERSION,
+                "from_state": st.EXPERIMENTAL,
+                "to_state": st.OUTLOOK,
+                "reason": "prueba",
+            }
+            for lead in rm.LEADS
+        ]
+    )
+
+
+def test_manifest_without_outlook_status_stays_valid(tmp_path):
+    m = {
+        "id": "x",
+        "title": "T",
+        "kind": "series",
+        "source": "S",
+        "period": "2000-01-01/2001-01-01",
+        "license": "L",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "files": ["a.json"],
+    }
+    p = tmp_path / "manifest.json"
+    p.write_text(json.dumps(m))
+    assert load_manifest(p).outlook_status is None
+    p.write_text(json.dumps({**m, "outlook_status": "rojo"}))
+    with pytest.raises(ValueError):
+        load_manifest(p)
+
+
+def test_cli_outlook_layer(tmp_path):
+    reg = make_registry(tmp_path)
+    gate_path = tmp_path / "gate.json"
+    gate_path.write_text(json.dumps(gate()))
+    out = tmp_path / "layer"
+    r = CliRunner().invoke(
+        app,
+        ["forecast", "outlook-layer", "--registry", str(reg.path), "--gate", str(gate_path),
+         "--out", str(out)],
+    )  # fmt: skip
+    assert r.exit_code == 0, r.output
+    o = json.loads((out / "outlook.json").read_text())
+    assert o["regions"][0]["leads"][0]["hindcast"]["bss_clim"] == 0.7
+    missing = CliRunner().invoke(
+        app,
+        ["forecast", "outlook-layer", "--registry", str(reg.path), "--gate", str(tmp_path / "no"),
+         "--out", str(out)],
+    )  # fmt: skip
+    assert missing.exit_code == 1
+
+
+def test_real_gate_file_feeds_the_layer(tmp_path):
+    if not F58.is_file():
+        pytest.skip("reports/05/F5.8.json not present")
+    out = fo.build(make_registry(tmp_path).path, tmp_path / "o", gate=F58)
+    o = json.loads((out / "outlook.json").read_text())
+    assert o["regions"][0]["leads"][0]["hindcast"]["n_events_pooled"] > 0
+
+
+# --- fixture for the web e2e ------------------------------------------------------------------------
+
+
+def write_fixture(tmp_path: Path, dest: Path) -> Path:
+    reg = make_registry(tmp_path)
+    scores = tmp_path / "scores.json"
+    scores.write_text(json.dumps(scores_payload()))
+    g = tmp_path / "gate.json"
+    g.write_text(json.dumps(gate()))
+    log = promote_log(tmp_path, leads=(1,))
+    out = fo.build(reg.path, dest, scores=scores, status=log.path, gate=g)
+    m = out / "manifest.json"
+    d = json.loads(m.read_text())
+    d.update(
+        source="GEFS operativo y ERA5T falsos de prueba; modelo logístico de juguete (datos falsos de prueba)",
+        license="CC0",
+    )
+    m.write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
+def test_fixture_matches_builder(tmp_path):
+    if os.environ.get("FORECAST_OUTLOOK_WRITE_FIXTURE"):
+        (tmp_path / "w").mkdir()
+        write_fixture(tmp_path / "w", FIXTURE)
+    (tmp_path / "c").mkdir()
+    out = write_fixture(tmp_path / "c", tmp_path / "fx")
+    for name in ("manifest.json", "outlook.json"):
+        assert (FIXTURE / name).read_text(encoding="utf-8") == (out / name).read_text(
+            encoding="utf-8"
+        ), f"{name} is stale: rerun with FORECAST_OUTLOOK_WRITE_FIXTURE=1"
+    o = json.loads((FIXTURE / "outlook.json").read_text(encoding="utf-8"))
+    assert any(c["above_cap"] for _, c in cells(o))
+    assert any(c["history"]["n"] > 0 for _, c in cells(o))
+    assert load_manifest(FIXTURE / "manifest.json").outlook_status == "mixto"

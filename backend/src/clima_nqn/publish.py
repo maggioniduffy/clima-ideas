@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from clima_nqn.layers.manifest import MANIFEST_NAME, LayerManifest, discover_layers
+from clima_nqn.layers.manifest import MANIFEST_NAME, LayerManifest, discover_layers, load_layer
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +137,84 @@ def publish_layers(root: Path, client: Any, bucket: str, prefix: str = "") -> tu
     """Upload every planned object; returns (objects, total bytes)."""
     total = 0
     uploads = plan_uploads(root, prefix)
+    for u in uploads:
+        body = u.body
+        client.put_object(
+            Bucket=bucket,
+            Key=u.key,
+            Body=body,
+            ContentType=u.content_type,
+            CacheControl=u.cache_control,
+        )
+        total += len(body)
+    return len(uploads), total
+
+
+class PublishError(Exception):
+    """A publish step was refused (nothing, or nothing further, was uploaded)."""
+
+
+def plan_layer_uploads(root: Path, layer_id: str, prefix: str = "") -> list[Upload]:
+    """One layer's data files, then its manifest (no index). Raises PublishError if it is not publishable."""
+    root = Path(root)
+    pre = prefix.strip("/") + "/" if prefix.strip("/") else ""
+    m = load_layer(root, layer_id)
+    if m is None:
+        raise PublishError(f"layer {layer_id!r} not found or invalid under {root}")
+    missing = [f for f in m.files if not (root / m.id / f).is_file()]
+    if missing:
+        raise PublishError(f"layer {layer_id} lists missing files: {', '.join(missing)}")
+    folder = root / m.id
+    uploads = [
+        Upload(f"{pre}{m.id}/{rel}", content_type(rel), DATA_CACHE, path=folder / rel)
+        for rel in _layer_files(root, m)
+    ]
+    uploads.append(
+        Upload(
+            f"{pre}{m.id}/{MANIFEST_NAME}",
+            "application/json",
+            INDEX_CACHE,
+            path=folder / MANIFEST_NAME,
+        )
+    )
+    return uploads
+
+
+def read_live_index(client: Any, bucket: str, prefix: str = "") -> list[dict]:
+    """The live ``layers.json``; any failure to read or parse it raises PublishError."""
+    pre = prefix.strip("/") + "/" if prefix.strip("/") else ""
+    try:
+        obj = client.get_object(Bucket=bucket, Key=pre + INDEX_NAME)
+        index = json.loads(obj["Body"].read())
+    except Exception as exc:
+        raise PublishError(f"cannot read the live {INDEX_NAME}: {type(exc).__name__}") from exc
+    if not isinstance(index, list) or not all(isinstance(e, dict) and "id" in e for e in index):
+        raise PublishError(f"the live {INDEX_NAME} is not a list of layer manifests")
+    return index
+
+
+def publish_one_layer(
+    root: Path, layer_id: str, client: Any, bucket: str, prefix: str = ""
+) -> tuple[int, int]:
+    """Upload only ``layer_id`` and merge its entry into the live ``layers.json`` (never rebuilds the index).
+
+    The live index is read first and the run is refused if it cannot be read, so a daily job that only
+    owns one layer can never wipe the catalog. Other entries are kept as they are; the list stays sorted by id.
+    """
+    uploads = plan_layer_uploads(root, layer_id, prefix)
+    live = read_live_index(client, bucket, prefix)
+    entry = load_layer(Path(root), layer_id).model_dump(mode="json")  # type: ignore[union-attr]
+    merged = sorted([e for e in live if e["id"] != layer_id] + [entry], key=lambda e: e["id"])
+    pre = prefix.strip("/") + "/" if prefix.strip("/") else ""
+    uploads.append(
+        Upload(
+            pre + INDEX_NAME,
+            "application/json",
+            INDEX_CACHE,
+            data=json.dumps(merged).encode("utf-8"),
+        )
+    )
+    total = 0
     for u in uploads:
         body = u.body
         client.put_object(

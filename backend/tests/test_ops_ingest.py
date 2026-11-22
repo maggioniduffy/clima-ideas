@@ -13,6 +13,8 @@ from typer.testing import CliRunner
 from clima_nqn.cli import app
 from clima_nqn.io import flow, snow
 from clima_nqn.ops import ingest
+from clima_nqn.stages.hindcast import forecasts as fc
+from clima_nqn.stages.hindcast import riskday
 
 RUN = pd.Timestamp("2026-11-22")
 SIDS = sorted(snow.UPSTREAM_BOXES)
@@ -71,12 +73,35 @@ def fake_gefs(init, member, step, area):
     return grid(1.0 if member == "geavg" else 2.0)  # mm per 6 h bucket
 
 
+def wide_field(value=1.0, margin=True):
+    """Constant field on the wide grid (plus the decoding margin for GEFS)."""
+    n, w, s_, e = fc._margin_area(fc.WIDE_GRID.area) if margin else fc.WIDE_GRID.area
+    lat = np.round(np.arange(s_, n + 1e-6, 0.25), 4)
+    lon = np.round(np.arange(w, e + 1e-6, 0.25), 4)
+    return xr.DataArray(np.full((len(lat), len(lon)), float(value)), dims=("lat", "lon"),
+                        coords={"lat": lat, "lon": lon})  # fmt: skip
+
+
+def fake_gefs25(init, member, step, area):
+    return wide_field(1.0 + fc.GEFS_MEMBERS.index(member))  # mm per 6 h bucket: 1..5
+
+
+def fake_era5t_regions(start, stop, area):
+    times = pd.date_range(start, stop, freq="h")
+    f = wide_field(0.002 / 24, margin=False)  # 2 mm per day, in m per hour
+    vals = np.broadcast_to(f.values, (len(times), *f.shape)).copy()
+    return xr.DataArray(vals, dims=("time", "lat", "lon"),
+                        coords={"time": times, "lat": f["lat"].values, "lon": f["lon"].values})  # fmt: skip
+
+
 FETCHERS = {
     "flow": fake_flow,
     "oni": lambda: ONI_TEXT,
     "era5t": fake_era5t,
     "ecmwf": fake_ecmwf,
     "gefs": fake_gefs,
+    "gefs_regions": fake_gefs25,
+    "era5t_regions": fake_era5t_regions,
 }
 CLOCK = datetime(2026, 11, 22, 12, 0, tzinfo=UTC)
 
@@ -319,3 +344,152 @@ def test_grib_roundtrip_decode_and_crop():
     assert da["lon"].values.tolist() == [-73.0, -72.0, -71.0, -70.0]
     # source row 2 = lat -37 (index 2), lon 287 -> -73 (column 1): value 2*8+1 = 17
     assert float(da.sel(lat=-37.0, lon=-73.0)) == 17.0
+
+
+# --- F6.3: regional GEFS 0.25 and ERA5T -----------------------------------------------------------
+
+
+def test_gefs25_url_and_idx_span():
+    url = ingest.gefs25_url(RUN.date(), "p01", 240)
+    assert url.endswith("/gefs.20261122/00/atmos/pgrb2sp25/gep01.t00z.pgrb2s.0p25.f240")
+    idx = (
+        "17:900:d=2026112200:CPOFP:surface:12 hour fcst:ENS=+1\n"
+        "18:1000:d=2026112200:APCP:surface:6-12 hour acc fcst:ENS=+1\n"
+        "19:1500:d=2026112200:CSNOW:surface:6-12 hour ave fcst:ENS=+1\n"
+    )
+    assert ingest.parse_gefs_idx(idx, span=(6, 12)) == (1000, 1499)
+    assert (
+        ingest.parse_gefs_idx(idx, span=(0, 12)) is None
+    )  # accumulation from 0 is not a 6 h bucket
+
+
+def test_gefs_regions_schema_members_leads_and_daily_sum():
+    df = ingest.ingest_gefs_regions(RUN, fetcher=fake_gefs25, now=CLOCK)
+    assert list(df.columns) == [
+        "init_date", "lead", "valid_date", "member", "region", "tp_mm", "available_on", "fetched_at",
+    ]  # fmt: skip
+    assert set(df["member"]) == set(fc.GEFS_MEMBERS) and set(df["region"]) == set(riskday.REGIONS)
+    assert sorted(df["lead"].unique()) == list(range(1, 11)) and df["lead"].dtype.kind == "i"
+    assert len(df) == 5 * 3 * 10
+    one = df[(df["member"] == "p03") & (df["lead"] == 4) & (df["region"] == "confluencia")]
+    assert one["tp_mm"].iloc[0] == pytest.approx(4 * 4.0)  # p03 = 4 mm per bucket x 4 buckets
+    assert one["valid_date"].iloc[0] == RUN + pd.Timedelta(days=3)
+    assert (df["init_date"] == RUN).all() and (df["available_on"] == RUN).all()
+
+
+def test_gefs_regions_daily_uses_the_right_buckets():
+    seen = {}
+
+    def fetcher(init, member, step, area):
+        seen.setdefault(member, []).append(step)
+        return wide_field(float(step))  # bucket value = its end step
+
+    df = ingest.ingest_gefs_regions(RUN, fetcher=fetcher, members=("c00",), now=CLOCK)
+    assert sorted(seen["c00"]) == list(range(6, 241, 6))
+    got = df[(df["lead"] == 2) & (df["region"] == "confluencia")]["tp_mm"].iloc[0]
+    assert got == pytest.approx(30 + 36 + 42 + 48)  # buckets ending f030, f036, f042, f048
+
+
+def test_gefs_regions_missing_member_keeps_others_and_logs(tmp_path):
+    def fetcher(init, member, step, area):
+        if member == "p02":
+            raise ingest.NotAvailable("p02 absent")
+        if member == "p04" and step == 60:  # one step of lead 3 (hours 48-72)
+            raise ingest.NotAvailable("p04 f060 absent")
+        return fake_gefs25(init, member, step, area)
+
+    res = run(tmp_path, sources=["gefs_regions"], fetchers={"gefs_regions": fetcher})
+    assert res["gefs_regions"]["status"] == "ok"
+    df = pd.read_parquet(tmp_path / "gefs_regions" / "2026-11-22.parquet")
+    assert set(df["member"]) == {"c00", "p01", "p03", "p04"}
+    p04 = df[df["member"] == "p04"]
+    assert 3 not in set(p04["lead"]) and len(p04) == 9 * 3  # dropped, not zero
+    detail = json.loads((tmp_path / "manifest.json").read_text())["gefs_regions"]["detail"]
+    assert "p02" in detail["missing_steps"] and detail["missing_steps"]["p04"] == [60]
+    assert detail["members_present"] == ["c00", "p01", "p03", "p04"]
+
+
+def test_gefs_regions_falls_back_when_run_incomplete():
+    def fetcher(init, member, step, area):
+        if pd.Timestamp(init) == RUN and step > 120:  # newest run still being published
+            raise ingest.NotAvailable("not yet")
+        return fake_gefs25(init, member, step, area)
+
+    df = ingest.ingest_gefs_regions(RUN, fetcher=fetcher, now=CLOCK)
+    assert (df["init_date"] == RUN - pd.Timedelta(days=1)).all()
+    assert (df["available_on"] == RUN).all()
+
+    def never(init, member, step, area):
+        raise ingest.NotAvailable("no")
+
+    with pytest.raises(ingest.NotAvailable):
+        ingest.ingest_gefs_regions(RUN, fetcher=never, now=CLOCK)
+
+
+def test_wide_region_means_equal_riskday_region_means():
+    grid = fc.WIDE_GRID
+    lat2d, lon2d = np.meshgrid(grid.lat, grid.lon, indexing="ij")
+    vals = 5.0 + np.sin(lat2d) * 3 + np.cos(lon2d * 2)
+    vals[3, 4] = np.nan
+    field = xr.DataArray(vals, dims=("lat", "lon"), coords={"lat": grid.lat, "lon": grid.lon})
+    masks = riskday.regions(grid.lat, grid.lon)
+    expected = riskday.region_means(field, masks)
+    got = ingest.wide_region_means(field, masks)
+    assert set(got) == set(riskday.REGIONS)
+    for name in masks:
+        assert got[name] == pytest.approx(float(expected[name]), rel=1e-6)
+        w = np.cos(np.radians(lat2d))[masks[name] & ~np.isnan(vals)]
+        manual = (vals[masks[name] & ~np.isnan(vals)] * w).sum() / w.sum()
+        assert got[name] == pytest.approx(manual, rel=1e-5)
+    assert len({round(v, 6) for v in got.values()}) == 3  # regions differ
+
+
+def test_era5t_regions_daily_window_and_drops_empty_days(tmp_path):
+    df = ingest.ingest_era5t_regions(RUN, fetcher=fake_era5t_regions, now=CLOCK)
+    assert list(df.columns) == ["date", "region", "tp_mm", "available_on", "fetched_at"]
+    assert np.allclose(df["tp_mm"], 2.0) and len(df) == 3 * 14
+    assert set(df["region"]) == set(riskday.REGIONS)
+    assert df["date"].min() == RUN - pd.Timedelta(days=14)
+    assert df["date"].max() == RUN - pd.Timedelta(days=1)
+
+    empty_day = RUN - pd.Timedelta(days=5)
+
+    def with_gap(start, stop, area):
+        da = fake_era5t_regions(start, stop, area)
+        t = pd.DatetimeIndex(da["time"].values)
+        gap = (t > empty_day) & (t <= empty_day + pd.Timedelta(days=1))  # hours D 01..D+1 00
+        vals = da.values.copy()
+        vals[gap] = np.nan
+        return da.copy(data=vals)
+
+    df = ingest.ingest_era5t_regions(RUN, fetcher=with_gap, now=CLOCK)
+    assert empty_day not in set(df["date"]) and len(df) == 3 * 13
+    assert not df["tp_mm"].isna().any()
+
+
+def test_new_sources_idempotent_and_no_leak(tmp_path):
+    names = ["gefs_regions", "era5t_regions"]
+    first = run(tmp_path, sources=names)
+    assert {v["status"] for v in first.values()} == {"ok"}
+    paths = [tmp_path / n / "2026-11-22.parquet" for n in names]
+    before = [p.read_bytes() for p in paths]
+
+    def boom(*a, **k):
+        raise AssertionError("fetcher called")
+
+    second = run(tmp_path, sources=names, fetchers={n: boom for n in names})
+    assert {v["status"] for v in second.values()} == {"skipped"}
+    assert before == [p.read_bytes() for p in paths]
+    assert second["gefs_regions"]["detail"] == first["gefs_regions"]["detail"]
+    manifest = json.loads((tmp_path / "manifest.json").read_text())
+    assert manifest["era5t_regions"]["newest_value_date"] == "2026-11-21"
+    assert manifest["gefs_regions"]["newest_value_date"] == "2026-12-01"
+    meta = pq.read_schema(paths[0]).metadata
+    assert b"pgrb2sp25" in meta[b"source"] and b"NODD" in meta[b"license"]
+
+    bad = pd.DataFrame({"init_date": [RUN + pd.Timedelta(days=1)], "available_on": [RUN]})
+    with pytest.raises(ValueError, match="init_date"):
+        ingest.check_no_leak(bad, "gefs_regions", RUN)
+    bad = pd.DataFrame({"date": [RUN], "available_on": [RUN]})
+    with pytest.raises(ValueError, match="not before"):
+        ingest.check_no_leak(bad, "era5t_regions", RUN)

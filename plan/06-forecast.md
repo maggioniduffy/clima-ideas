@@ -1,6 +1,6 @@
 # Fase 6 — Predicción a futuro (experimental)
 
-Estado: en curso (F6.1, F6.4 y el código de F6.5 hechos; registro diario solo con climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
+Estado: en curso (F6.1, F6.3 de día de riesgo, F6.4, F6.6 y F6.8 hechos, F6.5 en código; registro diario con día de riesgo «Experimental» y climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
 
 Mide si los modelos predicen mejor que la climatología algo que todavía no pasó. Desde el 2026-11-12 (`plan.md`,
 Rumbo 7) una variable y anticipación que pasa la compuerta de evidencia se muestra como "Perspectiva de riesgo"
@@ -36,12 +36,12 @@ encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en b
 |---|---|---|---|
 | F6.1 ✅ | Ingesta operativa idempotente de entradas actuales (ERA5T, ERA5-Land, ECMWF open data, GEFS, ONI, caudal); verificar antes la latencia real del caudal en tiempo real (SNIH dice no ser red de alerta; AIC restringida) | Sonnet escribe, Haiku corre | Latencia de caudal medida y anotada en `docs/research/data-access.md` + una corrida trae el último día disponible + unit de idempotencia |
 | F6.2 | Modelo estacional (regresión logística y LightGBM) + baselines, validado según "Validación (F6.2)" | Sonnet implementa, Haiku entrena | RPS y Brier por año de test vs. cada baseline + unit de particiones sin fuga |
-| F6.3 | Corrida de corto plazo: F5.3 y LSTM F2.5 alimentados con pronósticos operativos | Sonnet | Predicción emitida para hoy con incertidumbre |
+| F6.3 ✅ (día de riesgo; caudal bloqueado) | Corrida de corto plazo: F5.3 y LSTM F2.5 alimentados con pronósticos operativos | Sonnet | Predicción emitida para hoy con incertidumbre |
 | F6.4 ✅ | Registro de predicciones congeladas: append-only con fecha de emisión, versión de modelo y hash de entradas | Sonnet | Unit: no se puede editar ni emitir con fecha pasada |
 | F6.5 (código ✅) | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, Haiku corre | Tabla de skill por horizonte + unit de métricas |
-| F6.6 | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
+| F6.6 ✅ (código; en línea al mergear a `main`) | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
 | F6.7 | Prueba de caudal alto: dejando afuera cada crecida grande (junio de 2023 incluida), con entradas de pronóstico y la latencia de caudal de F6.1, ¿la probabilidad de superar el umbral sube sobre la climatología antes de cada pico y los intervalos cubren los picos cerca de lo nominal? | Haiku corre, Sonnet codifica | Tabla por crecida y anticipación con veredicto + unit de partición sin fuga |
-| F6.8 | Promoción y descenso: aplica la compuerta por variable, anticipación y región, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión; el descenso de una anticipación arrastra a las más largas |
+| F6.8 ✅ (código; sin promociones hasta la temporada 2027) | Promoción y descenso: aplica la compuerta por variable, anticipación y región, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión; el descenso de una anticipación arrastra a las más largas |
 | F6.9 | Propuesta (2026-11-13), depende de F5.9 y F5.10: climatología condicional de caudal alto a partir de la tabla evento × estación (`responses.json`, V8 de la fase 1): frecuencia de superar el umbral según IVT máximo, isoterma de 0 °C y mes. Es un modelo simple más para el criterio 3 de la compuerta, no un atajo: pasa por los mismos criterios | Sonnet codifica, Haiku corre | BSS vs. climatología y persistencia con IC bootstrap por evento + unit de partición sin fuga |
 
 ## Validación (F6.2)
@@ -157,6 +157,32 @@ lo que ya se observó.
   (ingesta, emisión y, los lunes, puntuación), con commit sin force a la rama `data/forecast-registry`. El
   entrenamiento es una foto congelada de SNIH (`training/flow`) cuyo hash va en la versión del modelo. Los
   programados solo corren desde `main`.
+- F6.3 (2026-11-22): `ops ingest --sources gefs_regions,era5t_regions` (GEFS 0,25° operativo, 5 miembros, medias
+  regionales de F5.3; ERA5T regional para puntuar) y `forecast emit-riskday` con la logística congelada
+  (`backend/models/riskday-logistic-v1.json`, ajuste 2000–2014, reproduce el BSS de F5.8 con diferencia 0) más su
+  climatología mensual; 60 registros por día, «Experimental». `forecast score --era5t-regions` puntúa
+  `p_dia_riesgo`. Corre en `forecast-daily.yml`. Caudal (LSTM) no: sin caudal en tiempo real. Informe
+  `reports/06/F6.3.md`.
+
+- Tope (2026-11-22): `hindcast gate` agrega `prob_cap_vigente` (bins de confiabilidad con L−1, L y L+1, no creciente):
+  100 % hasta 3–4 días, 40–70 % a 7 y 30–40 % a 10; el resto de F5.8 no cambió. Va en
+  `backend/models/riskday-logistic-v1.caps.json` (el JSON del modelo y su versión no cambian) y `emit-riskday` lo
+  copia a `details.prob_cap`.
+- F6.8 (2026-11-22): `forecast/status.py`, bitácora `status/outlook.jsonl` con cadena SHA-256. `forecast promote`
+  exige `--approved-by` y `--approved-on`, pase de hindcast (F5.8), temporada mayo–sep completa con ≥ 10 eventos
+  agrupados entre regiones y skill ≥ 0, y anticipaciones contiguas; nunca la corre el workflow. `forecast
+  demote-auto` (job diario) desciende con skill < 0 en la última temporada completa o con cambio de versión, y
+  arrastra a las anticipaciones más largas. `forecast score` gana la tabla por temporada (`seasons`) y los eventos
+  agrupados (`events_pooled`). 20 unit.
+
+- F6.6 (2026-11-22): capa `forecast-outlook` (`clima-nqn forecast outlook-layer`: última emisión de la logística y su
+  climatología, estado F6.8, hindcast F5.8, historial prospectivo F6.5, avisos y enlaces) y `ForecastPanel` en el
+  visor: probabilidad junto a la climatológica con intervalos, "> tope" (también en los extremos del intervalo),
+  estado en texto neutro, historial con n, POD y FAR o "Historial insuficiente". El manifiesto gana `outlook_status`
+  opcional. `clima-nqn publish --layer` sube una sola capa y fusiona su entrada en el `layers.json` en línea (se niega
+  si no lo puede leer). El job diario construye y publica la capa al bucket `nqn`. e2e `web/e2e/forecast.spec.ts`.
+  Enlace a Defensa Civil igual al del panel de F5.6, sin verificar (no se pudo abrir desde el entorno).
+
 ## Abierto
 
 - Pronóstico ENSO: IRI ya no ofrece descarga de datos; queda C3S por CDS. Archivo histórico de pronósticos emitidos:
@@ -167,3 +193,22 @@ lo que ya se observó.
 - Caudal en tiempo real: SNIH no lo tiene; pedir a la AIC acceso operativo (restringido). Sin eso, F6.3 y F6.7 de caudal no son verificables en el día.
 - `registry.append` relee la cadena entera en cada llamada; la emisión usa `append_many` (una verificación por lote).
 - La verificación estacional tarda meses en juntar muestras; el hindcast de F6.2 da la primera estimación.
+
+## Plan de cierre de la fase (2026-11-22)
+
+Cuatro olas, en este orden por el calendario (la temporada prospectiva mayo–sep 2027 solo cuenta si el día de
+riesgo ya se emite antes de mayo): 1) F6.3 + F6.5 de día de riesgo; 2) tope de probabilidad, F6.8 y F6.6;
+3) F6.7 y F6.9 (caudal alto, hindcast); 4) F6.2 estacional. La fase queda "en curso" hasta la temporada 2027.
+
+Decisiones del usuario (2026-11-22):
+
+- F6.2 se hace **sin ENSO como entrada** (nieve y humedad de suelo, lluvia previa), aunque F2.7 no pasó su
+  compuerta; ENSO queda como baseline de análogos. El estacional nunca se promueve.
+- F6.3 usa la logística **congelada con el ajuste 2000–2014**, el mismo modelo que evaluó F5.8.
+- Tope de probabilidad: confiabilidad agrupando las anticipaciones L−1, L y L+1, con tope no creciente en L; por
+  encima se muestra "> tope".
+
+Decisiones de implementación: GEFS operativo 0,25° (`pgrb2sp25`) con los 5 miembros del reforecast (`c00`,
+`p01`–`p04`); incertidumbre por 200 bootstraps de bloques de eventos de los coeficientes (intervalo 90 %);
+nieve y humedad de suelo de ARCO-ERA5 (`sd`, `swvl1–3`) en vez de ERA5-Land (ERA5-Land: sensibilidad pendiente).
+El archivo operativo de `noaa-gefs-pds` cubre junio de 2023 (comprobado), así que F6.7 puede incluir esa crecida.

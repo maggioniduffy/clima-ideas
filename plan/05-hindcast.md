@@ -82,8 +82,10 @@ pasar a la fase 6 como perspectiva y cuáles quedan "Experimental".
   (decisión del usuario). La logística pasa el hindcast (BSS > 0 con IC contra climatología y persistencia, 118
   eventos agrupados, anticipaciones contiguas) hasta 9 días en la cordillera norte, 10 en la sur y 7 en Confluencia;
   el resto queda "Experimental". Sensibilidad: p90 9/10/10, p98 7/7/5. LightGBM no supera a la logística (criterio
-  3). ~14 eventos independientes por temporada mayo–septiembre. El tope de probabilidad (bin con ≥ 20 días) no es
-  monótono en la anticipación (1,0 a 1 día, 0,1–0,5 a 2): revisar la regla antes de F6.6.
+  3). ~14 eventos independientes por temporada mayo–septiembre. El tope por anticipación (bin con ≥ 20 días) no era
+  monótono (1,0 a 1 día, 0,1–0,5 a 2); desde el 2026-11-22 (decisión del usuario) rige el tope con bins agrupando L−1, L
+  y L+1, no creciente en L: 100 % hasta 3–4 días y 30–40 % a 10 (columna nueva de `reports/05/F5.8.md`; el resto del
+  informe no cambió).
 - F5.5 (2026-11-22): `clima-nqn hindcast analogs-library | analogs | analogs-layer`, workflow
   `hindcast-analogs.yml`, rama `data/f55-analogs`, informe `reports/05/F5.5.md`. IVT diario ERA5 1980–2025, 10
   análogos por evento F1.3: el 42 % de los días análogos fue río atmosférico contra 5 % del baseline al azar

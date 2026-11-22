@@ -1,0 +1,43 @@
+{
+ "source": "F5.8.json",
+ "source_sha256": "d0afd1c5f8394a57b79a8bf9af291f5d851275df639d3a2bd4ed31c3417d7b9d",
+ "rule": "Tope de probabilidad vigente (F5.8, decisión del usuario 2026-11-22): borde superior del bin de confiabilidad más alto con al menos 20 días pronosticados, agrupando los días de test de las anticipaciones L-1, L y L+1, y no creciente en L. Por encima del tope se muestra «> tope».",
+ "caps": {
+  "cordillera_norte": {
+   "1": 1.0,
+   "2": 1.0,
+   "3": 1.0,
+   "4": 1.0,
+   "5": 0.9,
+   "6": 0.9,
+   "7": 0.7,
+   "8": 0.6,
+   "9": 0.5,
+   "10": 0.4
+  },
+  "cordillera_sur": {
+   "1": 1.0,
+   "2": 1.0,
+   "3": 1.0,
+   "4": 0.9,
+   "5": 0.9,
+   "6": 0.7,
+   "7": 0.5,
+   "8": 0.5,
+   "9": 0.5,
+   "10": 0.4
+  },
+  "confluencia": {
+   "1": 1.0,
+   "2": 1.0,
+   "3": 1.0,
+   "4": 1.0,
+   "5": 0.7,
+   "6": 0.6,
+   "7": 0.6,
+   "8": 0.5,
+   "9": 0.4,
+   "10": 0.3
+  }
+ }
+}
