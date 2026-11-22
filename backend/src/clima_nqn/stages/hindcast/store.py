@@ -15,6 +15,7 @@ import shutil
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -28,9 +29,36 @@ log = logging.getLogger(__name__)
 CREATED_BY = "clima-nqn hindcast (F5.1)"
 BATCH_CASES = 8
 
+# what a store holds: ``variable`` option -> (array name, units, long name, file stem suffix)
+VARIABLES = {
+    "precip": ("precip_mm", "mm", "precipitation over the 24 h lead window", ""),
+    "ivt": ("ivt", fc.IVT_UNITS, "daily mean of |IVT| over forecast hours 24(L-1)+6..24L", "-ivt"),
+}
 
-def shard_path(out: Path, model: str, shard: int, n_shards: int) -> Path:
-    return out / f"{model}.shard-{shard}-of-{n_shards}.zarr"
+
+def variable_info(variable: str) -> tuple[str, str, str, str]:
+    if variable not in VARIABLES:
+        raise ValueError(f"variable must be one of {', '.join(VARIABLES)}, got {variable!r}")
+    return VARIABLES[variable]
+
+
+def store_stem(model: str, variable: str = "precip") -> str:
+    """File stem of a model's store: ``gefs-reforecast`` (precip) or ``gefs-reforecast-ivt``."""
+    return model + variable_info(variable)[3]
+
+
+def with_members(spec: fc.ModelSpec, members: tuple[str, ...] | None) -> fc.ModelSpec:
+    """``spec`` restricted to ``members`` (each must belong to the model)."""
+    if members is None:
+        return spec
+    bad = [m for m in members if m not in spec.members]
+    if bad or not members:
+        raise ValueError(f"members must be among {', '.join(spec.members)}, got {list(members)}")
+    return replace(spec, members=tuple(members))
+
+
+def shard_path(out: Path, model: str, shard: int, n_shards: int, variable: str = "precip") -> Path:
+    return out / f"{store_stem(model, variable)}.shard-{shard}-of-{n_shards}.zarr"
 
 
 def empty_store(
@@ -38,8 +66,10 @@ def empty_store(
     cases: pd.DataFrame,
     leads: tuple[int, ...] = fc.LEADS,
     grid: fc.Grid = fc.F51_GRID,
+    variable: str = "precip",
 ) -> xr.Dataset:
     """All-NaN, all-pending dataset for ``cases`` (columns of ``cases.parquet``)."""
+    vname, units, long_name, _ = variable_info(variable)
     n, nl, nm = len(cases), len(leads), len(spec.members)
     valid = pd.to_datetime(cases["valid_date"]).to_numpy().astype("datetime64[ns]")
     init = np.stack(
@@ -47,10 +77,10 @@ def empty_store(
     )
     ds = xr.Dataset(
         {
-            "precip_mm": (
+            vname: (
                 ("case", "lead", "member", "lat", "lon"),
                 np.full((n, nl, nm, *grid.shape), np.nan, dtype=np.float32),
-                {"units": "mm", "long_name": "precipitation over the 24 h lead window"},
+                {"units": units, "long_name": long_name},
             ),
             "status": (
                 ("case", "lead", "member"),
@@ -79,11 +109,31 @@ def store_grid(ds: xr.Dataset) -> fc.Grid:
     return fc.F51_GRID if area is None else fc.grid_from_area(area)
 
 
+def data_variable(ds: xr.Dataset) -> str:
+    """Name of the forecast array of a store (``precip_mm`` or ``ivt``)."""
+    for vname, *_rest in VARIABLES.values():
+        if vname in ds.data_vars:
+            return vname
+    raise ValueError("store holds neither precip_mm nor ivt")
+
+
 def model_attrs(spec: fc.ModelSpec, ds: xr.Dataset, grid: fc.Grid | None = None, **extra) -> dict:
     grid = grid or store_grid(ds)
     status = ds["status"].values
+    ivt = data_variable(ds) == "ivt"
     return {
-        "source": spec.source,
+        "source": fc.SOURCE_GEFS_IVT if ivt and spec.name == "gefs-reforecast" else spec.source,
+        "variable": data_variable(ds),
+        **(
+            {
+                "units": fc.IVT_UNITS,
+                "levels_hpa": list(fc.IVT_LEVELS),
+                "steps": fc.IVT_STEP_NOTE,
+                "members": [str(m) for m in ds["member"].values.tolist()],
+            }
+            if ivt
+            else {}
+        ),
         "license": spec.license,
         "period": spec.period,
         "model": spec.name,
@@ -108,7 +158,7 @@ def write_store(ds: xr.Dataset, path: Path) -> None:
         shutil.rmtree(tmp)
     path.parent.mkdir(parents=True, exist_ok=True)
     nl, nm = ds.sizes["lead"], ds.sizes["member"]
-    enc = {"precip_mm": {"chunks": (1, nl, nm, ds.sizes["lat"], ds.sizes["lon"])}}
+    enc = {data_variable(ds): {"chunks": (1, nl, nm, ds.sizes["lat"], ds.sizes["lon"])}}
     ds.to_zarr(tmp, mode="w", encoding=enc, consolidated=False)
     if path.exists():
         shutil.rmtree(path)
@@ -140,33 +190,36 @@ def fetch_shard(
     batch_cases: int = BATCH_CASES,
     log_fn: Callable[[str], None] = log.info,
     grid: fc.Grid = fc.F51_GRID,
+    variable: str = "precip",
 ) -> dict:
     """Fetch every pending (case, lead, member) of ``cases`` into the shard store at ``path``.
+
+    ``variable`` ``ivt`` calls ``fetcher.fetch_ivt`` instead of ``fetcher.fetch`` (F5.10).
 
     ``cases`` is this shard's slice (already eligible for the model). Existing finished entries
     are kept; entries with status error or pending are (re)fetched.
     """
-    ds = empty_store(spec, cases, leads, grid)
+    ds = empty_store(spec, cases, leads, grid, variable)
     if path.exists():
         old = read_store(path)
         if not _same_layout(old, ds):
             raise ValueError(f"{path} holds a different case/lead/member layout; remove it first")
+        if data_variable(old) != data_variable(ds):
+            raise ValueError(f"{path} holds {data_variable(old)}, not {data_variable(ds)}")
         ds = old
         ds["status"].values[ds["status"].values == fc.STATUS_ERROR] = fc.STATUS_PENDING
-    precip, status = ds["precip_mm"].values, ds["status"].values
+    precip, status = ds[data_variable(ds)].values, ds["status"].values
     inits = ds["init_date"].values
     t0 = time.monotonic()
 
     def one(ci: int, li: int, mi: int):
         init = pd.Timestamp(inits[ci, li])
         try:
-            return (
-                ci,
-                li,
-                mi,
-                fetcher.fetch(spec.name, init, int(leads[li]), spec.members[mi]),
-                None,
-            )
+            if variable == "ivt":
+                arr = fetcher.fetch_ivt(init, int(leads[li]), spec.members[mi])
+            else:
+                arr = fetcher.fetch(spec.name, init, int(leads[li]), spec.members[mi])
+            return ci, li, mi, arr, None
         except Exception as exc:  # noqa: BLE001 - one bad file must not stop a long run
             return ci, li, mi, None, exc
 
@@ -217,11 +270,13 @@ def combine_shards(
     out_path: Path,
     allow_partial: bool = False,
     run_id: str = "",
+    variable: str = "precip",
 ) -> xr.Dataset:
-    """Merge ``<model>.shard-i-of-n.zarr`` stores into one store ordered by (valid_date, case)."""
-    found = sorted(in_dir.glob(f"{spec.name}.shard-*-of-*.zarr"))
+    """Merge ``<stem>.shard-i-of-n.zarr`` stores into one store ordered by (valid_date, case)."""
+    stem = store_stem(spec.name, variable)
+    found = sorted(in_dir.glob(f"{stem}.shard-*-of-*.zarr"))
     if not found:
-        raise FileNotFoundError(f"no {spec.name} shards in {in_dir}")
+        raise FileNotFoundError(f"no {stem} shards in {in_dir}")
     totals = {int(p.name.split("-of-")[1].split(".")[0]) for p in found}
     if len(totals) != 1:
         raise ValueError(f"shards disagree on the shard count: {sorted(totals)}")

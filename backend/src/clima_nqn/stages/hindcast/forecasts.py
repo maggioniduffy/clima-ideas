@@ -203,6 +203,138 @@ def gefs_url(init: date | pd.Timestamp, member: str) -> str:
     return f"{GEFS_BASE}/{d:%Y}/{tag}/{member}/Days:1-10/apcp_sfc_{tag}_{member}.grib2"
 
 
+# --- IVT from pressure levels (F5.10) ------------------------------------------------------------
+
+G = 9.80665  # m s-2
+IVT_LEVELS = (1000, 925, 850, 700, 600, 500, 400, 300)  # hPa; same 8 levels as IFS / AIFS
+IVT_VARS = ("SPFH", "UGRD", "VGRD")  # idx names; GRIB shortNames q, u, v
+IVT_SHORT = {"SPFH": "q", "UGRD": "u", "VGRD": "v"}
+IVT_UNITS = "kg m-1 s-1"
+IVT_STEP_NOTE = (
+    "daily IVT of lead L = mean over the forecast hours 24(L-1)+6, +12, +18 and 24L of |Q|, "
+    "Q = (1/g) * integral of q (u, v) dp over 1000, 925, 850, 700, 600, 500, 400, 300 hPa "
+    "(trapezoid, Pa)"
+)
+SOURCE_GEFS_IVT = (
+    "NOAA GEFSv12 reforecast (noaa-gefs-retrospective, AWS NODD), SPFH/UGRD/VGRD on pressure "
+    "levels, 00 UTC, 0.25 deg"
+)
+MAX_IVT = 5000.0  # kg m-1 s-1; a larger value is a unit/decoding bug (strongest ARs: ~1500)
+
+
+def ivt_steps(lead: int) -> list[int]:
+    """Forecast hours whose IVT averages to lead day ``lead``: 24 (L-1) + 6, 12, 18, 24."""
+    base = 24 * (lead - 1)
+    return [base + 6, base + 12, base + 18, base + 24]
+
+
+def ivt_family(var: str, level: int) -> str:
+    """GEFS reforecast file family holding ``var`` at ``level`` hPa (800-1000 vs 700 and above)."""
+    base = {"SPFH": "spfh_pres", "UGRD": "ugrd_pres", "VGRD": "vgrd_pres"}[var]
+    return base if level >= 800 else f"{base}_abv700mb"
+
+
+def gefs_ivt_url(init: date | pd.Timestamp, member: str, family: str) -> str:
+    d = pd.Timestamp(init)
+    tag = f"{d:%Y%m%d}00"
+    return f"{GEFS_BASE}/{d:%Y}/{tag}/{member}/Days:1-10/{family}_{tag}_{member}.grib2"
+
+
+@dataclass(frozen=True)
+class IdxField:
+    var: str  # SPFH, UGRD, VGRD
+    level: int  # hPa
+    step: int  # forecast hour
+    start: int
+    end: int | None  # inclusive; None = to end of file
+
+
+_LEVEL = re.compile(r"(\d+) mb$")
+_STEP = re.compile(r"(\d+) hour fcst$")
+
+
+def parse_pres_idx(text: str) -> list[IdxField]:
+    """Isobaric-level messages of a GEFS reforecast ``.idx`` with their byte ranges.
+
+    Lines look like ``1:0:d=2010070100:SPFH:1000 mb:3 hour fcst:ENS=low-res ctl``; the byte range
+    runs to the next line's offset - 1 (any variable).
+    """
+    rows = [ln.split(":") for ln in text.splitlines() if ln.strip()]
+    out = []
+    for i, parts in enumerate(rows):
+        if len(parts) < 6:
+            continue
+        lv, st = _LEVEL.match(parts[4]), _STEP.match(parts[5])
+        if not lv or not st or parts[3] not in IVT_SHORT:
+            continue
+        end = int(rows[i + 1][1]) - 1 if i + 1 < len(rows) else None
+        out.append(IdxField(parts[3], int(lv[1]), int(st[1]), int(parts[1]), end))
+    return out
+
+
+def select_ivt_fields(
+    fields: list[IdxField], var: str, family_is_abv: bool, lead: int
+) -> list[IdxField]:
+    """The (level, step) messages of ``var`` of one file family needed for lead ``lead``.
+
+    ``family_is_abv`` picks the 700-and-above levels; ValueError when one is absent. Ordered by byte
+    offset (file order).
+    """
+    by_key = {(f.var, f.level, f.step): f for f in fields}
+    want = [
+        (var, lv, st)
+        for lv in IVT_LEVELS
+        if (ivt_family(var, lv).endswith("_abv700mb")) == family_is_abv
+        for st in ivt_steps(lead)
+    ]
+    missing = [k for k in want if k not in by_key]
+    if missing:
+        raise ValueError(f"idx has no messages {missing[:3]}... for lead {lead}")
+    return sorted((by_key[k] for k in want), key=lambda f: f.start)
+
+
+def merge_ranges(fields: list[IdxField]) -> list[tuple[int, int | None, list[IdxField]]]:
+    """Group byte-adjacent messages (sorted by offset) into single ranges: ``(lo, hi, fields)``."""
+    groups: list[list[IdxField]] = []
+    for f in fields:
+        if groups and groups[-1][-1].end is not None and groups[-1][-1].end + 1 == f.start:
+            groups[-1].append(f)
+        else:
+            groups.append([f])
+    return [(g[0].start, g[-1].end, g) for g in groups]
+
+
+def ivt_vector(q: np.ndarray, u: np.ndarray, v: np.ndarray, levels_hpa) -> tuple:
+    """Integrated vapour transport components ``(Qu, Qv)`` in kg m-1 s-1.
+
+    ``q`` (kg/kg), ``u``, ``v`` (m/s) have the level axis first; ``levels_hpa`` gives its pressures
+    in any order. ``Q = (1/g) integral q (u, v) dp`` over the span of ``levels_hpa`` (trapezoid, Pa).
+    """
+    lev = np.asarray(levels_hpa, dtype="float64")
+    order = np.argsort(lev)
+    p = lev[order] * 100.0
+    q, u, v = (np.asarray(a, dtype="float64")[order] for a in (q, u, v))
+    shape = (-1,) + (1,) * (q.ndim - 1)
+    dp = np.diff(p).reshape(shape)
+
+    def integ(f: np.ndarray) -> np.ndarray:
+        return ((f[1:] + f[:-1]) / 2.0 * dp).sum(axis=0) / G
+
+    return integ(q * u), integ(q * v)
+
+
+def ivt_from_levels(q: np.ndarray, u: np.ndarray, v: np.ndarray, levels_hpa) -> np.ndarray:
+    """``|Q|`` in kg m-1 s-1 (see ``ivt_vector``), float32."""
+    qu, qv = ivt_vector(q, u, v, levels_hpa)
+    return np.hypot(qu, qv).astype(np.float32)
+
+
+def check_ivt(arr: np.ndarray, what: str) -> None:
+    """Raise on a non-finite or implausible (> ``MAX_IVT``) IVT field (marks status 2)."""
+    if not np.isfinite(arr).all() or float(np.max(arr)) > MAX_IVT:
+        raise ValueError(f"{what}: implausible IVT (max {float(np.nanmax(arr)):.0f})")
+
+
 def parse_apcp_idx(text: str) -> list[IdxMessage]:
     """Surface APCP accumulation messages of a GEFS ``.idx`` with their byte ranges.
 
@@ -321,6 +453,12 @@ class Fetcher(Protocol):
     ) -> np.ndarray | None: ...
 
 
+class IvtFetcher(Protocol):
+    """``fetch_ivt`` returns daily IVT (kg m-1 s-1) on the fetcher's grid, ``None`` if not published."""
+
+    def fetch_ivt(self, init: pd.Timestamp, lead: int, member: str) -> np.ndarray | None: ...
+
+
 class HttpFetcher:
     """Anonymous HTTPS byte-range reads; thread safe; counts requests and bytes."""
 
@@ -398,6 +536,52 @@ class HttpFetcher:
             total = vals if total is None else total + vals
         check_box_mean(total, f"gefs {init:%Y-%m-%d} {member} lead {lead}")
         return total
+
+    def _ivt_family_fields(
+        self, init: pd.Timestamp, member: str, var: str, abv: bool, lead: int
+    ) -> dict[tuple[int, int], np.ndarray] | None:
+        """``{(level, step): field}`` of one variable in one file family; None if unpublished."""
+        family = ivt_family(var, 300 if abv else 1000)
+        url = gefs_ivt_url(init, member, family)
+        text = self._text(url + ".idx")
+        if text is None:
+            return None
+        picked = select_ivt_fields(parse_pres_idx(text), var, abv, lead)
+        out: dict = {}
+        for lo, hi, group in merge_ranges(picked):
+            blob = self._get(url, (lo, hi))
+            if blob is None:
+                return None
+            decoded = grib_fields(blob, _margin_area(self.grid.area))
+            if len(decoded) != len(group):
+                raise RuntimeError(f"{url}: want {len(group)} messages, got {len(decoded)}")
+            for f, (keys, field) in zip(group, decoded, strict=True):
+                if keys["shortName"] != IVT_SHORT[var] or keys["step"] != f.step:
+                    raise RuntimeError(
+                        f"{url}: want {IVT_SHORT[var]} {f.step} h, got "
+                        f"{keys['shortName']} {keys['step']} h"
+                    )
+                out[(f.level, f.step)] = to_target_grid(field, self.grid)
+        return out
+
+    def fetch_ivt(self, init: pd.Timestamp, lead: int, member: str) -> np.ndarray | None:
+        """Daily IVT (kg m-1 s-1) of lead ``lead`` on the fetcher's grid: mean of |Q| at the four steps."""
+        fields: dict[str, dict] = {}
+        for var in IVT_VARS:
+            merged: dict = {}
+            for abv in (False, True):
+                part = self._ivt_family_fields(init, member, var, abv, lead)
+                if part is None:
+                    return None
+                merged.update(part)
+            fields[var] = merged
+        mags = []
+        for step in ivt_steps(lead):
+            q, u, v = (np.stack([fields[var][(lv, step)] for lv in IVT_LEVELS]) for var in IVT_VARS)
+            mags.append(ivt_from_levels(q, u, v, IVT_LEVELS))
+        out = np.mean(mags, axis=0).astype(np.float32)
+        check_ivt(out, f"gefs ivt {init:%Y-%m-%d} {member} lead {lead}")
+        return out
 
     def _tp(self, model: str, init: pd.Timestamp, step: int) -> np.ndarray | None:
         key = (model, f"{init:%Y%m%d}")

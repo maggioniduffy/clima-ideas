@@ -23,6 +23,17 @@ TP_NAME = "total_precipitation"
 CP_NAME = "convective_precipitation"
 # short variable code -> (ARCO name, output variable)
 OBS_VARIABLES = {"tp": (TP_NAME, "precip_mm"), "cp": (CP_NAME, "cp_mm")}
+IVT_CODE = "ivt"  # F5.10: |Q| from viwve / viwvn at D 06, 12, 18 and D+1 00 UTC -> ``ivt``
+IVT_NAMES = {
+    "vertical_integral_of_eastward_water_vapour_flux": "viwve",
+    "vertical_integral_of_northward_water_vapour_flux": "viwvn",
+}
+IVT_HOURS = (6, 12, 18, 24)
+VALID_CODES = (*OBS_VARIABLES, IVT_CODE)
+IVT_NOTE = (
+    "ivt = mean of |Q| (ERA5 viwve, viwvn, full column) at D 06:00, 12:00, 18:00 and D+1 00:00 UTC, "
+    "the same four hours as the forecast steps 24(L-1)+6..24L"
+)
 WINDOW_NOTE = (
     "day D = ERA5 hourly tp ending D 01:00..D+1 00:00 UTC, same window as lead L hours "
     "(24(L-1), 24L] of the 00 UTC run"
@@ -50,7 +61,8 @@ def observed_days(
 ) -> xr.Dataset:
     """``precip_mm`` (date, lat, lon) float32: ERA5 daily total over ``grid`` for each date.
 
-    ``variables`` may add ``cp`` (convective precipitation) -> ``cp_mm``, same window and units.
+    ``variables`` may add ``cp`` (convective precipitation) -> ``cp_mm``, same window and units, and
+    ``ivt`` -> ``ivt`` (kg m-1 s-1): mean of |Q| at D 06, 12, 18 and D+1 00 UTC (F5.10).
     """
     import zarr
 
@@ -61,39 +73,58 @@ def observed_days(
     raw = era5._retry(opener, retries, retry_wait, "era5 open")
     stop = pd.Timestamp(raw.attrs.get("valid_time_stop", era5.FINAL_ERA5_STOP))
     codes = list(dict.fromkeys(variables))
-    unknown = [c for c in codes if c not in OBS_VARIABLES]
+    unknown = [c for c in codes if c not in VALID_CODES]
     if unknown or not codes:
-        raise ValueError(f"variables must be among {sorted(OBS_VARIABLES)}, got {codes}")
-    names = {OBS_VARIABLES[c][0]: c for c in codes}
-    lazy = raw[list(names)]
+        raise ValueError(f"variables must be among {sorted(VALID_CODES)}, got {codes}")
+    pcodes = [c for c in codes if c in OBS_VARIABLES]
+    want_ivt = IVT_CODE in codes
+    names = {OBS_VARIABLES[c][0]: c for c in pcodes}
+    lazy = raw[[*names, *(IVT_NAMES if want_ivt else ())]]
     lat_t, lon_t = grid.lat, grid.lon
 
-    def one_hour(stamp: pd.Timestamp) -> dict[str, np.ndarray]:
+    def hour_fields(stamp: pd.Timestamp, mapping: dict[str, str]) -> dict[str, np.ndarray]:
         def load() -> dict[str, np.ndarray]:
-            part = era5.crop_to_area(lazy.sel(time=[stamp]), grid.area, names).load()
+            part = era5.crop_to_area(lazy[list(mapping)].sel(time=[stamp]), grid.area, mapping)
+            part = part.load()
             lat, lon = part["lat"].values, part["lon"].values
             same = lat.shape == lat_t.shape and lon.shape == lon_t.shape
             assert same and np.allclose(lat, lat_t) and np.allclose(lon, lon_t), (
                 f"ERA5 grid != {grid.name} grid"
             )
-            return {c: part[c].values[0].astype("float64") for c in codes}
+            return {c: part[c].values[0].astype("float64") for c in mapping.values()}
 
-        return era5._retry(load, retries, retry_wait, f"{stamp:%Y-%m-%d %H:00} {'+'.join(codes)}")
+        label = f"{stamp:%Y-%m-%d %H:00} {'+'.join(mapping.values())}"
+        return era5._retry(load, retries, retry_wait, label)
 
-    out = {c: np.empty((len(days), *grid.shape), dtype=np.float32) for c in codes}
+    out = {c: np.empty((len(days), *grid.shape), dtype=np.float32) for c in pcodes}
+    ivt = np.empty((len(days), *grid.shape), dtype=np.float32) if want_ivt else None
     with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
         for start in range(0, len(days), LOG_EVERY_DAYS):
             chunk = days[start : start + LOG_EVERY_DAYS]
-            stamps = [d + pd.Timedelta(hours=h) for d in chunk for h in range(1, 25)]
-            fields = list(pool.map(one_hour, stamps))
-            for c in codes:
+            if pcodes:
+                stamps = [d + pd.Timedelta(hours=h) for d in chunk for h in range(1, 25)]
+                fields = list(pool.map(lambda t: hour_fields(t, names), stamps))
+                for c in pcodes:
+                    for i in range(len(chunk)):
+                        hours = [f[c] for f in fields[24 * i : 24 * (i + 1)]]
+                        out[c][start + i] = (np.sum(hours, axis=0) * 1000.0).astype("float32")
+            if ivt is not None:
+                stamps = [d + pd.Timedelta(hours=h) for d in chunk for h in IVT_HOURS]
+                fields = list(pool.map(lambda t: hour_fields(t, IVT_NAMES), stamps))
+                k = len(IVT_HOURS)
                 for i in range(len(chunk)):
-                    hours = [f[c] for f in fields[24 * i : 24 * (i + 1)]]
-                    out[c][start + i] = (np.sum(hours, axis=0) * 1000.0).astype("float32")
+                    mags = [np.hypot(f["viwve"], f["viwvn"]) for f in fields[k * i : k * (i + 1)]]
+                    ivt[start + i] = np.mean(mags, axis=0).astype("float32")
             log_fn(f"era5 observed {start + len(chunk)}/{len(days)} days")
     era5t = bool(days[-1] + pd.Timedelta(days=1) > stop)
+    data_vars = {
+        OBS_VARIABLES[c][1]: (("date", "lat", "lon"), out[c], {"units": "mm"}) for c in pcodes
+    }
+    if ivt is not None:
+        data_vars["ivt"] = (("date", "lat", "lon"), ivt, {"units": fc.IVT_UNITS})
+    arco_names = [OBS_VARIABLES[c][0] for c in pcodes] + (list(IVT_NAMES) if want_ivt else [])
     return xr.Dataset(
-        {OBS_VARIABLES[c][1]: (("date", "lat", "lon"), out[c], {"units": "mm"}) for c in codes},
+        data_vars,
         coords={
             "date": np.array(days, dtype="datetime64[ns]"),
             "lat": lat_t,
@@ -108,7 +139,8 @@ def observed_days(
             "grid": grid.description,
             "grid_name": grid.name,
             "area": list(grid.area),
-            "variables": ",".join(OBS_VARIABLES[c][0] for c in codes),
+            "variables": ",".join(arco_names),
+            **({"ivt_window": IVT_NOTE} if want_ivt else {}),
         },
     )
 

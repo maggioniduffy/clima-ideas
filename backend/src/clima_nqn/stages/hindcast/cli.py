@@ -17,6 +17,7 @@ from clima_nqn.stages.hindcast import forecasts as fc
 from clima_nqn.stages.hindcast import observe as observe_mod
 from clima_nqn.stages.hindcast import riskday_cli, store
 from clima_nqn.stages.hindcast import verify as verify_mod
+from clima_nqn.stages.hindcast import verify_ivt as verify_ivt_mod
 
 hindcast_app = typer.Typer(help="Hindcast forecasts for AR events and control days (F5.1).")
 
@@ -37,6 +38,14 @@ def _model(name: str) -> fc.ModelSpec:
     if name not in fc.MODELS:
         raise typer.BadParameter(f"model must be one of {', '.join(fc.MODELS)}")
     return fc.MODELS[name]
+
+
+def _variable(name: str, model: str) -> str:
+    if name not in store.VARIABLES:
+        raise typer.BadParameter(f"--variable must be one of {', '.join(store.VARIABLES)}")
+    if name == "ivt" and model != "gefs-reforecast":
+        raise typer.BadParameter("--variable ivt is only implemented for gefs-reforecast")
+    return name
 
 
 @hindcast_app.command("cases")
@@ -92,9 +101,23 @@ def fetch(
     batch_cases: Annotated[
         int, typer.Option(help="Cases per atomic shard rewrite.")
     ] = store.BATCH_CASES,
+    variable: Annotated[
+        str, typer.Option(help="precip (default) or ivt (F5.10, gefs-reforecast only).")
+    ] = "precip",
+    members: Annotated[
+        str | None,
+        typer.Option(help="Comma-separated members, default all of the model (e.g. c00)."),
+    ] = None,
 ) -> None:
     """Fetch the model's forecasts for this shard's cases; resumes and skips finished cases."""
     spec = _model(model)
+    variable = _variable(variable, model)
+    try:
+        spec = store.with_members(
+            spec, tuple(m.strip() for m in members.split(",") if m.strip()) if members else None
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
     grid = _grid(area)
     if batch_cases < 1:
         raise typer.BadParameter("--batch-cases must be >= 1")
@@ -110,10 +133,11 @@ def fetch(
     mine = table.iloc[i - 1 :: n].reset_index(drop=True)
     logging.basicConfig(level=logging.WARNING)  # httpx logs every request at INFO
     fetcher = fc.HttpFetcher(grid=grid)
-    path = store.shard_path(out, model, i, n)
+    path = store.shard_path(out, model, i, n, variable)
     res = store.fetch_shard(
-        spec, mine, fetcher, path, lead_list, workers, batch_cases, log_fn=typer.echo, grid=grid
-    )
+        spec, mine, fetcher, path, lead_list, workers, batch_cases, log_fn=typer.echo, grid=grid,
+        variable=variable,
+    )  # fmt: skip
     typer.echo(f"{path}: {res}; {fetcher.requests} requests, {fetcher.bytes / 1e6:.1f} MB")
     if res["n_error"]:
         typer.echo(f"WARNING: {res['n_error']} entries failed after retries; rerun to retry them")
@@ -125,16 +149,21 @@ def combine(
     in_dir: Annotated[Path, typer.Option("--in", help="Directory with the shard stores.")],
     out: Annotated[Path, typer.Option(help="Output directory; writes <model>.zarr.")],
     allow_partial: Annotated[bool, typer.Option(help="Accept missing shards / pending.")] = False,
+    variable: Annotated[
+        str, typer.Option(help="precip (default) or ivt (writes <model>-ivt.zarr).")
+    ] = "precip",
 ) -> None:
-    """Merge the shards of a model into ``<out>/<model>.zarr``."""
+    """Merge the shards of a model into ``<out>/<model>.zarr`` (``<model>-ivt.zarr`` for ivt)."""
     spec = _model(model)
+    variable = _variable(variable, model)
+    target = out / f"{store.store_stem(model, variable)}.zarr"
     try:
         ds = store.combine_shards(
-            spec, in_dir, out / f"{model}.zarr", allow_partial, os.environ.get("GITHUB_RUN_ID", "")
+            spec, in_dir, target, allow_partial, os.environ.get("GITHUB_RUN_ID", ""), variable
         )
     except (FileNotFoundError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
-    typer.echo(f"{out / (model + '.zarr')}: {dict(ds.sizes)}; {ds.attrs}")
+    typer.echo(f"{target}: {dict(ds.sizes)}; {ds.attrs}")
 
 
 @hindcast_app.command("observe")
@@ -149,7 +178,7 @@ def observe(
     ] = None,
     area: Annotated[str, typer.Option(help="Grid: f51 (default, F5.1) or wide (F5.3).")] = "f51",
     variables: Annotated[
-        str, typer.Option(help="Comma-separated: tp (precip_mm), cp (cp_mm).")
+        str, typer.Option(help="Comma-separated: tp (precip_mm), cp (cp_mm), ivt (ivt, F5.10).")
     ] = "tp",
     workers: Annotated[int, typer.Option(help="Threads for ERA5 chunk reads.")] = 64,
     max_days: Annotated[
@@ -160,9 +189,9 @@ def observe(
     """ERA5 daily precipitation (mm) for the dates of --cases (inside any model period) or --first/--last."""
     grid = _grid(area)
     codes = [v.strip() for v in variables.split(",") if v.strip()]
-    bad = [c for c in codes if c not in observe_mod.OBS_VARIABLES]
+    bad = [c for c in codes if c not in observe_mod.VALID_CODES]
     if bad or not codes:
-        raise typer.BadParameter(f"--variables must be among {sorted(observe_mod.OBS_VARIABLES)}")
+        raise typer.BadParameter(f"--variables must be among {sorted(observe_mod.VALID_CODES)}")
     if (cases is None) == (first is None and last is None):
         raise typer.BadParameter("give exactly one of --cases or --first/--last")
     if cases is not None:
@@ -181,7 +210,11 @@ def observe(
     )
     observe_mod.write_obs(ds, out)
     if csv:
-        frame = pd.DataFrame({"box_mean_mm": verify_mod.box_mean(ds["precip_mm"]).to_series()})
+        frame = pd.DataFrame(index=pd.Index(ds["date"].values, name="date"))
+        if "precip_mm" in ds:
+            frame["box_mean_mm"] = verify_mod.box_mean(ds["precip_mm"]).to_series()
+        if "ivt" in ds:
+            frame["box_mean_ivt"] = verify_mod.box_mean(ds["ivt"]).to_series()
         if "cp_mm" in ds:
             frame["box_mean_cp_mm"] = verify_mod.box_mean(ds["cp_mm"]).to_series()
         csv.parent.mkdir(parents=True, exist_ok=True)
@@ -302,6 +335,41 @@ def compare(
     (out / "F5.4.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
     (out / "F5.4.md").write_text(compare_mod.render_md(table, summary, meta))
     typer.echo(f"{out / 'F5.4.md'}: {len(table)} pairs, {len(summary)} summary rows")
+
+
+@hindcast_app.command("verify-ivt")
+def verify_ivt(
+    ivt: Annotated[
+        Path, typer.Option(help="gefs-reforecast-ivt.zarr from `fetch --variable ivt`.")
+    ],
+    precip: Annotated[Path, typer.Option(help="gefs-reforecast.zarr from F5.1 (member c00 used).")],
+    obs: Annotated[Path, typer.Option(help="era5-obs.zarr with ivt and precip_mm.")],
+    out: Annotated[Path, typer.Option(help="Output directory (F5.10.json, F5.10.md).")],
+    n_boot: Annotated[int, typer.Option(help="Bootstrap resamples.")] = 1000,
+    seed: Annotated[int, typer.Option(help="Bootstrap seed.")] = 0,
+    member: Annotated[str, typer.Option(help="Member used from both stores.")] = "c00",
+) -> None:
+    """Forecast IVT vs. forecast precipitation, same cases and metrics, per lead (F5.10)."""
+    for path in (ivt, precip, obs):
+        if not path.exists():
+            raise typer.BadParameter(f"{path} missing")
+    obs_ds = observe_mod.read_obs(obs)
+    try:
+        df, meta = verify_ivt_mod.verify_ivt(
+            store.read_store(ivt), store.read_store(precip), obs_ds, n_boot, seed, member
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    horizons = verify_ivt_mod.horizons(df)
+    out.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "records": [{k: _clean(v) for k, v in r.items()} for r in df.to_dict("records")],
+        "horizons": horizons,
+        "meta": meta,
+    }
+    (out / "F5.10.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
+    (out / "F5.10.md").write_text(verify_ivt_mod.render_md(df, horizons, meta))
+    typer.echo(f"{out / 'F5.10.md'}: {len(df)} records; horizons {horizons}")
 
 
 hindcast_app.command("riskday")(riskday_cli.riskday)
