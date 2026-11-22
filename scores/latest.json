@@ -1,0 +1,8 @@
+{
+ "source": "Registro de predicciones F6.4 + SNIH (SIPH) — Red Hidrológica Nacional",
+ "records": 40,
+ "pending": 40,
+ "n_boot": 2000,
+ "seed": 0,
+ "table": []
+}

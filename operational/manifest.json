@@ -1,0 +1,57 @@
+{
+ "ecmwf": {
+  "attempted_run_date": "2026-11-22",
+  "error": null,
+  "file": "ecmwf/2026-11-22.parquet",
+  "lag_days": -8,
+  "last_run_date": "2026-11-22",
+  "newest_value_date": "2026-11-30",
+  "rows": 30,
+  "status": "ok",
+  "updated_at": "2026-11-22T00:42:38.199527+00:00"
+ },
+ "era5t": {
+  "attempted_run_date": "2026-11-22",
+  "error": null,
+  "file": "era5t/2026-11-22.parquet",
+  "lag_days": 10,
+  "last_run_date": "2026-11-22",
+  "newest_value_date": "2026-11-12",
+  "rows": 9,
+  "status": "ok",
+  "updated_at": "2026-11-22T00:42:32.631285+00:00"
+ },
+ "flow": {
+  "attempted_run_date": "2026-11-22",
+  "error": "RuntimeError: source returned no rows",
+  "file": null,
+  "lag_days": null,
+  "last_run_date": null,
+  "newest_value_date": null,
+  "rows": null,
+  "status": "failed",
+  "updated_at": "2026-11-22T00:42:17.930443+00:00"
+ },
+ "gefs": {
+  "attempted_run_date": "2026-11-22",
+  "error": null,
+  "file": "gefs/2026-11-22.parquet",
+  "lag_days": -8,
+  "last_run_date": "2026-11-22",
+  "newest_value_date": "2026-11-30",
+  "rows": 60,
+  "status": "ok",
+  "updated_at": "2026-11-22T00:42:43.830780+00:00"
+ },
+ "oni": {
+  "attempted_run_date": "2026-11-22",
+  "error": null,
+  "file": "oni/2026-11-22.parquet",
+  "lag_days": 82,
+  "last_run_date": "2026-11-22",
+  "newest_value_date": "2026-09-01",
+  "rows": 921,
+  "status": "ok",
+  "updated_at": "2026-11-22T00:42:32.239139+00:00"
+ }
+}
