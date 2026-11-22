@@ -697,6 +697,15 @@ def analyze(
 # --- inputs from disk ---------------------------------------------------------------------------
 
 
+def obs_from_csv(path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Regional daily ``tp``/``cp`` (mm) from ``reports/05/F5.3-obs.csv`` (columns ``date``, ``<region>_tp_mm``,
+    ``<region>_cp_mm``): same values as the region means taken from the obs zarr."""
+    df = pd.read_csv(path, parse_dates=["date"]).set_index("date").sort_index()
+    tp = pd.DataFrame({r: df[f"{r}_tp_mm"] for r in REGIONS})
+    cp = pd.DataFrame({r: df[f"{r}_cp_mm"] for r in REGIONS})
+    return tp, cp
+
+
 def load_inputs(fc_path: Path, obs_path: Path, events_path: Path) -> dict:
     fc = xr.open_zarr(fc_path, consolidated=False)
     kinds = v.str_values(fc["kind"])
@@ -707,12 +716,17 @@ def load_inputs(fc_path: Path, obs_path: Path, events_path: Path) -> dict:
     means = region_means(prec, masks)
     members = {r: means[r].transpose("case", "lead", "member").values for r in REGIONS}
     dates = pd.to_datetime(fc["valid_date"].values)
-    obs = xr.open_zarr(obs_path, consolidated=False)
-    if "cp_mm" not in obs:
-        raise ValueError("obs store has no cp_mm; run `hindcast observe --variables tp,cp`")
-    omasks = regions(obs["lat"].values, obs["lon"].values)
-    tp = pd.DataFrame({r: x.to_series() for r, x in region_means(obs["precip_mm"], omasks).items()})
-    cp = pd.DataFrame({r: x.to_series() for r, x in region_means(obs["cp_mm"], omasks).items()})
+    if Path(obs_path).suffix == ".csv":
+        tp, cp = obs_from_csv(obs_path)
+    else:
+        obs = xr.open_zarr(obs_path, consolidated=False)
+        if "cp_mm" not in obs:
+            raise ValueError("obs store has no cp_mm; run `hindcast observe --variables tp,cp`")
+        omasks = regions(obs["lat"].values, obs["lon"].values)
+        tp = pd.DataFrame(
+            {r: x.to_series() for r, x in region_means(obs["precip_mm"], omasks).items()}
+        )
+        cp = pd.DataFrame({r: x.to_series() for r, x in region_means(obs["cp_mm"], omasks).items()})
     events = pd.read_parquet(events_path, columns=["event_id", "start", "end"])
     ctx = build_context(dates, [int(x) for x in fc["lead"].values], members, tp, cp, events)
     ctx["fc_attrs"] = {k: str(val) for k, val in dict(fc.attrs).items()}

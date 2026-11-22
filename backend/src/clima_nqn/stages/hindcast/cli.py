@@ -16,7 +16,7 @@ from clima_nqn.stages.hindcast import compare as compare_mod
 from clima_nqn.stages.hindcast import enso_skill as enso_skill_mod
 from clima_nqn.stages.hindcast import forecasts as fc
 from clima_nqn.stages.hindcast import observe as observe_mod
-from clima_nqn.stages.hindcast import riskday_cli, store
+from clima_nqn.stages.hindcast import gate_cli, riskday_cli, store
 from clima_nqn.stages.hindcast import verify as verify_mod
 from clima_nqn.stages.hindcast import verify_ivt as verify_ivt_mod
 
@@ -374,6 +374,7 @@ def verify_ivt(
 
 
 hindcast_app.command("riskday")(riskday_cli.riskday)
+hindcast_app.command("gate")(gate_cli.gate)
 
 
 @hindcast_app.command("enso-skill")
