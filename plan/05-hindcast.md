@@ -60,8 +60,16 @@ pasar a la fase 6 como perspectiva y cuáles quedan "Experimental".
 
 ## Abierto
 
-- F5.2, mitad convección: F5.1 no tiene casos convectivos y ERA5 no sirve de referencia para convección (F3.4);
-  hace falta un juego de casos de días convectivos de F3 y verificar contra IMERG.
+- F5.3, decisiones del usuario (2026-11-22), fijadas antes de correr:
+  - Día de riesgo: lluvia diaria media de la región en ERA5 ≥ p95 de los días de entrenamiento (sensibilidad p90 y
+    p98), en 3 regiones: cordillera norte y sur (polígono F1 cortado en −38,5) y Confluencia (caja de F3.6).
+  - Ríos atmosféricos y convección no se separan: en cada región, cada día de riesgo se clasifica por mecanismo
+    (río atmosférico F1.3 > convectivo, con cp/tp de ERA5 ≥ 0,5 > otro) y se compara su preponderancia y su acierto.
+    Esto reemplaza la mitad de convección de F5.2.
+  - Pronósticos de todos los días 2000–2019 (GEFSv12 reforecast, 5 miembros, grilla −41,25…−36 / −72…−67,5) en la
+    rama `data/f53-alldays`. Test 2015–2019.
+- F5.2, mitad convección: se resuelve en F5.3, por mecanismo y en todos los días (decisión del 2026-11-22).
+  ERA5 sigue siendo una referencia débil para convección (F3.4); contrastar con IMERG queda como sensibilidad posible.
 
 - Licencia de GEFS (2026-11-22, F6.1): NODD abierta con atribución; reforecast GEFSv12 2000–2020 con APCP e IVT calculable.
 - F5.9 (2026-11-22): IVT calculable en GEFS (operativo y reforecast) e IFS/AIFS; detalle en `reports/06/F6.1-latency.md`.
