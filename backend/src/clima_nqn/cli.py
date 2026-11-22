@@ -36,6 +36,7 @@ from clima_nqn.stages.flood import hindcast as flood_hindcast
 from clima_nqn.stages.flood import hydro_models as flood_hydro
 from clima_nqn.stages.flood import lstm as flood_lstm
 from clima_nqn.stages.flood import streamflow_eval
+from clima_nqn.stages.hindcast.cli import hindcast_app
 from clima_nqn.stages.stations import qc as station_qc
 
 app = typer.Typer(help="clima-nqn command line interface.")
@@ -54,6 +55,7 @@ def version() -> None:
 
 app.add_typer(ops_app, name="ops")
 app.add_typer(forecast_app, name="forecast")
+app.add_typer(hindcast_app, name="hindcast")
 
 enso_app = typer.Typer(help="Shared ENSO index (NOAA CPC ONI).")
 app.add_typer(enso_app, name="enso")
@@ -100,7 +102,9 @@ app.add_typer(debris_app, name="debris")
 
 @debris_app.command("catchments")
 def debris_catchments(
-    targets: Annotated[Path, typer.Argument(help="GeoJSON of road lines / neighbourhood polygons.")],
+    targets: Annotated[
+        Path, typer.Argument(help="GeoJSON of road lines / neighbourhood polygons.")
+    ],
     bbox: Annotated[
         tuple[float, float, float, float], typer.Option(help="lon_min lat_min lon_max lat_max.")
     ],
@@ -115,7 +119,9 @@ def debris_catchments(
 
 @debris_app.command("layer")
 def debris_layer(
-    catchments: Annotated[list[Path], typer.Argument(help="Catchment Parquet(s) from `debris catchments`.")],
+    catchments: Annotated[
+        list[Path], typer.Argument(help="Catchment Parquet(s) from `debris catchments`.")
+    ],
     out: Annotated[
         Path | None, typer.Option(help="Layer directory (default: <data root>/debris-catchments).")
     ] = None,

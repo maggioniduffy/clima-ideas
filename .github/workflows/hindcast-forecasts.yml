@@ -1,0 +1,170 @@
+# F5.1 (plan/05): forecasts for the F1.3 AR event days and matched control days, one Zarr per model.
+# Manual, plus one run when this file changes on the work branch. Job `cases` builds cases.parquet from the catalog branch `data/f23-ar-events`; the
+# matrix job `fetch` runs one shard per runner (`clima-nqn hindcast fetch --shard i/n`, byte-range
+# reads of the GEFS reforecast and ECMWF open-data mirrors on AWS, anonymous); job `combine` merges
+# the shards and commits <model>.zarr + cases.parquet + README to the orphan branch
+# `data/f51-forecasts` (force-pushed, so a machine that cannot reach artifact storage can `git fetch` it).
+# `model`: all | gefs-reforecast | ifs | aifs. IFS and AIFS have few cases and run as one shard.
+name: Hindcast forecasts (F5.1)
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Model to fetch"
+        type: choice
+        options: [all, gefs-reforecast, ifs, aifs]
+        default: all
+      n_shards:
+        description: "Shards for gefs-reforecast (1-32); ifs and aifs always use one"
+        default: "8"
+  push: # one full run from the work branch (dispatch needs the file on main)
+    branches: [fm/nice-maxwell-iiumsl]
+    paths: [.github/workflows/hindcast-forecasts.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  CATALOG_BRANCH: data/f23-ar-events
+  OUT_BRANCH: data/f51-forecasts
+
+jobs:
+  cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      models: ${{ steps.plan.outputs.models }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: Plan the matrix
+        id: plan
+        env:
+          MODEL: ${{ inputs.model || 'all' }}
+          N_SHARDS: ${{ inputs.n_shards || '8' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+          model, n = os.environ["MODEL"], os.environ["N_SHARDS"]
+          models = ["gefs-reforecast", "ifs", "aifs"] if model == "all" else [model]
+          if not set(models) <= {"gefs-reforecast", "ifs", "aifs"}:
+              sys.exit(f"invalid model: {model!r}")
+          if not re.fullmatch(r"\d+", n) or not 1 <= int(n) <= 32:
+              sys.exit(f"invalid n_shards: {n!r}")
+          rows = []
+          for m in models:
+              k = int(n) if m == "gefs-reforecast" else 1
+              rows += [{"model": m, "shard": i, "n": k} for i in range(1, k + 1)]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("matrix=" + json.dumps({"include": rows}) + "\n")
+              f.write("models=" + " ".join(models) + "\n")
+          PY
+      - name: Build cases from the catalog branch
+        run: |
+          git fetch --depth=1 origin "$CATALOG_BRANCH"
+          git show FETCH_HEAD:events.parquet > events.parquet
+          uv run clima-nqn hindcast cases --events events.parquet --out cases.parquet
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hindcast-cases
+          path: |
+            backend/cases.parquet
+            backend/events.parquet
+          retention-days: 30
+
+  fetch:
+    needs: cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.cases.outputs.matrix) }}
+    name: fetch ${{ matrix.model }} ${{ matrix.shard }}/${{ matrix.n }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          name: hindcast-cases
+          path: backend/cases
+      - name: Fetch this shard
+        run: |
+          uv run clima-nqn hindcast fetch --model "${{ matrix.model }}" --cases cases/cases.parquet \
+            --out shards --shard "${{ matrix.shard }}/${{ matrix.n }}" --workers 16
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hindcast-${{ matrix.model }}-${{ matrix.shard }}-of-${{ matrix.n }}
+          path: backend/shards
+          retention-days: 30
+
+  combine:
+    needs: [cases, fetch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          name: hindcast-cases
+          path: backend/cases
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: hindcast-*-of-*
+          merge-multiple: true
+          path: backend/shards
+      - name: Combine shards
+        env:
+          MODELS: ${{ needs.cases.outputs.models }}
+        run: |
+          mkdir -p out
+          for m in $MODELS; do
+            uv run clima-nqn hindcast combine --model "$m" --in shards --out out
+          done
+          cp cases/cases.parquet out/cases.parquet
+          du -sh out/*
+      - name: Commit to the data branch
+        env:
+          MODELS: ${{ needs.cases.outputs.models }}
+        run: |
+          cd out
+          git init -q -b "$OUT_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cat > README.md <<EOF
+          F5.1 hindcast forecasts (plan/05-hindcast.md), built by .github/workflows/hindcast-forecasts.yml
+          run ${GITHUB_RUN_ID}. Models: ${MODELS}. Not code; can be deleted after use.
+          Files: <model>.zarr (variable precip_mm: case, lead, member, lat, lon; mm per 24 h lead window;
+          lat -41..-36, lon -71.5..-68; \`status\` marks ok / not published / error per entry; attrs hold
+          source, license, period, lead convention and counts) and cases.parquet (event and control days;
+          rule, seed and counts in the Parquet metadata).
+          Lead L = forecast hours (24(L-1), 24L] of the 00 UTC run; valid_date = init_date + L - 1.
+          Sources: NOAA GEFSv12 reforecast (noaa-gefs-retrospective, NODD: open, attribution requested, no
+          NOAA endorsement implied); ECMWF open data IFS and AIFS via the AWS mirror (CC-BY-4.0 + ECMWF
+          Terms of Use, https://www.ecmwf.int/en/forecasts/datasets/open-data). Catalog: branch
+          ${CATALOG_BRANCH} (F1.3, ERA5 + TECA BARD).
+          EOF
+          git add -A
+          git commit -qm "data: F5.1 hindcast forecasts (${MODELS}) from run ${GITHUB_RUN_ID}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$OUT_BRANCH"

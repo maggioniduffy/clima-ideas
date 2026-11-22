@@ -1,0 +1,159 @@
+# F5.3 stage A (plan/05): GEFS reforecast (5 members, leads 1-10) for ALL days 2000-01-10..2019-12-31
+# on the wide 0.25 deg grid (lat -41.25..-36, lon -72..-67.5), one Zarr for the risk-day classifier.
+# Manual, plus one run when this file changes on the work branch. Job `cases` builds the all-days
+# table (no catalog needed); the matrix job `fetch` runs one shard per runner
+# (`clima-nqn hindcast fetch --area wide --shard i/n`, byte-range reads of the GEFS reforecast mirror
+# on AWS, anonymous); job `combine` merges the shards and commits gefs-reforecast.zarr + cases.parquet
+# + README to the orphan branch `data/f53-alldays` (force-pushed, like F5.1).
+# Measured 2026-11-22: ~0.12 s and ~1.2 MB per (case, lead, member) entry (CPU bound), 50 entries per
+# case, so 64 shards of ~114 cases take ~11-15 min each; the timeout leaves a wide margin.
+name: Hindcast all days (F5.3)
+
+on:
+  workflow_dispatch:
+    inputs:
+      n_shards:
+        description: "Shards (1-128)"
+        default: "64"
+      first:
+        description: "First valid day, YYYY-MM-DD (>= 2000-01-10)"
+        default: "2000-01-10"
+      last:
+        description: "Last valid day, YYYY-MM-DD (<= 2019-12-31)"
+        default: "2019-12-31"
+  push: # one full run from the work branch (dispatch needs the file on main)
+    branches: [fm/nice-maxwell-iiumsl]
+    paths: [.github/workflows/hindcast-alldays.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  OUT_BRANCH: data/f53-alldays
+
+jobs:
+  cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: Plan the matrix and build the all-days cases
+        id: plan
+        env:
+          N_SHARDS: ${{ inputs.n_shards || '64' }}
+          FIRST: ${{ inputs.first || '2000-01-10' }}
+          LAST: ${{ inputs.last || '2019-12-31' }}
+        run: |
+          python3 - <<'PY'
+          import datetime, json, os, re, sys
+          n = os.environ["N_SHARDS"]
+          if not re.fullmatch(r"\d+", n) or not 1 <= int(n) <= 128:
+              sys.exit(f"invalid n_shards: {n!r}")
+          days = []
+          for key in ("FIRST", "LAST"):
+              v = os.environ[key]
+              if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+                  sys.exit(f"invalid {key.lower()}: {v!r}")
+              days.append(datetime.date.fromisoformat(v))
+          if not datetime.date(2000, 1, 10) <= days[0] <= days[1] <= datetime.date(2019, 12, 31):
+              sys.exit(f"period must lie inside 2000-01-10..2019-12-31, got {days[0]}..{days[1]}")
+          rows = [{"shard": i, "n": int(n)} for i in range(1, int(n) + 1)]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("matrix=" + json.dumps({"include": rows}) + "\n")
+          PY
+          uv run clima-nqn hindcast cases --all-days --first "$FIRST" --last "$LAST" --out cases.parquet
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hindcast-cases
+          path: backend/cases.parquet
+          retention-days: 30
+
+  fetch:
+    needs: cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.cases.outputs.matrix) }}
+    name: fetch gefs-reforecast ${{ matrix.shard }}/${{ matrix.n }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          name: hindcast-cases
+          path: backend/cases
+      - name: Fetch this shard
+        run: |
+          uv run clima-nqn hindcast fetch --model gefs-reforecast --area wide --cases cases/cases.parquet \
+            --out shards --shard "${{ matrix.shard }}/${{ matrix.n }}" --workers 16 --batch-cases 16
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hindcast-gefs-reforecast-${{ matrix.shard }}-of-${{ matrix.n }}
+          path: backend/shards
+          retention-days: 30
+
+  combine:
+    needs: [cases, fetch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          name: hindcast-cases
+          path: backend/cases
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: hindcast-*-of-*
+          merge-multiple: true
+          path: backend/shards
+      - name: Combine shards
+        run: |
+          mkdir -p out
+          uv run clima-nqn hindcast combine --model gefs-reforecast --in shards --out out
+          cp cases/cases.parquet out/cases.parquet
+          du -sh out/*
+      - name: Commit to the data branch
+        run: |
+          cd out
+          git init -q -b "$OUT_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cat > README.md <<EOF
+          F5.3 all-days GEFS reforecast (plan/05-hindcast.md), built by .github/workflows/hindcast-alldays.yml
+          run ${GITHUB_RUN_ID}. Not code; can be deleted after use.
+          Files: gefs-reforecast.zarr (variable precip_mm: case, lead, member, lat, lon; mm per 24 h lead
+          window; members c00 p01..p04; wide grid lat -41.25..-36, lon -72..-67.5 at 0.25 deg; \`status\`
+          marks ok / not published / error per entry; attrs hold source, license, period, grid, lead
+          convention and counts) and cases.parquet (one case per valid day, kind "all", ids ALL-YYYYMMDD).
+          Lead L = forecast hours (24(L-1), 24L] of the 00 UTC run; valid_date = init_date + L - 1.
+          Source: NOAA GEFSv12 reforecast (noaa-gefs-retrospective, NODD: open, attribution requested, no
+          NOAA endorsement implied).
+          EOF
+          git add -A
+          git commit -qm "data: F5.3 all-days GEFS reforecast from run ${GITHUB_RUN_ID}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$OUT_BRANCH"

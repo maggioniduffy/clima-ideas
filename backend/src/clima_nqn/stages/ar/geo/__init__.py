@@ -114,4 +114,3 @@ def load_cordillera(path: Path = CORDILLERA_FILE) -> list[Point]:
     if geom["type"] != "Polygon":
         raise ValueError(f"expected a Polygon in {path.name}, got {geom['type']}")
     return [(float(x), float(y)) for x, y in geom["coordinates"][0][:-1]]
-

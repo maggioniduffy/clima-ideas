@@ -8,12 +8,12 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 
 | # | Fase | Archivo | Depende de | Estado |
 |---|---|---|---|---|
-| 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | hecha, salvo F0.11 (publicar en línea) |
+| 0 | Bases: monorepo, visor, API, contrato de capas, acceso a datos | [plan/00-foundations.md](plan/00-foundations.md) | — | hecha (web en línea: https://clima-nqn-web.faustino-maggioni.workers.dev) |
 | 1 | Ríos atmosféricos en la cordillera | [plan/01-atmospheric-rivers.md](plan/01-atmospheric-rivers.md) | 0 | hecha (F1.7 solo 2023; 3 estudios de F1.5 sin verificar; F1.9: ENSO sin diferencia sostenida en extremos); rediseño del visor V5–V8 hecho, capa real sin regenerar |
 | 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | tareas hechas (F2.5: el LSTM empata o gana a GR4J y gana a la persistencia desde 2 días; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa; bandas de CemaNeige y F2.3 sobre cuencas HydroBASINS: sin cambio de conclusión); cierra al publicar la capa |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | hecha (IDF solo con IMERG, sin corregir; sesgo a 24 h 0,92 y 0,67 en extremos; sin señal de ENSO; serie ISD con control de calidad; capa convection-idf publicada) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | núcleo hecho y publicado (476 cuencas con cauce de 841: D-infinito y forma; CN por escenarios TR-55); extensión no se abre (F4.4a: sin mancha de un evento) |
-| 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | pendiente (F5.9 hecha: IVT calculable en GEFS e IFS/AIFS; licencia GEFS NODD) |
+| 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | en curso (F5.1–F5.4, F5.7, F5.9 y F5.10 hechas: GEFS acierta la cantidad de lluvia de los ríos atmosféricos hasta 7 días; un día de riesgo ≥ p95 se anticipa con regresión logística hasta 9–10 días en la cordillera y 7 en Confluencia, sin mejora de LightGBM; el IVT conserva acierto 1–2 días más que la lluvia; AIFS e IFS sin diferencia detectable; F5.7: ENSO no cambia el acierto ni mejora el clasificador; F5.8 pendiente) |
 | 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | en curso (F6.1 y F6.4 hechas, F6.5 en código; registro diario con climatología de caudal en `data/forecast-registry`; SNIH sin caudal en tiempo real, 236 días de rezago) |
 
 ## Rumbo (revisión del 2026-11-11)
@@ -39,7 +39,7 @@ Siete ajustes, que salen de los resultados y de `docs/research/data-access.md`:
 5. **La pregunta de la fase 3 puede no tener respuesta como está escrita.** Medir cuánto subestiman los productos
    globales exige lluvia horaria de estación (SMN sin verificar, AIC restringido). F3.0 lo comprueba antes de
    empezar; si falla, la pregunta se reformula.
-6. **Nada está publicado.** La web estática con capas en R2 se decidió el 2026-11-05 y no estaba en el plan: es
+6. **Publicado (2026-11-22).** La web estática con capas en R2 se decidió el 2026-11-05 y no estaba en el plan: es
    F0.11. Desde ahí, una fase cierra cuando su capa está en línea.
 7. **De analizar a prevenir (2026-11-12, decisión del usuario).** El objetivo suma ayudar a prevenir impactos de
    lluvias y tormentas extremas. La salida es una perspectiva de riesgo a 1–10 días para usuarios técnicos, solo en
@@ -62,9 +62,8 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 
 ## Próximo
 
-1. F0.11: capas subidas a R2 y probadas con la web local; falta la web en línea con `VITE_DATA_URL` (`odd/tasks/publish.md`).
-2. Fase 5, mitad ríos atmosféricos: F5.1 (reforecast GEFSv12 2000–2020 + ECMWF open data) y F5.10.
-3. Fase 6: mergear a `main` para que corra el registro diario; pedir a la AIC caudal en tiempo real.
+1. Fase 5: F5.8, la compuerta de evidencia sobre la logística de F5.3; después F5.5 (análogos) y F5.6 (tablero).
+2. Fase 6: el registro diario corre desde `main`; pedir a la AIC caudal en tiempo real.
 
 ## Referencias
 

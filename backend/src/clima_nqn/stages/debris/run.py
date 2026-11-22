@@ -24,7 +24,9 @@ def load_targets(path: Path) -> list[tuple[str, object]]:
     out = []
     for i, f in enumerate(gj["features"]):
         props = f.get("properties") or {}
-        out.append((str(props.get("name") or props.get("ref") or f"target_{i}"), shape(f["geometry"])))
+        out.append(
+            (str(props.get("name") or props.get("ref") or f"target_{i}"), shape(f["geometry"]))
+        )
     return out
 
 
@@ -51,5 +53,7 @@ def run(
     max_area_km2: float = catchments.DEFAULT_MAX_AREA_KM2,
 ) -> tuple[Path, int]:
     arr, transform = read_dem(bbox)
-    found = catchments.delineate(arr, transform, load_targets(targets_path), min_area_km2, max_area_km2)
+    found = catchments.delineate(
+        arr, transform, load_targets(targets_path), min_area_km2, max_area_km2
+    )
     return catchments.write_parquet(found, out), len(found)
