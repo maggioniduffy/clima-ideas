@@ -161,8 +161,9 @@ lo que ya se observó.
 
 - Pronóstico ENSO: IRI ya no ofrece descarga de datos; queda C3S por CDS. Archivo histórico de pronósticos emitidos:
   sin verificar.
-- "Modelo bueno" para mostrarse como perspectiva: lo fija la compuerta de evidencia (2026-11-12). Si F5.8 muestra
-  menos de 10 eventos independientes esperables por temporada, la espera prospectiva pasa a dos inviernos.
+- "Modelo bueno" para mostrarse como perspectiva: lo fija la compuerta de evidencia (2026-11-12). F5.8 (2026-11-22):
+  ~14 eventos independientes agrupados por temporada mayo–septiembre (13,6 en test), así que alcanza un invierno.
+  Pasan el hindcast: día de riesgo con la logística hasta 9 (cordillera norte), 10 (sur) y 7 días (Confluencia).
 - Caudal en tiempo real: SNIH no lo tiene; pedir a la AIC acceso operativo (restringido). Sin eso, F6.3 y F6.7 de caudal no son verificables en el día.
 - `registry.append` relee la cadena entera en cada llamada; la emisión usa `append_many` (una verificación por lote).
 - La verificación estacional tarda meses en juntar muestras; el hindcast de F6.2 da la primera estimación.

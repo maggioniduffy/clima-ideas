@@ -1,6 +1,6 @@
 # Fase 5 — Predicción retrospectiva
 
-Estado: en curso (F5.1 y F5.9 hechas; F5.2, F5.3, F5.4, F5.7 y F5.10 hechas) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
+Estado: hecha (todas las tareas; capas hindcast-verification y hindcast-analogs publicadas el 2026-11-22) · Depende de: 1 (mitad ríos atmosféricos), 3 (mitad convección) · Refs: `docs/architecture.md`
 
 ## Pregunta
 
@@ -21,10 +21,10 @@ Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de
 | F5.2 ✅ | Verificación por días de anticipación, separada en ríos atmosféricos y convección | Haiku analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
 | F5.3 ✅ | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet | Brier y PR-AUC en test temporal, no exactitud |
 | F5.4 ✅ | AIFS vs. IFS en los eventos neuquinos | Haiku | Tabla por evento y anticipación |
-| F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
-| F5.6 | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |
+| F5.5 ✅ | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
+| F5.6 ✅ | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |
 | F5.7 ✅ | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | Haiku analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
-| F5.8 | Tabla de la compuerta de evidencia (`plan/06-forecast.md`, criterios 1–3) para "día de riesgo": por región y anticipación, BSS vs. climatología y vs. regresión logística con IC bootstrap por evento, eventos independientes en test (agrupados también entre regiones), diagrama de confiabilidad, POD y FAR | Haiku corre, Sonnet codifica | Tabla con veredicto por región y anticipación + unit de agrupación de eventos y de anticipaciones contiguas |
+| F5.8 ✅ | Tabla de la compuerta de evidencia (`plan/06-forecast.md`, criterios 1–3) para "día de riesgo": por región y anticipación, BSS vs. climatología y vs. regresión logística con IC bootstrap por evento, eventos independientes en test (agrupados también entre regiones), diagrama de confiabilidad, POD y FAR | Haiku corre, Sonnet codifica | Tabla con veredicto por región y anticipación + unit de agrupación de eventos y de anticipaciones contiguas |
 | F5.9 ✅ | Propuesta (2026-11-13): comprobar si el IVT se puede calcular con los niveles de ECMWF open data y GEFS (variables, niveles, resolución, latencia) | Haiku | Anotado en `docs/research/data-access.md` con fuente; si no se puede, F5.10 y F6.9 no se hacen |
 | F5.10 ✅ | Propuesta (2026-11-13), depende de F5.9: acierto por anticipación del IVT pronosticado frente a la lluvia pronosticada en los eventos del catálogo F1.3 | Haiku analiza, Sonnet codifica métricas | Curvas de IVT y de lluvia lado a lado, misma métrica y mismos eventos |
 
@@ -77,6 +77,22 @@ pasar a la fase 6 como perspectiva y cuáles quedan "Experimental".
 - F5.7 (2026-11-22): `clima-nqn hindcast enso-skill`, informe `reports/05/F5.7.md`. Sin señal de ENSO en el acierto
   por fase (la diferencia Niño − Niña excluye 0 solo a 5 días; la regla pedía 3 contiguas). El ONI conocido a la
   fecha de la corrida no mejora el clasificador de F5.3 en ninguna de 30 combinaciones.
+
+- F5.8 (2026-11-22): `clima-nqn hindcast gate`, informe `reports/05/F5.8.md`. Persistencia = Markov de entrenamiento
+  (decisión del usuario). La logística pasa el hindcast (BSS > 0 con IC contra climatología y persistencia, 118
+  eventos agrupados, anticipaciones contiguas) hasta 9 días en la cordillera norte, 10 en la sur y 7 en Confluencia;
+  el resto queda "Experimental". Sensibilidad: p90 9/10/10, p98 7/7/5. LightGBM no supera a la logística (criterio
+  3). ~14 eventos independientes por temporada mayo–septiembre. El tope de probabilidad (bin con ≥ 20 días) no es
+  monótono en la anticipación (1,0 a 1 día, 0,1–0,5 a 2): revisar la regla antes de F6.6.
+- F5.5 (2026-11-22): `clima-nqn hindcast analogs-library | analogs | analogs-layer`, workflow
+  `hindcast-analogs.yml`, rama `data/f55-analogs`, informe `reports/05/F5.5.md`. IVT diario ERA5 1980–2025, 10
+  análogos por evento F1.3: el 42 % de los días análogos fue río atmosférico contra 5 % del baseline al azar
+  (diferencia 0,37 [0,34; 0,39]; k = 5 y 20 dan 0,41 y 0,32). Lluvia ERA5 de los análogos en la cordillera 3–4 veces
+  la del baseline. IMERG no cubre la cordillera ("sin dato"); en Confluencia IMERG y ERA5 dan signos opuestos (sin
+  verificar).
+- F5.6 (2026-11-22): capa `hindcast-verification` (`clima-nqn hindcast verification-layer`) y panel
+  `HindcastPanel`: modelo, evento y anticipación; pronóstico contra ERA5, curva de acierto, tabla de la compuerta y
+  análogos. e2e `web/e2e/hindcast.spec.ts`. Capas en R2; el panel llega a la web en línea al desplegar desde `main`.
 
 ## Abierto
 

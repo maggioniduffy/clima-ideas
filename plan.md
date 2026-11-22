@@ -13,7 +13,7 @@ Producto: pipeline Python por etapa que publica capas en un visor web.
 | 2 | Crecidas de ríos + LSTM de caudal | [plan/02-floods.md](plan/02-floods.md) | 1, caudal SNIH | tareas hechas (F2.5: el LSTM empata o gana a GR4J y gana a la persistencia desde 2 días; F2.7: señal de ENSO solo concurrente, la compuerta de F6.2 no pasa; bandas de CemaNeige y F2.3 sobre cuencas HydroBASINS: sin cambio de conclusión); cierra al publicar la capa |
 | 3 | Convección e IDF en la Confluencia | [plan/03-convection.md](plan/03-convection.md) | 0 | hecha (IDF solo con IMERG, sin corregir; sesgo a 24 h 0,92 y 0,67 en extremos; sin señal de ENSO; serie ISD con control de calidad; capa convection-idf publicada) |
 | 4 | Aluviones: cuencas chicas (núcleo); HEC-RAS y emulador (extensión) | [plan/04-debris-flows.md](plan/04-debris-flows.md) | núcleo: 2, 3 · extensión: F4.4a | núcleo hecho y publicado (476 cuencas con cauce de 841: D-infinito y forma; CN por escenarios TR-55); extensión no se abre (F4.4a: sin mancha de un evento) |
-| 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | en curso (F5.1–F5.4, F5.7, F5.9 y F5.10 hechas: GEFS acierta la cantidad de lluvia de los ríos atmosféricos hasta 7 días; un día de riesgo ≥ p95 se anticipa con regresión logística hasta 9–10 días en la cordillera y 7 en Confluencia, sin mejora de LightGBM; el IVT conserva acierto 1–2 días más que la lluvia; AIFS e IFS sin diferencia detectable; F5.7: ENSO no cambia el acierto ni mejora el clasificador; F5.8 pendiente) |
+| 5 | Predicción retrospectiva | [plan/05-hindcast.md](plan/05-hindcast.md) | 1 (ríos atmosféricos) · 3 (convección) | hecha (capas hindcast-verification y hindcast-analogs publicadas; F5.8: la logística de día de riesgo pasa el hindcast hasta 9 días en cordillera norte, 10 en sur y 7 en Confluencia; F5.5: el 42 % de los análogos ERA5 de un río atmosférico fue río atmosférico, contra 5 % al azar) |
 | 6 | Predicción a futuro (experimental) | [plan/06-forecast.md](plan/06-forecast.md) | 0, 2, 5 · registro F6.1 + F6.4: solo 0 | en curso (F6.1 y F6.4 hechas, F6.5 en código; registro diario con climatología de caudal en `data/forecast-registry`; SNIH sin caudal en tiempo real, 236 días de rezago) |
 
 ## Rumbo (revisión del 2026-11-11)
@@ -62,7 +62,9 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 
 ## Próximo
 
-1. Fase 5: F5.8, la compuerta de evidencia sobre la logística de F5.3; después F5.5 (análogos) y F5.6 (tablero).
+1. Fase 6: F6.3 con la logística de F5.3 sobre GEFS operativo, emitida como "Experimental" en el registro para juntar
+   la temporada prospectiva (F6.8); revisar el tope de probabilidad de F5.8 antes de F6.6. Desplegar la web desde
+   `main` para que aparezca el tablero de F5.6.
 2. Fase 6: el registro diario corre desde `main`; pedir a la AIC caudal en tiempo real.
 
 ## Referencias
