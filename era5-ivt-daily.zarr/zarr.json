@@ -1,0 +1,13 @@
+{
+  "attributes": {
+    "title": "Daily IVT components, ERA5 over Neuqu\u00e9n",
+    "source": "ERA5 (Copernicus Climate Change Service) via ARCO-ERA5 (Google Cloud public dataset)",
+    "license": "CC-BY 4.0",
+    "period": "1980-01-01 to 2025-12-31",
+    "method": "daily mean of 00/06/12/18 UTC viwve, viwvn (kg m-1 s-1)",
+    "area": "N=-34 W=-74 S=-43 E=-66",
+    "n_days": 16802
+  },
+  "zarr_format": 3,
+  "node_type": "group"
+}
