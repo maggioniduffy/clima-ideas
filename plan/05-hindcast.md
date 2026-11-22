@@ -17,16 +17,16 @@ Primero la mitad de ríos atmosféricos (solo necesita el catálogo F1.3); la de
 
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
-| F5.1 | Ingesta de pronósticos para las fechas de eventos y días de control | Sonnet escribe, opencode corre | Zarr por modelo y anticipación |
-| F5.2 | Verificación por días de anticipación, separada en ríos atmosféricos y convección | opencode analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
+| F5.1 | Ingesta de pronósticos para las fechas de eventos y días de control | Sonnet escribe, Haiku corre | Zarr por modelo y anticipación |
+| F5.2 | Verificación por días de anticipación, separada en ríos atmosféricos y convección | Haiku analiza, Sonnet codifica métricas | Curvas de acierto + unit de métricas |
 | F5.3 | Clasificador de "día de riesgo" (LightGBM) vs. climatología y regresión logística | Sonnet | Brier y PR-AUC en test temporal, no exactitud |
-| F5.4 | AIFS vs. IFS en los eventos neuquinos | opencode | Tabla por evento y anticipación |
+| F5.4 | AIFS vs. IFS en los eventos neuquinos | Haiku | Tabla por evento y anticipación |
 | F5.5 | Análogos: días ERA5 más parecidos a cada evento y qué pasó | Sonnet | Unit de búsqueda; capa de análogos |
 | F5.6 | Tablero de verificación en el visor | Sonnet | e2e: elegir modelo, evento y anticipación |
-| F5.7 | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | opencode analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
-| F5.8 | Tabla de la compuerta de evidencia (`plan/06-forecast.md`, criterios 1–3) para "día de riesgo": por región y anticipación, BSS vs. climatología y vs. regresión logística con IC bootstrap por evento, eventos independientes en test (agrupados también entre regiones), diagrama de confiabilidad, POD y FAR | opencode corre, Sonnet codifica | Tabla con veredicto por región y anticipación + unit de agrupación de eventos y de anticipaciones contiguas |
-| F5.9 | Propuesta (2026-11-13), sin verificar: comprobar si el IVT se puede calcular con los niveles de ECMWF open data y GEFS (variables, niveles, resolución, latencia) | opencode | Anotado en `docs/research/data-access.md` con fuente; si no se puede, F5.10 y F6.9 no se hacen |
-| F5.10 | Propuesta (2026-11-13), depende de F5.9: acierto por anticipación del IVT pronosticado frente a la lluvia pronosticada en los eventos del catálogo F1.3 | opencode analiza, Sonnet codifica métricas | Curvas de IVT y de lluvia lado a lado, misma métrica y mismos eventos |
+| F5.7 | Acierto por fase ENSO; fase y ONI como variables del clasificador F5.3 | Haiku analiza, Sonnet agrega variables | Curvas por fase + Brier con y sin ENSO |
+| F5.8 | Tabla de la compuerta de evidencia (`plan/06-forecast.md`, criterios 1–3) para "día de riesgo": por región y anticipación, BSS vs. climatología y vs. regresión logística con IC bootstrap por evento, eventos independientes en test (agrupados también entre regiones), diagrama de confiabilidad, POD y FAR | Haiku corre, Sonnet codifica | Tabla con veredicto por región y anticipación + unit de agrupación de eventos y de anticipaciones contiguas |
+| F5.9 | Propuesta (2026-11-13), sin verificar: comprobar si el IVT se puede calcular con los niveles de ECMWF open data y GEFS (variables, niveles, resolución, latencia) | Haiku | Anotado en `docs/research/data-access.md` con fuente; si no se puede, F5.10 y F6.9 no se hacen |
+| F5.10 | Propuesta (2026-11-13), depende de F5.9: acierto por anticipación del IVT pronosticado frente a la lluvia pronosticada en los eventos del catálogo F1.3 | Haiku analiza, Sonnet codifica métricas | Curvas de IVT y de lluvia lado a lado, misma métrica y mismos eventos |
 
 ## Entregable
 

@@ -14,10 +14,10 @@ Desarrollo guiado por [plan.md](plan.md) (índice de fases, alcance: Neuquén).
 |---|---|---|
 | Plan, orquestación, revisión | Opus (sesión principal) | Divide tareas, delega, revisa diffs e informes |
 | Implementar y corregir código | Sonnet (subagente) | Código, unit tests (pytest, vitest) y e2e (Playwright) |
-| Investigación, datos grandes, análisis | opencode | Búsquedas web, descargas, consultas pesadas, análisis con informe |
-| Tests simples pero largos | opencode | Suites lentas (`pytest -m slow`), entrenamientos, corridas de pipeline |
+| Investigación, datos grandes, análisis | Haiku (subagente) | Búsquedas web, descargas, consultas pesadas, análisis con informe |
+| Tests simples pero largos | Haiku (subagente) | Suites lentas (`pytest -m slow`), entrenamientos, corridas de pipeline |
 
-En este proyecto opencode reemplaza a Codex para trabajo masivo. Plantillas de prompt: `docs/agents.md`.
+Haiku (subagente, modelo `haiku`) hace el trabajo masivo; reemplaza a opencode desde el 2026-11-22. Plantillas de prompt: `docs/agents.md`.
 
 Ciclo por tarea:
 

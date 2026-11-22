@@ -14,14 +14,14 @@ ERA5 1980–hoy: componentes de IVT, precipitación, isoterma de 0 °C. Licencia
 
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
-| F1.1 ✅ | Script de descarga ERA5 desde ARCO-ERA5 (Zarr público en Google Cloud, sin cola ni clave; `tools/teca/fetch_era5_ivt.py --source arco`) por recorte y variables, idempotente | Sonnet escribe, opencode corre | Zarr completo en `data/raw/era5/` |
-| F1.2 ✅ | Detección con TECA BARD en jobs paralelos (matriz de GitHub Actions por año o por mes; BARD tarda ~2,5 h por año en el hemisferio sur) | opencode corre, Opus valida | Máscara diaria de ríos atmosféricos |
+| F1.1 ✅ | Script de descarga ERA5 desde ARCO-ERA5 (Zarr público en Google Cloud, sin cola ni clave; `tools/teca/fetch_era5_ivt.py --source arco`) por recorte y variables, idempotente | Sonnet escribe, Haiku corre | Zarr completo en `data/raw/era5/` |
+| F1.2 ✅ | Detección con TECA BARD en jobs paralelos (matriz de GitHub Actions por año o por mes; BARD tarda ~2,5 h por año en el hemisferio sur) | Haiku corre, Opus valida | Máscara diaria de ríos atmosféricos |
 | F1.3 ✅ | Catálogo: eventos que tocan el polígono de cordillera (fecha, duración, IVT máx., isoterma 0 °C) | Sonnet | Parquet + unit tests con máscara sintética |
-| F1.4 ✅ | Fracción de días de lluvia extrema (p99) que coinciden con un evento | opencode | Informe con cifras, fuente y período |
-| F1.5 ✅ | Contraste con literatura de ríos atmosféricos en los Andes | opencode | Tabla: nuestro conteo vs. publicado |
+| F1.4 ✅ | Fracción de días de lluvia extrema (p99) que coinciden con un evento | Haiku | Informe con cifras, fuente y período |
+| F1.5 ✅ | Contraste con literatura de ríos atmosféricos en los Andes | Haiku | Tabla: nuestro conteo vs. publicado |
 | F1.6 ✅ | Capa del visor: eventos en la línea de tiempo + replay de IVT por hora | Sonnet | e2e: elegir evento, reproducir, inspeccionar |
-| F1.7 ✅ | ML (media): detector preentrenado tipo ClimateNet vs. BARD | opencode corre, Sonnet integra | Acuerdo entre métodos medido; opcional |
-| F1.8 ✅ | Ríos atmosféricos por fase ENSO (F0.10): conteo, IVT y lluvia por estación del año; test de permutación | opencode analiza, Sonnet codifica el test | Tabla Niño/Neutro/Niña con p-valor y n de años + unit del test |
+| F1.7 ✅ | ML (media): detector preentrenado tipo ClimateNet vs. BARD | Haiku corre, Sonnet integra | Acuerdo entre métodos medido; opcional |
+| F1.8 ✅ | Ríos atmosféricos por fase ENSO (F0.10): conteo, IVT y lluvia por estación del año; test de permutación | Haiku analiza, Sonnet codifica el test | Tabla Niño/Neutro/Niña con p-valor y n de años + unit del test |
 | F1.9 ✅ | Días de lluvia extrema (≥ p99 de F1.4) por estación y fase ENSO, y contra el ONI, 1980–2025; regla fijada antes de correr (ver "Regla de F1.9") | Sonnet codifica, Opus corre y revisa | `reports/01/F1.9.md` con años por fase, conteos "k de n", test de permutación y sensibilidad p95 y rectángulo |
 
 ## Regla de F1.9 (fijada el 2026-11-12, antes de correr)

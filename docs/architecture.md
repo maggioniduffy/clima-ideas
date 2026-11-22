@@ -15,7 +15,7 @@ web/                pnpm, Vite, React, TypeScript, deck.gl
   src/theme/        tokens (ver docs/design.md)
   e2e/              Playwright
 data/               raw/ interim/ processed/  (fuera de git)
-reports/            informes de opencode por fase
+reports/            informes de Haiku por fase
 ```
 
 ## Flujo
