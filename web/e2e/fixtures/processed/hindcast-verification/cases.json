@@ -20,7 +20,7 @@
  ],
  "models": {
   "gefs-reforecast": {
-   "label": "GEFSv12 reforecast (5 miembros)",
+   "label": "GEFSv12",
    "source": "GEFS falso de prueba",
    "license": "CC0",
    "period": "valid 2001-01-02..2019-12-31",

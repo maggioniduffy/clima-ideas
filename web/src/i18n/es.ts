@@ -99,7 +99,7 @@ export const es = {
     error: "No se pudo cargar la capa de verificación",
     tag: "Retrospectivo",
     intro:
-      "Retrospectivo: pronósticos pasados de eventos que ya ocurrieron, comparados con ERA5. No dice nada sobre lo que viene.",
+      "Pronósticos pasados de eventos que ya ocurrieron, comparados con ERA5. No dice nada sobre lo que viene.",
     notAlert: "No es un sistema de alerta oficial.",
     officialLead: "Avisos oficiales:",
     // Defensa Civil Neuquén URL: sin verificar (see HindcastPanel).

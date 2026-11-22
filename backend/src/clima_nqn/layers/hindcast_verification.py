@@ -41,7 +41,7 @@ DEFAULT_OUT = REPO_ROOT / "data" / "processed" / LAYER_ID
 DEFAULT_FORECASTS = REPO_ROOT / "data" / "f51-forecasts"
 DEFAULT_REPORTS = REPO_ROOT / "reports" / "05"
 MODELS = {
-    "gefs-reforecast": "GEFSv12 reforecast (5 miembros)",
+    "gefs-reforecast": "GEFSv12",
     "ifs": "ECMWF IFS",
     "aifs": "ECMWF AIFS",
 }
