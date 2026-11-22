@@ -84,6 +84,8 @@ Medido desde el contenedor el 2026-11-22; detalle y comandos en `reports/06/F6.1
 | GEFS operativo | available | s3://noaa-gefs-pds | 2026-11-21 18 UTC | ~0,25 d | desde 2017-01-01 | NODD abierto, atribución solicitada, sin implicar endoso (https://registry.opendata.aws/noaa-gefs/) |
 | GEFS reforecast v12 | available | s3://noaa-gefs-retrospective | 2000–2020 | — | — | igual que GEFS (mismo programa NODD; sin verificar en página propia) |
 
+GEFS operativo 0,25° (F6.3, verificado 2026-11-22): `s3://noaa-gefs-pds/gefs.AAAAMMDD/00/atmos/pgrb2sp25/{gec00,gep01..gep04}.t00z.pgrb2s.0p25.fXXX` (+ `.idx`), APCP en superficie hasta f240. Acumulación en ventanas de 6 h en pasos múltiplos de 6 (`f006` = `0-6 hour acc`, `f012` = `6-12`, `f240` = `234-240`; en f003 y f009 hay `0-3` y `6-9`, que no se usan), así que el día de anticipación L suma los cuatro cubos que terminan en 24(L-1)+6 … 24L.
+
 IVT (F5.9): calculable en GEFS operativo (q en `pgrb2b`, u/v en `pgrb2a` + `pgrb2b`, 1000–300 hPa), en el reforecast
 GEFSv12 (`*_pres` + `*_pres_abv700mb`) y en IFS/AIFS con 8 niveles (1000, 925, 850, 700, 600, 500, 400, 300 hPa).
 

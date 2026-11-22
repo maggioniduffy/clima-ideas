@@ -3,6 +3,8 @@
 #    (forecast runs cannot be downloaded again later, so they are archived every day).
 # 2. `forecast emit`: climatology baseline of daily flow, 1-10 days, frozen in the append-only registry.
 #    Persistence is paused: SNIH has no real-time flow (last value 2026-03-31, reports/06/F6.1-latency.md).
+# 2b. `forecast emit-riskday`: frozen F5.3 logistic (fit 2000-2014) on operational GEFS 0.25 (5 members) per
+#     region, plus its monthly climatology, 1-10 days, "Experimental" (F6.3).
 # 3. Mondays (and manual runs): refresh observed flow from SNIH and `forecast score` the registry.
 # Everything is committed (never force-pushed) to the branch `data/forecast-registry`, so the git history
 # is a second, external proof that no frozen prediction was edited. Scheduled runs only fire from the
@@ -85,10 +87,21 @@ jobs:
           uv run clima-nqn forecast emit --flow-dir "$STORE/training/flow" \
             --registry "$STORE/registry/predictions.jsonl" \
             --model-version "$MODEL_VERSION" --models "$MODELS"
+
+      - name: Emit risk-day predictions (F6.3, Experimental)
+        if: ${{ !cancelled() }}
+        run: |
+          uv run clima-nqn forecast emit-riskday --gefs-regions "$STORE/operational/gefs_regions" \
+            --model models/riskday-logistic-v1.json --registry "$STORE/registry/predictions.jsonl"
+
+      - name: Registry head hash
+        if: ${{ !cancelled() }}
+        run: |
           uv run python -c "from clima_nqn.forecast.registry import PredictionRegistry as R; print(R('$STORE/registry/predictions.jsonl').verify())" \
             > "$STORE/registry/head.txt"
 
       - name: Refresh observed flow and score (Mondays and manual runs)
+        if: ${{ !cancelled() }}
         run: |
           if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" != "1" ]; then
             echo "not Monday: skip scoring"; exit 0
@@ -98,9 +111,11 @@ jobs:
           uv run clima-nqn flow ingest --raw "$RUNNER_TEMP/obs-raw" --out "$STORE/observed/flow" \
             --report "$STORE/observed/flow-report.md"
           uv run clima-nqn forecast score --flow-dir "$STORE/observed/flow" \
+            --era5t-regions "$STORE/operational/era5t_regions" \
             --registry "$STORE/registry/predictions.jsonl" --out "$STORE/scores/latest"
 
       - name: Commit to the data branch (append, no force)
+        if: ${{ !cancelled() }}
         run: |
           cd "$STORE"
           git config user.name "github-actions[bot]"
