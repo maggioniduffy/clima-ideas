@@ -4,6 +4,7 @@ import { ConvectionPanel, type ConvectionPanelProps } from "./ConvectionPanel";
 import { DebrisPanel, type DebrisPanelProps } from "./DebrisPanel";
 import { EnsoPanel } from "./EnsoPanel";
 import { FloodStationPanel } from "./FloodStationPanel";
+import { ForecastPanel, type ForecastPanelProps } from "./ForecastPanel";
 import { HindcastPanel, type HindcastPanelProps } from "./HindcastPanel";
 
 interface Props {
@@ -17,13 +18,15 @@ interface Props {
   debris?: DebrisPanelProps | null;
   /** Selected hindcast-verification layer; shown when nothing above is. */
   hindcast?: HindcastPanelProps | null;
+  /** Selected forecast-outlook layer; shown when nothing above is. */
+  forecast?: ForecastPanelProps | null;
   /** Opens an AR event (flood tags). */
   onOpenArEvent?: (id: string) => void;
 }
 
 /** Second card of the card row: ENSO table or flood-station charts; not rendered when there is nothing to show. */
-export function DetailCard({ flood = null, enso = null, convection = null, debris = null, hindcast = null, onOpenArEvent }: Props) {
-  if (!enso && !flood && !convection && !debris && !hindcast) return null;
+export function DetailCard({ flood = null, enso = null, convection = null, debris = null, hindcast = null, forecast = null, onOpenArEvent }: Props) {
+  if (!enso && !flood && !convection && !debris && !hindcast && !forecast) return null;
   return (
     <section className="detail-card card tx" data-testid="detail-card">
       {enso ? (
@@ -33,7 +36,7 @@ export function DetailCard({ flood = null, enso = null, convection = null, debri
       ) : convection ? (
         <ConvectionPanel {...convection} />
       ) : (
-        debris ? <DebrisPanel {...debris} /> : hindcast && <HindcastPanel {...hindcast} />
+        debris ? <DebrisPanel {...debris} /> : hindcast ? <HindcastPanel {...hindcast} /> : forecast && <ForecastPanel {...forecast} />
       )}
     </section>
   );

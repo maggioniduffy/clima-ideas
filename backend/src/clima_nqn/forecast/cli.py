@@ -265,3 +265,34 @@ def demote_auto_cmd(
     for r in done:
         typer.echo(f"{r['region']} anticipación {r['lead']}: {r['reason']}")
     typer.echo(f"{len(done)} descensos")
+
+
+@forecast_app.command("outlook-layer")
+def outlook_layer_cmd(
+    registry: Path = typer.Option(..., help="Archivo JSONL del registro."),
+    out: Path = typer.Option(
+        Path("data/processed/forecast-outlook"), help="Carpeta de la capa forecast-outlook."
+    ),
+    scores: Path = typer.Option(
+        None, help="scores/latest.json (opcional; sin él, historial vacío)."
+    ),
+    status: Path = typer.Option(
+        None, help="status/outlook.jsonl (opcional; sin él, todo Experimental)."
+    ),
+    gate: Path = typer.Option(
+        Path("../reports/05/F5.8.json"), help="Veredicto del hindcast (F5.8)."
+    ),
+) -> None:
+    """Escribe la capa del visor con la última predicción de día de riesgo (F6.6)."""
+    from clima_nqn.forecast.registry import RegistryTamperError
+    from clima_nqn.layers import forecast_outlook as fo
+
+    if not gate.is_file():
+        typer.echo(f"No existe el veredicto del hindcast: {gate}", err=True)
+        raise typer.Exit(1)
+    try:
+        fo.build(registry, out, scores, status, gate)
+    except (fo.OutlookError, RegistryTamperError) as e:
+        typer.echo(f"forecast-outlook: {e}", err=True)
+        raise typer.Exit(1) from e
+    typer.echo(f"forecast-outlook -> {out}")

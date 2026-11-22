@@ -16,9 +16,12 @@ from clima_nqn.io.enso import DEFAULT_PATH, build_enso, fetch_oni, read_enso, wr
 from clima_nqn.layers import flood_stations
 from clima_nqn.ops.cli import ops_app
 from clima_nqn.publish import (
+    PublishError,
     make_client,
+    plan_layer_uploads,
     plan_uploads,
     publish_layers,
+    publish_one_layer,
     resolve_credentials,
 )
 from clima_nqn.stages.ar import catalog as ar_catalog
@@ -1166,6 +1169,13 @@ def publish_cmd(
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="List the objects to upload; no env vars, no network.")
     ] = False,
+    layer: Annotated[
+        str | None,
+        typer.Option(
+            help="Publish only this layer and merge its entry into the live layers.json "
+            "(refused if the live index cannot be read)."
+        ),
+    ] = None,
 ) -> None:
     """Upload layers and the layers.json index to Cloudflare R2 (reads R2_* env vars)."""
     data_root = Path(root or os.environ.get("CLIMA_NQN_DATA") or DEFAULT_DATA_ROOT)
@@ -1174,7 +1184,15 @@ def publish_cmd(
         typer.echo(f"data root not found: {data_root}", err=True)
         raise typer.Exit(1)
     if dry_run:
-        uploads = plan_uploads(data_root, prefix)
+        try:
+            uploads = (
+                plan_layer_uploads(data_root, layer, prefix)
+                if layer
+                else plan_uploads(data_root, prefix)
+            )
+        except PublishError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(1) from exc
         for u in uploads:
             typer.echo(f"{u.key}  {u.size} B  {u.content_type}")
         total = sum(u.size for u in uploads)
@@ -1186,7 +1204,14 @@ def publish_cmd(
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from exc
     client = make_client(cfg["R2_ACCOUNT_ID"], cfg["R2_ACCESS_KEY_ID"], cfg["R2_SECRET_ACCESS_KEY"])
-    count, total = publish_layers(data_root, client, cfg["R2_BUCKET"], prefix)
+    if layer:
+        try:
+            count, total = publish_one_layer(data_root, layer, client, cfg["R2_BUCKET"], prefix)
+        except PublishError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(1) from exc
+    else:
+        count, total = publish_layers(data_root, client, cfg["R2_BUCKET"], prefix)
     typer.echo(f"{count} objects, {total / 1e6:.2f} MB -> bucket {cfg['R2_BUCKET']}")
 
 

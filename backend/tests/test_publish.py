@@ -214,3 +214,98 @@ def test_content_type_ignores_host_mime_table(tmp_path: Path) -> None:
         assert content_type("a.parquet") == "application/octet-stream"
     finally:
         mimetypes.init()
+
+
+# --- single-layer mode (forecast-outlook in the daily job) ---------------------------------------------
+
+
+class FakeS3Live(FakeS3):
+    def __init__(self, index: object | None) -> None:
+        super().__init__()
+        self.index = index
+
+    def get_object(self, **kwargs: object) -> dict:
+        self.calls.append({"get": kwargs["Key"]})
+        if self.index is None:
+            raise KeyError("NoSuchKey")
+        import io
+
+        body = self.index if isinstance(self.index, bytes) else json.dumps(self.index).encode()
+        return {"Body": io.BytesIO(body)}
+
+
+def _live_entry(name: str) -> dict:
+    return {**BASE, "id": name, "outlook_status": None, "extra": "kept"}
+
+
+def test_single_layer_merges_into_live_index_and_uploads_only_that_layer(tree: Path) -> None:
+    from clima_nqn.publish import publish_one_layer
+
+    s3 = FakeS3Live([_live_entry("zz-live"), _live_entry("no-frames"), _live_entry("gone")])
+    count, _ = publish_one_layer(tree, "no-frames", s3, "bkt")
+    puts = [c for c in s3.calls if "Key" in c]
+    assert [c["Key"] for c in puts] == [
+        "no-frames/a.parquet",
+        "no-frames/manifest.json",
+        "layers.json",
+    ]
+    assert count == 3
+    merged = json.loads(puts[-1]["Body"])
+    assert [e["id"] for e in merged] == ["gone", "no-frames", "zz-live"]  # others kept, sorted
+    assert next(e for e in merged if e["id"] == "zz-live")["extra"] == "kept"
+    assert next(e for e in merged if e["id"] == "no-frames")["files"] == ["a.parquet"]
+    assert "extra" not in next(e for e in merged if e["id"] == "no-frames")  # replaced, not merged
+
+
+def test_single_layer_inserts_new_entry_with_prefix(tree: Path) -> None:
+    from clima_nqn.publish import publish_one_layer
+
+    s3 = FakeS3Live([_live_entry("zz-live")])
+    publish_one_layer(tree, "no-frames", s3, "bkt", prefix="p")
+    assert s3.calls[0] == {"get": "p/layers.json"}
+    assert [c["Key"] for c in s3.calls if "Key" in c][-1] == "p/layers.json"
+    assert [e["id"] for e in json.loads([c for c in s3.calls if "Key" in c][-1]["Body"])] == [
+        "no-frames",
+        "zz-live",
+    ]
+
+
+@pytest.mark.parametrize("live", [None, b"not json", {"a": 1}, [1, 2]])
+def test_single_layer_refuses_when_live_index_unreadable(tree: Path, live: object) -> None:
+    from clima_nqn.publish import PublishError, publish_one_layer
+
+    s3 = FakeS3Live(live)
+    with pytest.raises(PublishError):
+        publish_one_layer(tree, "no-frames", s3, "bkt")
+    assert not [c for c in s3.calls if "Key" in c]  # nothing uploaded
+
+
+def test_single_layer_refuses_unknown_or_incomplete_layer(tree: Path) -> None:
+    from clima_nqn.publish import PublishError, publish_one_layer
+
+    for name in ("incomplete", "bad", "nope"):
+        s3 = FakeS3Live([])
+        with pytest.raises(PublishError):
+            publish_one_layer(tree, name, s3, "bkt")
+        assert s3.calls == []
+
+
+def test_cli_single_layer(tree: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    for k, v in ENV.items():
+        monkeypatch.setenv(k, v)
+    s3 = FakeS3Live([_live_entry("zz-live")])
+    monkeypatch.setattr(cli, "make_client", lambda *_a, **_k: s3)
+    r = CliRunner().invoke(cli.app, ["publish", "--root", str(tree), "--layer", "no-frames"])
+    assert r.exit_code == 0, r.output
+    assert "3 objects" in r.output
+    dry = CliRunner().invoke(
+        cli.app, ["publish", "--root", str(tree), "--layer", "no-frames", "--dry-run"]
+    )
+    assert dry.exit_code == 0 and "no-frames/manifest.json" in dry.output
+    assert "layers.json" not in dry.output
+    bad = CliRunner().invoke(cli.app, ["publish", "--root", str(tree), "--layer", "nope"])
+    assert bad.exit_code == 1
+    s3_dead = FakeS3Live(None)
+    monkeypatch.setattr(cli, "make_client", lambda *_a, **_k: s3_dead)
+    dead = CliRunner().invoke(cli.app, ["publish", "--root", str(tree), "--layer", "no-frames"])
+    assert dead.exit_code == 1 and "live layers.json" in dead.output

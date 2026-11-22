@@ -506,3 +506,22 @@
 .hind-table { min-width: 0; }
 .hind-table td { white-space: normal; }
 .hind-status { text-align: right; font-size: 11px; line-height: 1.25; }
+
+/* Forecast outlook (F6.6): neutral tokens only; no colour tied to probability or state. */
+.fc-panel .fc-notices { margin: 0; padding: var(--space-2) var(--space-3); background: var(--raised); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-1); }
+.fc-panel .fc-notices p { margin: 0; font-size: 13px; line-height: 1.35; }
+.fc-panel a { color: var(--text); text-decoration: underline; }
+.fc-panel a:focus-visible, .fc-panel .hind-table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fc-title { margin: 0; font-size: 14px; font-weight: 600; }
+.fc-table { min-width: 980px; }
+.fc-table th:nth-child(6), .fc-table td:nth-child(6) { min-width: 210px; }
+.fc-table th:nth-child(7), .fc-table td:nth-child(7) { min-width: 230px; }
+.fc-table th.fc-left, .fc-table td.fc-left { text-align: left; }
+.fc-table td, .fc-table tbody th { vertical-align: top; }
+.fc-sub { display: block; font-size: 11px; color: var(--text-muted); font-weight: 400; }
+h4 .fc-sub { display: inline; }
+.fc-states { display: flex; flex-direction: column; gap: var(--space-1); }
+.fc-states dt { font-weight: 600; font-size: 12px; }
+.fc-states dd { margin: 0; font-size: 12px; line-height: 1.3; color: var(--text-muted); }
+.fc-states dt, .fc-states dd { min-height: 0; justify-content: flex-start; text-align: left; }
+.fc-inputs ul { margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.35; }

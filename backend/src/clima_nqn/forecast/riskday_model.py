@@ -58,7 +58,7 @@ FIT_PERIOD_STR = f"{FIT_PERIOD[0]}/{FIT_PERIOD[1]}"
 LEADS = tuple(range(1, 11))
 ESTADO = "Experimental"
 FEATURES = ("log1p_ens_mean_mm", "member_frac", "month_sin", "month_cos")
-OPERATIONAL_SOURCE = f"{_INGEST_INFO['gefs'].source}; media regional por miembro"
+OPERATIONAL_SOURCE = f"{_INGEST_INFO['gefs_regions'].source}; media regional por miembro"
 _CAP = 500.0
 
 
