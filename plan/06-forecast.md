@@ -167,3 +167,22 @@ lo que ya se observó.
 - Caudal en tiempo real: SNIH no lo tiene; pedir a la AIC acceso operativo (restringido). Sin eso, F6.3 y F6.7 de caudal no son verificables en el día.
 - `registry.append` relee la cadena entera en cada llamada; la emisión usa `append_many` (una verificación por lote).
 - La verificación estacional tarda meses en juntar muestras; el hindcast de F6.2 da la primera estimación.
+
+## Plan de cierre de la fase (2026-11-22)
+
+Cuatro olas, en este orden por el calendario (la temporada prospectiva mayo–sep 2027 solo cuenta si el día de
+riesgo ya se emite antes de mayo): 1) F6.3 + F6.5 de día de riesgo; 2) tope de probabilidad, F6.8 y F6.6;
+3) F6.7 y F6.9 (caudal alto, hindcast); 4) F6.2 estacional. La fase queda "en curso" hasta la temporada 2027.
+
+Decisiones del usuario (2026-11-22):
+
+- F6.2 se hace **sin ENSO como entrada** (nieve y humedad de suelo, lluvia previa), aunque F2.7 no pasó su
+  compuerta; ENSO queda como baseline de análogos. El estacional nunca se promueve.
+- F6.3 usa la logística **congelada con el ajuste 2000–2014**, el mismo modelo que evaluó F5.8.
+- Tope de probabilidad: confiabilidad agrupando las anticipaciones L−1, L y L+1, con tope no creciente en L; por
+  encima se muestra "> tope".
+
+Decisiones de implementación: GEFS operativo 0,25° (`pgrb2sp25`) con los 5 miembros del reforecast (`c00`,
+`p01`–`p04`); incertidumbre por 200 bootstraps de bloques de eventos de los coeficientes (intervalo 90 %);
+nieve y humedad de suelo de ARCO-ERA5 (`sd`, `swvl1–3`) en vez de ERA5-Land (ERA5-Land: sensibilidad pendiente).
+El archivo operativo de `noaa-gefs-pds` cubre junio de 2023 (comprobado), así que F6.7 puede incluir esa crecida.
