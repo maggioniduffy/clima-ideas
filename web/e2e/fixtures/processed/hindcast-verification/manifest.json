@@ -1,0 +1,13 @@
+{
+ "id": "hindcast-verification",
+ "title": "Verificación retrospectiva de pronósticos",
+ "kind": "series",
+ "source": "GEFS, IFS y AIFS falsos de prueba; observado ERA5 falso de prueba",
+ "period": "2001-05-02/2025-06-05",
+ "license": "CC0",
+ "updated_at": "2026-01-01T00:00:00Z",
+ "files": [
+  "cases.json",
+  "skill.json"
+ ]
+}

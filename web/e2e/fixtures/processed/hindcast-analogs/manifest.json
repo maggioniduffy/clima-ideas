@@ -1,0 +1,12 @@
+{
+ "id": "hindcast-analogs",
+ "title": "Análogos ERA5 de los eventos de río atmosférico",
+ "kind": "series",
+ "source": "ERA5 e IMERG falsos de prueba",
+ "period": "1980-01-01/2025-12-31",
+ "license": "CC0",
+ "updated_at": "2026-01-01T00:00:00Z",
+ "files": [
+  "analogs.json"
+ ]
+}

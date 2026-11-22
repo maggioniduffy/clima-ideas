@@ -484,3 +484,25 @@
 .debris-table tr[data-current="true"] td, .debris-table tr[data-current="true"] th { font-weight: 700; }
 .debris-caveats { margin: 0; padding-left: var(--space-4); display: flex; flex-direction: column; gap: 2px; }
 .debris-panel .conv-note { font-size: 12px; line-height: 1.3; }
+
+/* Hindcast verification layer (F5.6): selectors reuse .conv-seg; plain tokens, no emphasis colours */
+.hind-panel h4 { margin: var(--space-1) 0 0; font-size: 14px; font-weight: 600; }
+.hind-panel .conv-note, .hind-panel .flood-warn { font-size: 12px; line-height: 1.3; }
+.hind-tag { margin: 0; font-size: 13px; line-height: 1.35; }
+.hind-section { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.hind-field { display: flex; flex-direction: column; gap: var(--space-1); font-size: 13px; color: var(--text-muted); }
+.hind-select {
+  min-height: 44px; width: 100%; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-md);
+  background: var(--raised); color: var(--text); font: inherit; font-size: 14px;
+}
+.hind-select:focus-visible, .hind-panel a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hind-panel a { color: var(--text); text-decoration: underline; }
+.hind-line { fill: none; stroke: var(--text); stroke-width: 1.75; stroke-linejoin: round; }
+.hind-obs { stroke: var(--water); stroke-width: 2; stroke-dasharray: 6 4; }
+.hind-zero { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.hind-cursor { stroke: var(--text-muted); stroke-width: 1; }
+.hind-dot { fill: var(--accent); stroke: var(--casing); stroke-width: 1.5; }
+.hind-table-wrap { overflow-x: auto; max-width: 100%; }
+.hind-table { min-width: 0; }
+.hind-table td { white-space: normal; }
+.hind-status { text-align: right; font-size: 11px; line-height: 1.25; }

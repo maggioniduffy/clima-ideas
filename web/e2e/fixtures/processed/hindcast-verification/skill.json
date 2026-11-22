@@ -1,0 +1,1637 @@
+{
+ "id": "hindcast-verification",
+ "obs_source": "ERA5 falso de prueba, media de la caja por cos(lat), mm por día UTC",
+ "models": {
+  "gefs-reforecast": {
+   "leads": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "crpss": [
+    {
+     "lead": 1,
+     "value": 0.8,
+     "lo": 0.68,
+     "hi": 0.9
+    },
+    {
+     "lead": 2,
+     "value": 0.74,
+     "lo": 0.61,
+     "hi": 0.84
+    },
+    {
+     "lead": 3,
+     "value": 0.68,
+     "lo": 0.54,
+     "hi": 0.78
+    },
+    {
+     "lead": 4,
+     "value": 0.62,
+     "lo": 0.47,
+     "hi": 0.72
+    },
+    {
+     "lead": 5,
+     "value": 0.56,
+     "lo": 0.4,
+     "hi": 0.66
+    },
+    {
+     "lead": 6,
+     "value": 0.5,
+     "lo": 0.33,
+     "hi": 0.6
+    },
+    {
+     "lead": 7,
+     "value": 0.44,
+     "lo": 0.26,
+     "hi": 0.54
+    },
+    {
+     "lead": 8,
+     "value": 0.38,
+     "lo": 0.19,
+     "hi": 0.48
+    },
+    {
+     "lead": 9,
+     "value": 0.32,
+     "lo": 0.12,
+     "hi": 0.42
+    },
+    {
+     "lead": 10,
+     "value": 0.26,
+     "lo": 0.05,
+     "hi": 0.36
+    }
+   ],
+   "bias": [
+    {
+     "lead": 1,
+     "value": 0.5,
+     "lo": 0.1,
+     "hi": 0.9
+    },
+    {
+     "lead": 2,
+     "value": 0.2,
+     "lo": -0.2,
+     "hi": 0.6
+    },
+    {
+     "lead": 3,
+     "value": -0.1,
+     "lo": -0.5,
+     "hi": 0.3
+    },
+    {
+     "lead": 4,
+     "value": -0.4,
+     "lo": -0.8,
+     "hi": 0.0
+    },
+    {
+     "lead": 5,
+     "value": -0.7,
+     "lo": -1.1,
+     "hi": -0.3
+    },
+    {
+     "lead": 6,
+     "value": -1.0,
+     "lo": -1.4,
+     "hi": -0.6
+    },
+    {
+     "lead": 7,
+     "value": -1.3,
+     "lo": -1.7,
+     "hi": -0.9
+    },
+    {
+     "lead": 8,
+     "value": -1.6,
+     "lo": -2.0,
+     "hi": -1.2
+    },
+    {
+     "lead": 9,
+     "value": -1.9,
+     "lo": -2.3,
+     "hi": -1.5
+    },
+    {
+     "lead": 10,
+     "value": -2.2,
+     "lo": -2.6,
+     "hi": -1.8
+    }
+   ],
+   "n": [
+    {
+     "lead": 1,
+     "n": 202
+    },
+    {
+     "lead": 2,
+     "n": 202
+    },
+    {
+     "lead": 3,
+     "n": 202
+    },
+    {
+     "lead": 4,
+     "n": 202
+    },
+    {
+     "lead": 5,
+     "n": 202
+    },
+    {
+     "lead": 6,
+     "n": 202
+    },
+    {
+     "lead": 7,
+     "n": 202
+    },
+    {
+     "lead": 8,
+     "n": 202
+    },
+    {
+     "lead": 9,
+     "n": 202
+    },
+    {
+     "lead": 10,
+     "n": 202
+    }
+   ]
+  },
+  "ifs": {
+   "leads": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "crpss": [
+    {
+     "lead": 1,
+     "value": 0.6,
+     "lo": 0.48,
+     "hi": 0.7
+    },
+    {
+     "lead": 2,
+     "value": 0.52,
+     "lo": 0.39,
+     "hi": 0.62
+    },
+    {
+     "lead": 3,
+     "value": 0.44,
+     "lo": 0.3,
+     "hi": 0.54
+    },
+    {
+     "lead": 4,
+     "value": 0.36,
+     "lo": 0.21,
+     "hi": 0.46
+    },
+    {
+     "lead": 5,
+     "value": 0.28,
+     "lo": 0.12,
+     "hi": 0.38
+    },
+    {
+     "lead": 6,
+     "value": 0.2,
+     "lo": 0.03,
+     "hi": 0.3
+    },
+    {
+     "lead": 7,
+     "value": 0.12,
+     "lo": -0.06,
+     "hi": 0.22
+    },
+    {
+     "lead": 8,
+     "value": 0.04,
+     "lo": -0.15,
+     "hi": 0.14
+    },
+    {
+     "lead": 9,
+     "value": -0.04,
+     "lo": -0.24,
+     "hi": 0.06
+    },
+    {
+     "lead": 10,
+     "value": -0.12,
+     "lo": -0.33,
+     "hi": -0.02
+    }
+   ],
+   "bias": [
+    {
+     "lead": 1,
+     "value": 0.5,
+     "lo": 0.1,
+     "hi": 0.9
+    },
+    {
+     "lead": 2,
+     "value": 0.2,
+     "lo": -0.2,
+     "hi": 0.6
+    },
+    {
+     "lead": 3,
+     "value": -0.1,
+     "lo": -0.5,
+     "hi": 0.3
+    },
+    {
+     "lead": 4,
+     "value": -0.4,
+     "lo": -0.8,
+     "hi": 0.0
+    },
+    {
+     "lead": 5,
+     "value": -0.7,
+     "lo": -1.1,
+     "hi": -0.3
+    },
+    {
+     "lead": 6,
+     "value": -1.0,
+     "lo": -1.4,
+     "hi": -0.6
+    },
+    {
+     "lead": 7,
+     "value": -1.3,
+     "lo": -1.7,
+     "hi": -0.9
+    },
+    {
+     "lead": 8,
+     "value": -1.6,
+     "lo": -2.0,
+     "hi": -1.2
+    },
+    {
+     "lead": 9,
+     "value": -1.9,
+     "lo": -2.3,
+     "hi": -1.5
+    },
+    {
+     "lead": 10,
+     "value": -2.2,
+     "lo": -2.6,
+     "hi": -1.8
+    }
+   ],
+   "n": [
+    {
+     "lead": 1,
+     "n": 23
+    },
+    {
+     "lead": 2,
+     "n": 23
+    },
+    {
+     "lead": 3,
+     "n": 23
+    },
+    {
+     "lead": 4,
+     "n": 23
+    },
+    {
+     "lead": 5,
+     "n": 23
+    },
+    {
+     "lead": 6,
+     "n": 23
+    },
+    {
+     "lead": 7,
+     "n": 23
+    },
+    {
+     "lead": 8,
+     "n": 23
+    },
+    {
+     "lead": 9,
+     "n": 23
+    },
+    {
+     "lead": 10,
+     "n": 23
+    }
+   ]
+  },
+  "aifs": {
+   "leads": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "crpss": [
+    {
+     "lead": 1,
+     "value": 0.5,
+     "lo": 0.38,
+     "hi": 0.6
+    },
+    {
+     "lead": 2,
+     "value": 0.4,
+     "lo": 0.27,
+     "hi": 0.5
+    },
+    {
+     "lead": 3,
+     "value": 0.3,
+     "lo": 0.16,
+     "hi": 0.4
+    },
+    {
+     "lead": 4,
+     "value": 0.2,
+     "lo": 0.05,
+     "hi": 0.3
+    },
+    {
+     "lead": 5,
+     "value": 0.1,
+     "lo": -0.06,
+     "hi": 0.2
+    },
+    {
+     "lead": 6,
+     "value": 0.0,
+     "lo": -0.17,
+     "hi": 0.1
+    },
+    {
+     "lead": 7,
+     "value": -0.1,
+     "lo": -0.28,
+     "hi": 0.0
+    },
+    {
+     "lead": 8,
+     "value": -0.2,
+     "lo": -0.39,
+     "hi": -0.1
+    },
+    {
+     "lead": 9,
+     "value": -0.3,
+     "lo": -0.5,
+     "hi": -0.2
+    },
+    {
+     "lead": 10,
+     "value": -0.4,
+     "lo": -0.61,
+     "hi": -0.3
+    }
+   ],
+   "bias": [
+    {
+     "lead": 1,
+     "value": 0.5,
+     "lo": 0.1,
+     "hi": 0.9
+    },
+    {
+     "lead": 2,
+     "value": 0.2,
+     "lo": -0.2,
+     "hi": 0.6
+    },
+    {
+     "lead": 3,
+     "value": -0.1,
+     "lo": -0.5,
+     "hi": 0.3
+    },
+    {
+     "lead": 4,
+     "value": -0.4,
+     "lo": -0.8,
+     "hi": 0.0
+    },
+    {
+     "lead": 5,
+     "value": -0.7,
+     "lo": -1.1,
+     "hi": -0.3
+    },
+    {
+     "lead": 6,
+     "value": -1.0,
+     "lo": -1.4,
+     "hi": -0.6
+    },
+    {
+     "lead": 7,
+     "value": -1.3,
+     "lo": -1.7,
+     "hi": -0.9
+    },
+    {
+     "lead": 8,
+     "value": -1.6,
+     "lo": -2.0,
+     "hi": -1.2
+    },
+    {
+     "lead": 9,
+     "value": -1.9,
+     "lo": -2.3,
+     "hi": -1.5
+    },
+    {
+     "lead": 10,
+     "value": -2.2,
+     "lo": -2.6,
+     "hi": -1.8
+    }
+   ],
+   "n": [
+    {
+     "lead": 1,
+     "n": 10
+    },
+    {
+     "lead": 2,
+     "n": 10
+    },
+    {
+     "lead": 3,
+     "n": 10
+    },
+    {
+     "lead": 4,
+     "n": 10
+    },
+    {
+     "lead": 5,
+     "n": 10
+    },
+    {
+     "lead": 6,
+     "n": 10
+    },
+    {
+     "lead": 7,
+     "n": 10
+    },
+    {
+     "lead": 8,
+     "n": 10
+    },
+    {
+     "lead": 9,
+     "n": 10
+    },
+    {
+     "lead": 10,
+     "n": 10
+    }
+   ]
+  }
+ },
+ "aifs_vs_ifs": {
+  "unit": "mm",
+  "first": "2024-03-03",
+  "last": "2025-11-24",
+  "n_event": 10,
+  "rows": [
+   {
+    "lead": "1",
+    "n": 10,
+    "mae_ifs": 1.3,
+    "mae_aifs": 1.48,
+    "diff": 0.18,
+    "lo": -0.5,
+    "hi": 0.8,
+    "bias_ifs": 0.9,
+    "bias_aifs": 1.1,
+    "p_sign": 0.5,
+    "verdict": "sin diferencia detectable"
+   },
+   {
+    "lead": "2",
+    "n": 10,
+    "mae_ifs": 1.6,
+    "mae_aifs": 1.76,
+    "diff": 0.16,
+    "lo": -0.5,
+    "hi": 0.8,
+    "bias_ifs": 0.9,
+    "bias_aifs": 1.1,
+    "p_sign": 0.5,
+    "verdict": "sin diferencia detectable"
+   },
+   {
+    "lead": "3",
+    "n": 10,
+    "mae_ifs": 1.9,
+    "mae_aifs": 2.04,
+    "diff": 0.14,
+    "lo": -0.5,
+    "hi": 0.8,
+    "bias_ifs": 0.9,
+    "bias_aifs": 1.1,
+    "p_sign": 0.5,
+    "verdict": "sin diferencia detectable"
+   }
+  ]
+ },
+ "gate": {
+  "quantile": 0.95,
+  "thresholds_mm": {
+   "cordillera_norte": 15.1,
+   "cordillera_sur": 14.5,
+   "confluencia": 3.4
+  },
+  "n_events_pooled_test": 118,
+  "n_events_test": {
+   "cordillera_norte": 44,
+   "cordillera_sur": 45,
+   "confluencia": 77
+  },
+  "fc_source": "GEFS falso de prueba",
+  "fc_period": "2000-01-10 … 2019-12-31",
+  "regions": {
+   "cordillera_norte": [
+    {
+     "lead": 1,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.49,
+      "lo": 0.39,
+      "hi": 0.59
+     },
+     "bss_log_markov": {
+      "value": 0.48,
+      "lo": 0.38,
+      "hi": 0.58
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.9,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.66,
+       "far": 0.21,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.92,
+       "far": 0.46,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 2,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.44,
+      "lo": 0.34,
+      "hi": 0.54
+     },
+     "bss_log_markov": {
+      "value": 0.43,
+      "lo": 0.33,
+      "hi": 0.53
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.8,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.62,
+       "far": 0.22,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.89,
+       "far": 0.47,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 3,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.39,
+      "lo": 0.29,
+      "hi": 0.49
+     },
+     "bss_log_markov": {
+      "value": 0.38,
+      "lo": 0.28,
+      "hi": 0.48
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.7,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.58,
+       "far": 0.23,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.86,
+       "far": 0.48,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 4,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.34,
+      "lo": 0.24,
+      "hi": 0.44
+     },
+     "bss_log_markov": {
+      "value": 0.33,
+      "lo": 0.23,
+      "hi": 0.43
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.6,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.54,
+       "far": 0.24,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.83,
+       "far": 0.49,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 5,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.29,
+      "lo": 0.19,
+      "hi": 0.39
+     },
+     "bss_log_markov": {
+      "value": 0.28,
+      "lo": 0.18,
+      "hi": 0.38
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.5,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.5,
+       "far": 0.25,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.8,
+       "far": 0.5,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 6,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.24,
+      "lo": 0.14,
+      "hi": 0.34
+     },
+     "bss_log_markov": {
+      "value": 0.23,
+      "lo": 0.13,
+      "hi": 0.33
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.46,
+       "far": 0.26,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.77,
+       "far": 0.51,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 7,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.19,
+      "lo": 0.09,
+      "hi": 0.29
+     },
+     "bss_log_markov": {
+      "value": 0.18,
+      "lo": 0.08,
+      "hi": 0.28
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.42,
+       "far": 0.27,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.74,
+       "far": 0.52,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 8,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.14,
+      "lo": 0.04,
+      "hi": 0.24
+     },
+     "bss_log_markov": {
+      "value": 0.13,
+      "lo": 0.03,
+      "hi": 0.23
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.38,
+       "far": 0.28,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.71,
+       "far": 0.53,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 9,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.09,
+      "lo": -0.01,
+      "hi": 0.19
+     },
+     "bss_log_markov": {
+      "value": 0.08,
+      "lo": -0.02,
+      "hi": 0.18
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.34,
+       "far": 0.29,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.68,
+       "far": 0.54,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 10,
+     "n_events": 46,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.04,
+      "lo": -0.06,
+      "hi": 0.14
+     },
+     "bss_log_markov": {
+      "value": 0.03,
+      "lo": -0.07,
+      "hi": 0.13
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.3,
+       "far": 0.3,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.65,
+       "far": 0.55,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    }
+   ],
+   "cordillera_sur": [
+    {
+     "lead": 1,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.5,
+      "lo": 0.4,
+      "hi": 0.6
+     },
+     "bss_log_markov": {
+      "value": 0.49,
+      "lo": 0.39,
+      "hi": 0.59
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.9,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.66,
+       "far": 0.21,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.92,
+       "far": 0.46,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 2,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.45,
+      "lo": 0.35,
+      "hi": 0.55
+     },
+     "bss_log_markov": {
+      "value": 0.44,
+      "lo": 0.34,
+      "hi": 0.54
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.8,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.62,
+       "far": 0.22,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.89,
+       "far": 0.47,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 3,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.4,
+      "lo": 0.3,
+      "hi": 0.5
+     },
+     "bss_log_markov": {
+      "value": 0.39,
+      "lo": 0.29,
+      "hi": 0.49
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.7,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.58,
+       "far": 0.23,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.86,
+       "far": 0.48,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 4,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.35,
+      "lo": 0.25,
+      "hi": 0.45
+     },
+     "bss_log_markov": {
+      "value": 0.34,
+      "lo": 0.24,
+      "hi": 0.44
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.6,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.54,
+       "far": 0.24,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.83,
+       "far": 0.49,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 5,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.3,
+      "lo": 0.2,
+      "hi": 0.4
+     },
+     "bss_log_markov": {
+      "value": 0.29,
+      "lo": 0.19,
+      "hi": 0.39
+     },
+     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "prob_cap": 0.5,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.5,
+       "far": 0.25,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.8,
+       "far": 0.5,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 6,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.25,
+      "lo": 0.15,
+      "hi": 0.35
+     },
+     "bss_log_markov": {
+      "value": 0.24,
+      "lo": 0.14,
+      "hi": 0.34
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.46,
+       "far": 0.26,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.77,
+       "far": 0.51,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 7,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.2,
+      "lo": 0.1,
+      "hi": 0.3
+     },
+     "bss_log_markov": {
+      "value": 0.19,
+      "lo": 0.09,
+      "hi": 0.29
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.42,
+       "far": 0.27,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.74,
+       "far": 0.52,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 8,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.15,
+      "lo": 0.05,
+      "hi": 0.25
+     },
+     "bss_log_markov": {
+      "value": 0.14,
+      "lo": 0.04,
+      "hi": 0.24
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.38,
+       "far": 0.28,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.71,
+       "far": 0.53,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 9,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.1,
+      "lo": 0.0,
+      "hi": 0.2
+     },
+     "bss_log_markov": {
+      "value": 0.09,
+      "lo": -0.01,
+      "hi": 0.19
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.34,
+       "far": 0.29,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.68,
+       "far": 0.54,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 10,
+     "n_events": 45,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.05,
+      "lo": -0.05,
+      "hi": 0.15
+     },
+     "bss_log_markov": {
+      "value": 0.04,
+      "lo": -0.06,
+      "hi": 0.14
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.3,
+       "far": 0.3,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.65,
+       "far": 0.55,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    }
+   ],
+   "confluencia": [
+    {
+     "lead": 1,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.55,
+      "lo": 0.45,
+      "hi": 0.65
+     },
+     "bss_log_markov": {
+      "value": 0.54,
+      "lo": 0.44,
+      "hi": 0.64
+     },
+     "status": "Experimental",
+     "prob_cap": 0.9,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.66,
+       "far": 0.21,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.92,
+       "far": 0.46,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 2,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.5,
+      "lo": 0.4,
+      "hi": 0.6
+     },
+     "bss_log_markov": {
+      "value": 0.49,
+      "lo": 0.39,
+      "hi": 0.59
+     },
+     "status": "Experimental",
+     "prob_cap": 0.8,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.62,
+       "far": 0.22,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.89,
+       "far": 0.47,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 3,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.45,
+      "lo": 0.35,
+      "hi": 0.55
+     },
+     "bss_log_markov": {
+      "value": 0.44,
+      "lo": 0.34,
+      "hi": 0.54
+     },
+     "status": "Experimental",
+     "prob_cap": 0.7,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.58,
+       "far": 0.23,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.86,
+       "far": 0.48,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 4,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.4,
+      "lo": 0.3,
+      "hi": 0.5
+     },
+     "bss_log_markov": {
+      "value": 0.39,
+      "lo": 0.29,
+      "hi": 0.49
+     },
+     "status": "Experimental",
+     "prob_cap": 0.6,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.54,
+       "far": 0.24,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.83,
+       "far": 0.49,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 5,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.35,
+      "lo": 0.25,
+      "hi": 0.45
+     },
+     "bss_log_markov": {
+      "value": 0.34,
+      "lo": 0.24,
+      "hi": 0.44
+     },
+     "status": "Experimental",
+     "prob_cap": 0.5,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.5,
+       "far": 0.25,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.8,
+       "far": 0.5,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 6,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.3,
+      "lo": 0.2,
+      "hi": 0.4
+     },
+     "bss_log_markov": {
+      "value": 0.29,
+      "lo": 0.19,
+      "hi": 0.39
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.46,
+       "far": 0.26,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.77,
+       "far": 0.51,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 7,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.25,
+      "lo": 0.15,
+      "hi": 0.35
+     },
+     "bss_log_markov": {
+      "value": 0.24,
+      "lo": 0.14,
+      "hi": 0.34
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.42,
+       "far": 0.27,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.74,
+       "far": 0.52,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 8,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.2,
+      "lo": 0.1,
+      "hi": 0.3
+     },
+     "bss_log_markov": {
+      "value": 0.19,
+      "lo": 0.09,
+      "hi": 0.29
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.38,
+       "far": 0.28,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.71,
+       "far": 0.53,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 9,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.15,
+      "lo": 0.05,
+      "hi": 0.25
+     },
+     "bss_log_markov": {
+      "value": 0.14,
+      "lo": 0.04,
+      "hi": 0.24
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.34,
+       "far": 0.29,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.68,
+       "far": 0.54,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    },
+    {
+     "lead": 10,
+     "n_events": 40,
+     "n_events_pooled": 118,
+     "base_rate": 0.04,
+     "bss_log_clim": {
+      "value": 0.1,
+      "lo": 0.0,
+      "hi": 0.2
+     },
+     "bss_log_markov": {
+      "value": 0.09,
+      "lo": -0.01,
+      "hi": 0.19
+     },
+     "status": "Experimental",
+     "prob_cap": 0.4,
+     "pod_far": {
+      "p>=0.5": {
+       "pod": 0.3,
+       "far": 0.3,
+       "hits": 40,
+       "false_alarms": 10,
+       "n_risk_days": 60
+      },
+      "p>=2base": {
+       "pod": 0.65,
+       "far": 0.55,
+       "hits": 58,
+       "false_alarms": 50,
+       "n_risk_days": 60
+      }
+     }
+    }
+   ]
+  }
+ }
+}

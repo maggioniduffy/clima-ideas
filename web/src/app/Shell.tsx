@@ -15,6 +15,8 @@ import { CONVECTION_LAYER_ID } from "../layers/convectionIdf";
 import { useConvectionIdf } from "../layers/useConvectionIdf";
 import { DEBRIS_LAYER_ID } from "../layers/debrisCatchments";
 import { useDebrisCatchments } from "../layers/useDebrisCatchments";
+import { ANALOGS_LAYER_ID, HINDCAST_LAYER_ID } from "../layers/hindcast";
+import { useHindcast } from "../layers/useHindcast";
 import { useLayers } from "../layers/useLayers";
 import { useTheme } from "../theme/themeStore";
 import { ClockBox } from "./ClockBox";
@@ -146,6 +148,9 @@ export function Shell() {
   const debrisLayer = s.layers.find((l) => l.id === DEBRIS_LAYER_ID);
   const debrisActive = !!debrisLayer && s.activeIds.has(debrisLayer.id);
   const debris = useDebrisCatchments(debrisLayer, debrisActive);
+  const hindcastLayer = s.layers.find((l) => l.id === HINDCAST_LAYER_ID);
+  const hindcastActive = !!hindcastLayer && s.activeIds.has(hindcastLayer.id);
+  const hindcast = useHindcast(hindcastLayer, s.layers.find((l) => l.id === ANALOGS_LAYER_ID), hindcastActive);
   const refLayers = useReferenceLayers();
   const arVisible = useMemo(
     () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn, TOP_N, ratios),
@@ -251,6 +256,11 @@ export function Shell() {
             debris={
               debrisActive && debrisLayer && s.selectedLayer?.id === debrisLayer.id
                 ? { state: debris, source: debrisLayer.source, period: debrisLayer.period }
+                : null
+            }
+            hindcast={
+              hindcastActive && hindcastLayer && s.selectedLayer?.id === hindcastLayer.id
+                ? { state: hindcast, source: hindcastLayer.source, period: hindcastLayer.period, license: hindcastLayer.license }
                 : null
             }
             enso={

@@ -1,0 +1,481 @@
+{
+ "id": "hindcast-analogs",
+ "title": "Análogos ERA5 de los eventos de río atmosférico",
+ "source": "ERA5 e IMERG falsos de prueba",
+ "license": "CC0",
+ "period": "1980-01-01/2025-12-31",
+ "k": 10,
+ "regions": [
+  "cordillera_norte",
+  "cordillera_sur",
+  "confluencia"
+ ],
+ "units": {
+  "rain": "mm/día",
+  "ivt_max": "kg m-1 s-1",
+  "distance": "kg m-1 s-1 (anomalías ponderadas)"
+ },
+ "rain_periods": {
+  "imerg": "2000-06-01/2025-09-30",
+  "era5": "2000-01-01/2019-12-31"
+ },
+ "summary": {},
+ "events": [
+  {
+   "event_id": "AR-2001-001",
+   "date": "2001-05-02",
+   "ivt_max": 455.3,
+   "ivt_daily_max": 415.3,
+   "analogs": [
+    {
+     "rank": 1,
+     "date": "1985-05-10",
+     "distance": 1.5,
+     "ar_event_id": "AR-1985-001",
+     "ivt_max": 420,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 2.5
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "date": "1988-05-11",
+     "distance": 1.9,
+     "ar_event_id": null,
+     "ivt_max": 408,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 3.0
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "date": "1991-05-12",
+     "distance": 2.3,
+     "ar_event_id": "AR-1991-003",
+     "ivt_max": 396,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 3.5
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "date": "1994-05-13",
+     "distance": 2.7,
+     "ar_event_id": "AR-1994-004",
+     "ivt_max": 384,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 4.0
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "date": "1997-05-14",
+     "distance": 3.1,
+     "ar_event_id": null,
+     "ivt_max": 372,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 4.5
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 6,
+     "date": "2000-05-15",
+     "distance": 3.5,
+     "ar_event_id": null,
+     "ivt_max": 360,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 8.0,
+       "era5": 5.0
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 7,
+     "date": "2003-05-16",
+     "distance": 3.9,
+     "ar_event_id": null,
+     "ivt_max": 348,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 9.0,
+       "era5": 5.5
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 8,
+     "date": "2006-05-17",
+     "distance": 4.3,
+     "ar_event_id": null,
+     "ivt_max": 336,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 10.0,
+       "era5": 6.0
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 9,
+     "date": "2009-05-18",
+     "distance": 4.7,
+     "ar_event_id": null,
+     "ivt_max": 324,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 11.0,
+       "era5": 6.5
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 10,
+     "date": "2012-05-19",
+     "distance": 5.1,
+     "ar_event_id": null,
+     "ivt_max": 312,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 12.0,
+       "era5": 7.0
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    }
+   ],
+   "analog_summary": {
+    "n_days": 10,
+    "ar_fraction": 0.3,
+    "ivt_max_mean": 360.0
+   },
+   "baseline": {
+    "n_days": 10,
+    "ar_fraction": 0.1,
+    "ivt_max_mean": 210.0
+   }
+  },
+  {
+   "event_id": "AR-2024-002",
+   "date": "2024-03-20",
+   "ivt_max": 501.0,
+   "ivt_daily_max": 461.0,
+   "analogs": [
+    {
+     "rank": 1,
+     "date": "1985-05-10",
+     "distance": 1.5,
+     "ar_event_id": null,
+     "ivt_max": 420,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 2.5
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "date": "1988-05-11",
+     "distance": 1.9,
+     "ar_event_id": "AR-1988-002",
+     "ivt_max": 408,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 3.0
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "date": "1991-05-12",
+     "distance": 2.3,
+     "ar_event_id": null,
+     "ivt_max": 396,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 3.5
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "date": "1994-05-13",
+     "distance": 2.7,
+     "ar_event_id": null,
+     "ivt_max": 384,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 4.0
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "date": "1997-05-14",
+     "distance": 3.1,
+     "ar_event_id": null,
+     "ivt_max": 372,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": null,
+       "era5": 4.5
+      },
+      "cordillera_sur": {
+       "imerg": null,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": null,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 6,
+     "date": "2000-05-15",
+     "distance": 3.5,
+     "ar_event_id": null,
+     "ivt_max": 360,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 8.0,
+       "era5": 5.0
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 7,
+     "date": "2003-05-16",
+     "distance": 3.9,
+     "ar_event_id": null,
+     "ivt_max": 348,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 9.0,
+       "era5": 5.5
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 8,
+     "date": "2006-05-17",
+     "distance": 4.3,
+     "ar_event_id": null,
+     "ivt_max": 336,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 10.0,
+       "era5": 6.0
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 9,
+     "date": "2009-05-18",
+     "distance": 4.7,
+     "ar_event_id": null,
+     "ivt_max": 324,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 11.0,
+       "era5": 6.5
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    },
+    {
+     "rank": 10,
+     "date": "2012-05-19",
+     "distance": 5.1,
+     "ar_event_id": null,
+     "ivt_max": 312,
+     "rain": {
+      "cordillera_norte": {
+       "imerg": 12.0,
+       "era5": 7.0
+      },
+      "cordillera_sur": {
+       "imerg": 1.1,
+       "era5": 0.9
+      },
+      "confluencia": {
+       "imerg": 0.2,
+       "era5": 0.1
+      }
+     }
+    }
+   ],
+   "analog_summary": {
+    "n_days": 10,
+    "ar_fraction": 0.1,
+    "ivt_max_mean": 360.0
+   },
+   "baseline": {
+    "n_days": 10,
+    "ar_fraction": 0.1,
+    "ivt_max_mean": 210.0
+   }
+  }
+ ]
+}
