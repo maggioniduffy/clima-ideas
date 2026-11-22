@@ -109,3 +109,45 @@ def test_train_period_after_issue_rejected(tmp_path) -> None:
         baselines.emit(
             make_registry(tmp_path), "1", sine_flow(), ISSUE, "v1", "2015-01-01/2021-06-01", INPUTS
         )
+
+
+def _cli_setup(tmp_path):
+    import typer
+    from typer.testing import CliRunner
+
+    from clima_nqn.forecast.cli import forecast_app
+
+    flow_dir = tmp_path / "flow"
+    flow_dir.mkdir()
+    today = datetime.now(UTC).date()
+    for sid in ("111", "222"):
+        sine_flow(end=(today - pd.Timedelta(days=3)).isoformat()).to_parquet(
+            flow_dir / f"{sid}.parquet", index=False
+        )
+    app = typer.Typer()
+    app.add_typer(forecast_app, name="forecast")
+    base = [
+        "forecast",
+        "emit",
+        "--flow-dir",
+        str(flow_dir),
+        "--registry",
+        str(tmp_path / "r.jsonl"),
+    ]
+    return CliRunner(), app, base, PredictionRegistry(tmp_path / "r.jsonl")
+
+
+def test_cli_emit_idempotent_and_options(tmp_path) -> None:
+    runner, app, base, reg = _cli_setup(tmp_path)
+    r = runner.invoke(app, [*base, "--station", "111"])
+    assert r.exit_code == 0, (r.output, r.exception)
+    assert len(reg.read()) == 20 and {x.model_name for x in reg.read()} == {"climatologia"}
+    r = runner.invoke(app, base)  # all stations; 111 already done
+    assert r.exit_code == 0 and "ya emitido" in r.output
+    assert len(reg.read()) == 40
+    r = runner.invoke(app, base)  # full rerun
+    assert r.exit_code == 0 and r.output.count("ya emitido") == 2 and len(reg.read()) == 40
+    r = runner.invoke(app, [*base, "--models", "climatologia,persistencia", "--station", "111"])
+    assert r.exit_code == 0, (r.output, repr(r.exception))
+    assert len(reg.read()) == 60  # persistencia added for 111
+    assert runner.invoke(app, [*base, "--models", "foo"]).exit_code == 2

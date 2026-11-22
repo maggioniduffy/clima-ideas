@@ -160,41 +160,54 @@ class PredictionRegistry:
         return None if prev == _ZERO_HASH else prev
 
     def append(self, draft: PredictionDraft) -> PredictionRecord:
+        return self.append_many([draft])[0]
+
+    def append_many(self, drafts: list[PredictionDraft]) -> list[PredictionRecord]:
+        """Append a batch all-or-nothing: verify the chain once, check every draft and every duplicate
+        (against the file and within the batch) before writing, then one write + fsync."""
+        if not drafts:
+            return []
         now = self._clock().astimezone(UTC)
-        if draft.issue_date < now - ISSUE_TOLERANCE:
-            raise InvalidPredictionError(
-                f"issue_date {draft.issue_date:%Y-%m-%dT%H:%MZ} is in the past"
-            )
-        if draft.issue_date > now + ISSUE_TOLERANCE:
-            raise InvalidPredictionError(
-                f"issue_date {draft.issue_date:%Y-%m-%dT%H:%MZ} is in the future"
-            )
-        if draft.valid_date < now.date():
-            raise InvalidPredictionError("valid_date is before the issue date")
-        if draft.valid_date != now.date() + timedelta(days=draft.lead_days):
-            raise InvalidPredictionError("valid_date does not match issue date + lead_days")
+        for draft in drafts:
+            if draft.issue_date < now - ISSUE_TOLERANCE:
+                raise InvalidPredictionError(
+                    f"issue_date {draft.issue_date:%Y-%m-%dT%H:%MZ} is in the past"
+                )
+            if draft.issue_date > now + ISSUE_TOLERANCE:
+                raise InvalidPredictionError(
+                    f"issue_date {draft.issue_date:%Y-%m-%dT%H:%MZ} is in the future"
+                )
+            if draft.valid_date < now.date():
+                raise InvalidPredictionError("valid_date is before the issue date")
+            if draft.valid_date != now.date() + timedelta(days=draft.lead_days):
+                raise InvalidPredictionError("valid_date does not match issue date + lead_days")
 
         head = self.verify()  # refuse to extend a tampered chain
         existing = self.read()
-        if any(_key(r, r.issued_at) == _key(draft, now) for r in existing):
-            raise DuplicatePredictionError(
-                f"already issued: {draft.model_version}/{draft.variable}/{draft.region}/"
-                f"lead {draft.lead_days}/{now.date()}"
+        seen = {_key(r, r.issued_at) for r in existing}
+        for draft in drafts:
+            k = _key(draft, now)
+            if k in seen:
+                raise DuplicatePredictionError(
+                    f"already issued: {draft.model_version}/{draft.variable}/{draft.region}/"
+                    f"lead {draft.lead_days}/{now.date()}"
+                )
+            seen.add(k)
+        records, lines, prev = [], [], head or _ZERO_HASH
+        for i, draft in enumerate(drafts):
+            body = draft.model_dump(mode="json")
+            body.update(
+                issued_at=now.isoformat(timespec="seconds"), seq=len(existing) + i, prev_hash=prev
             )
-        body = draft.model_dump(mode="json")
-        body.update(
-            issued_at=now.isoformat(timespec="seconds"),
-            seq=len(existing),
-            prev_hash=head or _ZERO_HASH,
-        )
-        body["record_hash"] = compute_record_hash(body)
-        record = PredictionRecord.model_validate(body)
+            body["record_hash"] = prev = compute_record_hash(body)
+            records.append(PredictionRecord.model_validate(body))
+            lines.append(json.dumps(body, sort_keys=True, ensure_ascii=False) + "\n")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(body, sort_keys=True, ensure_ascii=False) + "\n")
+            f.write("".join(lines))
             f.flush()
             os.fsync(f.fileno())
-        return record
+        return records
 
     def _raw(self) -> list[dict[str, Any]]:
         if not self.path.exists():

@@ -203,14 +203,18 @@ def build_drafts(
     model_version: str,
     train_period: str | Period,
     inputs: list[InputSource],
+    models: tuple[str, ...] = MODELS,
 ) -> list[PredictionDraft]:
-    """The 10 leads x 2 variables x 2 models drafts for one station."""
+    """The 10 leads x 2 variables drafts for one station, per requested model."""
+    unknown = set(models) - set(MODELS)
+    if unknown:
+        raise ValueError(f"unknown models: {sorted(unknown)}")
     period = parse_period(train_period)
     day = issue_date.date()
     if period[1] > day:
         raise ValueError("train_period ends after the issue date")
     clim = fit_climatology(flow, period)
-    pers = fit_persistence(flow, period)
+    pers = fit_persistence(flow, period) if "persistencia" in models else None
     obs_date, obs_q = last_observation(flow, day)
     lag = (day - obs_date).days
     in_hash = hash_inputs(
@@ -241,19 +245,22 @@ def build_drafts(
         valid = day + timedelta(days=lead)
         cq, cp, cn = clim.at(valid)
         h = lead + lag
-        pf = pers.forecast(obs_q, obs_date, h)
-        models = (
-            ("climatologia", cq, cp, cn, clim.threshold, {}),
-            (
-                "persistencia",
-                pf["quantiles"],
-                pf["p_exceed"],
-                pf["n_pairs"],
-                pers.threshold,
-                {"effective_horizon_days": h},
-            ),
-        )
-        for name, quant, p, n, thr, extra in models:
+        pf = pers.forecast(obs_q, obs_date, h) if pers else None
+        specs: list[tuple] = []
+        if "climatologia" in models:
+            specs.append(("climatologia", cq, cp, cn, clim.threshold, {}))
+        if pf is not None and pers is not None:
+            specs.append(
+                (
+                    "persistencia",
+                    pf["quantiles"],
+                    pf["p_exceed"],
+                    pf["n_pairs"],
+                    pers.threshold,
+                    {"effective_horizon_days": h},
+                )
+            )
+        for name, quant, p, n, thr, extra in specs:
             meta = {
                 **common,
                 "lead_days": lead,
@@ -296,6 +303,7 @@ def emit(
     model_version: str,
     train_period: str | Period,
     inputs: list[InputSource],
+    models: tuple[str, ...] = MODELS,
 ) -> list[PredictionRecord]:
     """Build and append the baseline predictions of one station; returns the appended records.
 
@@ -308,5 +316,5 @@ def emit(
         if now.date() != issue_date:
             raise ValueError(f"issue date {issue_date} is not the registry's today ({now.date()})")
         issue_date = now
-    drafts = build_drafts(station, flow, issue_date, model_version, train_period, inputs)
-    return [registry.append(d) for d in drafts]
+    drafts = build_drafts(station, flow, issue_date, model_version, train_period, inputs, models)
+    return registry.append_many(drafts)

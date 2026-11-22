@@ -1,6 +1,6 @@
 # Fase 6 — Predicción a futuro (experimental)
 
-Estado: pendiente · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
+Estado: en curso (F6.1, F6.4 y el código de F6.5 hechos; registro diario solo con climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
 
 Mide si los modelos predicen mejor que la climatología algo que todavía no pasó. Desde el 2026-11-12 (`plan.md`,
 Rumbo 7) una variable y anticipación que pasa la compuerta de evidencia se muestra como "Perspectiva de riesgo"
@@ -34,11 +34,11 @@ encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en b
 
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
-| F6.1 | Ingesta operativa idempotente de entradas actuales (ERA5T, ERA5-Land, ECMWF open data, GEFS, ONI, caudal); verificar antes la latencia real del caudal en tiempo real (SNIH dice no ser red de alerta; AIC restringida) | Sonnet escribe, Haiku corre | Latencia de caudal medida y anotada en `docs/research/data-access.md` + una corrida trae el último día disponible + unit de idempotencia |
+| F6.1 ✅ | Ingesta operativa idempotente de entradas actuales (ERA5T, ERA5-Land, ECMWF open data, GEFS, ONI, caudal); verificar antes la latencia real del caudal en tiempo real (SNIH dice no ser red de alerta; AIC restringida) | Sonnet escribe, Haiku corre | Latencia de caudal medida y anotada en `docs/research/data-access.md` + una corrida trae el último día disponible + unit de idempotencia |
 | F6.2 | Modelo estacional (regresión logística y LightGBM) + baselines, validado según "Validación (F6.2)" | Sonnet implementa, Haiku entrena | RPS y Brier por año de test vs. cada baseline + unit de particiones sin fuga |
 | F6.3 | Corrida de corto plazo: F5.3 y LSTM F2.5 alimentados con pronósticos operativos | Sonnet | Predicción emitida para hoy con incertidumbre |
 | F6.4 ✅ | Registro de predicciones congeladas: append-only con fecha de emisión, versión de modelo y hash de entradas | Sonnet | Unit: no se puede editar ni emitir con fecha pasada |
-| F6.5 | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, Haiku corre | Tabla de skill por horizonte + unit de métricas |
+| F6.5 (código ✅) | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, Haiku corre | Tabla de skill por horizonte + unit de métricas |
 | F6.6 | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
 | F6.7 | Prueba de caudal alto: dejando afuera cada crecida grande (junio de 2023 incluida), con entradas de pronóstico y la latencia de caudal de F6.1, ¿la probabilidad de superar el umbral sube sobre la climatología antes de cada pico y los intervalos cubren los picos cerca de lo nominal? | Haiku corre, Sonnet codifica | Tabla por crecida y anticipación con veredicto + unit de partición sin fuga |
 | F6.8 | Promoción y descenso: aplica la compuerta por variable, anticipación y región, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión; el descenso de una anticipación arrastra a las más largas |
@@ -131,11 +131,34 @@ lo que ya se observó.
   admiten duplicados por (versión, variable, región, anticipación, día). 17 unit. Todavía no emite predicciones:
   espera a F6.1.
 
+- F6.1 (2026-11-22): `clima-nqn ops ingest` (`backend/src/clima_nqn/ops/ingest.py`) guarda cada día
+  `<fuente>/<fecha>.parquet` de caudal SNIH (60 días), ONI, lluvia ERA5T por cuenca (14 días) y lluvia diaria por
+  cuenca de ECMWF IFS (AWS) y GEFS (media y control) a 1–10 días, con `available_on`, licencia y un `manifest.json`
+  con el rezago. Escritura atómica, se saltea lo ya guardado, una fuente caída no frena a las otras. 19 unit.
+  Latencias medidas (`reports/06/F6.1-latency.md`): **SNIH no tiene tiempo real**: último caudal el 2026-03-31 en
+  Paso de Indios y Bajada del Agrio (236 días), 2021 o nada en las otras cuatro; ERA5T 7 días con días enteros
+  vacíos; ECMWF y GEFS < 1 día; el portal de ECMWF guarda ~3 días, por eso se archiva a diario. Corrida real:
+  4 de 5 fuentes ok (caudal: sin filas recientes). Solo 3 estaciones tienen caja de cuenca (`snow.UPSTREAM_BOXES`).
+- Decisión del usuario (2026-11-22): archivar pronósticos y emitir solo climatología de caudal; la persistencia
+  queda en pausa hasta tener caudal en tiempo real (pedir acceso a la AIC). La climatología se puntúa cuando SNIH
+  cargue los datos; las predicciones siguen congeladas antes de conocerlos.
+- Baselines (2026-11-22): `forecast/baselines.py`, climatología del día del año (±7 días, cuantiles 5–95 %) y
+  persistencia (razón logarítmica por anticipación y mes, horizonte efectivo = anticipación + rezago), variables
+  `caudal_diario` y `p_caudal_alto` (umbral provisional p95 del período de entrenamiento, intervalo de Wilson 90 %).
+  `clima-nqn forecast emit`. El registro ganó un campo libre `details` (compatible hacia atrás).
+- F6.5 código (2026-11-22): `forecast/scoring.py`, error absoluto, CRPS aproximado por pinball sobre los cuantiles
+  5–95 % y Brier; skill 1 − S/S_clim sobre casos pareados, IC 95 % bootstrap por bloques de semana, POD y FAR con
+  p > 0,5, "insuficiente" con menos de 10 eventos. Solo puntúa registros del registro F6.4. `clima-nqn forecast score`.
+- Dónde corre (Abierto, decidido 2026-11-22): `.github/workflows/forecast-daily.yml`, todos los días a las 10:17 UTC
+  (ingesta, emisión y, los lunes, puntuación), con commit sin force a la rama `data/forecast-registry`. El
+  entrenamiento es una foto congelada de SNIH (`training/flow`) cuyo hash va en la versión del modelo. Los
+  programados solo corren desde `main`.
 ## Abierto
 
 - Pronóstico ENSO: IRI ya no ofrece descarga de datos; queda C3S por CDS. Archivo histórico de pronósticos emitidos:
   sin verificar.
 - "Modelo bueno" para mostrarse como perspectiva: lo fija la compuerta de evidencia (2026-11-12). Si F5.8 muestra
   menos de 10 eventos independientes esperables por temporada, la espera prospectiva pasa a dos inviernos.
-- Dónde corre la ingesta periódica (cron local o CI programado). Decide Opus en F6.1.
+- Caudal en tiempo real: SNIH no lo tiene; pedir a la AIC acceso operativo (restringido). Sin eso, F6.3 y F6.7 de caudal no son verificables en el día.
+- `registry.append` relee la cadena entera en cada llamada; la emisión usa `append_many` (una verificación por lote).
 - La verificación estacional tarda meses en juntar muestras; el hindcast de F6.2 da la primera estimación.

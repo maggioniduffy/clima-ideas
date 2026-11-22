@@ -31,12 +31,28 @@ def emit_cmd(
     registry: Path = typer.Option(..., help="Archivo JSONL del registro."),
     issue_date: str = typer.Option(None, help="AAAA-MM-DD; por defecto hoy (UTC)."),
     model_version: str = typer.Option("v1", help="Versión de los baselines."),
+    models: str = typer.Option(
+        "climatologia", help="Modelos separados por coma: climatologia, persistencia."
+    ),
+    station: list[str] = typer.Option(None, help="Estación (repetible); por defecto todas."),
 ) -> None:
-    """Emite climatología y persistencia a 1-10 días para cada estación y las agrega al registro."""
+    """Emite baselines a 1-10 días por estación y los agrega al registro (idempotente por día)."""
+    wanted = tuple(m.strip() for m in models.split(",") if m.strip())
+    bad = set(wanted) - set(baselines.MODELS)
+    if bad or not wanted:
+        typer.echo(f"Modelos no válidos: {sorted(bad)}", err=True)
+        raise typer.Exit(2)
     day = date.fromisoformat(issue_date) if issue_date else datetime.now(UTC).date()
     reg = PredictionRegistry(registry)
     total = 0
+    done = {(r.model_version, r.region, r.issued_at.date()) for r in reg.read()}  # already emitted
     for sid, flow in _stations(flow_dir).items():
+        if station and sid not in station:
+            continue
+        todo = tuple(m for m in wanted if (f"{m}-{model_version}", sid, day) not in done)
+        if not todo:
+            typer.echo(f"{sid}: ya emitido para {day} ({model_version}), se omite")
+            continue
         valid = flow.dropna(subset=["q_m3s"])
         valid = valid[valid["date"] <= pd.Timestamp(day)]
         if valid.empty:
@@ -48,7 +64,7 @@ def emit_cmd(
             InputSource(name=f"{SOURCE} (caudal diario, estación {sid})", latency_hours=latency)
         ]
         try:
-            recs = baselines.emit(reg, sid, flow, day, model_version, (first, last), inputs)
+            recs = baselines.emit(reg, sid, flow, day, model_version, (first, last), inputs, todo)
         except RegistryError as e:
             typer.echo(f"{sid}: {e}", err=True)
             raise typer.Exit(1) from e
