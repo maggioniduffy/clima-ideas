@@ -1,5 +1,7 @@
 """F5.8 evidence gate: event pooling, contiguity, Markov persistence without leakage, probability cap, CSV loader."""
 
+import itertools
+
 import numpy as np
 import pandas as pd
 
@@ -171,7 +173,7 @@ def test_pooled_cap_in_force_is_non_increasing_in_lead():
     rel[1][5]["n"] = 25  # L=1 cap 0.6 only
     out = gate.pooled_caps(rel)
     caps = [out[L]["cap"] for L in sorted(out)]
-    assert all(a >= b for a, b in zip(caps, caps[1:], strict=False))
+    assert all(a >= b for a, b in itertools.pairwise(caps))
     assert out[3]["cap_pooled"] == 0.9 and out[3]["cap"] <= out[2]["cap"]
 
 

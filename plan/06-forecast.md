@@ -41,7 +41,7 @@ encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en b
 | F6.5 (código ✅) | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, Haiku corre | Tabla de skill por horizonte + unit de métricas |
 | F6.6 | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
 | F6.7 | Prueba de caudal alto: dejando afuera cada crecida grande (junio de 2023 incluida), con entradas de pronóstico y la latencia de caudal de F6.1, ¿la probabilidad de superar el umbral sube sobre la climatología antes de cada pico y los intervalos cubren los picos cerca de lo nominal? | Haiku corre, Sonnet codifica | Tabla por crecida y anticipación con veredicto + unit de partición sin fuga |
-| F6.8 | Promoción y descenso: aplica la compuerta por variable, anticipación y región, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión; el descenso de una anticipación arrastra a las más largas |
+| F6.8 ✅ (código; sin promociones hasta la temporada 2027) | Promoción y descenso: aplica la compuerta por variable, anticipación y región, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión; el descenso de una anticipación arrastra a las más largas |
 | F6.9 | Propuesta (2026-11-13), depende de F5.9 y F5.10: climatología condicional de caudal alto a partir de la tabla evento × estación (`responses.json`, V8 de la fase 1): frecuencia de superar el umbral según IVT máximo, isoterma de 0 °C y mes. Es un modelo simple más para el criterio 3 de la compuerta, no un atajo: pasa por los mismos criterios | Sonnet codifica, Haiku corre | BSS vs. climatología y persistencia con IC bootstrap por evento + unit de partición sin fuga |
 
 ## Validación (F6.2)
@@ -163,6 +163,17 @@ lo que ya se observó.
   climatología mensual; 60 registros por día, «Experimental». `forecast score --era5t-regions` puntúa
   `p_dia_riesgo`. Corre en `forecast-daily.yml`. Caudal (LSTM) no: sin caudal en tiempo real. Informe
   `reports/06/F6.3.md`.
+
+- Tope (2026-11-22): `hindcast gate` agrega `prob_cap_vigente` (bins de confiabilidad con L−1, L y L+1, no creciente):
+  100 % hasta 3–4 días, 40–70 % a 7 y 30–40 % a 10; el resto de F5.8 no cambió. Va en
+  `backend/models/riskday-logistic-v1.caps.json` (el JSON del modelo y su versión no cambian) y `emit-riskday` lo
+  copia a `details.prob_cap`.
+- F6.8 (2026-11-22): `forecast/status.py`, bitácora `status/outlook.jsonl` con cadena SHA-256. `forecast promote`
+  exige `--approved-by` y `--approved-on`, pase de hindcast (F5.8), temporada mayo–sep completa con ≥ 10 eventos
+  agrupados entre regiones y skill ≥ 0, y anticipaciones contiguas; nunca la corre el workflow. `forecast
+  demote-auto` (job diario) desciende con skill < 0 en la última temporada completa o con cambio de versión, y
+  arrastra a las anticipaciones más largas. `forecast score` gana la tabla por temporada (`seasons`) y los eventos
+  agrupados (`events_pooled`). 20 unit.
 
 ## Abierto
 
