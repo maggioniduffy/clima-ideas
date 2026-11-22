@@ -44,6 +44,8 @@ import xarray as xr
 
 from clima_nqn.io import enso, era5, flow, forcing, snow
 from clima_nqn.io.grib import grib_fields
+from clima_nqn.stages.hindcast import forecasts as fc
+from clima_nqn.stages.hindcast import riskday
 
 DEFAULT_ROOT = Path("data/raw/operational")
 MANIFEST = "manifest.json"
@@ -53,6 +55,10 @@ LEADS = range(1, 11)
 BOX_MARGIN = 0.5  # degrees added around the union of the boxes when cropping a grid
 GEFS_BASE = "https://noaa-gefs-pds.s3.amazonaws.com"
 GEFS_MEMBERS = ("geavg", "gec00")  # ensemble mean + control; members gepNN can be added
+GEFS25_MEMBERS = fc.GEFS_MEMBERS  # c00, p01..p04: the members the frozen F5.3 model was trained on
+GEFS25_STEP = (
+    6  # h; operational pgrb2s files carry 6 h APCP buckets at steps that are multiples of 6
+)
 RUN_FALLBACK_DAYS = 3  # newest run searched: run_date, run_date-1, ...
 
 
@@ -104,6 +110,22 @@ INFO = {
         "precip_mm: mm per 24 h lead window (sum of 6 h APCP), box mean",
         "valid_date",
         f"{snow.BOX_NOTE}. member geavg = ensemble mean, gec00 = control.",
+    ),
+    "gefs_regions": SourceInfo(
+        "NOAA GEFS operational 0.25 deg pgrb2sp25, 00 UTC run, members c00,p01..p04, APCP (noaa-gefs-pds)",
+        fc.LICENSE_GEFS,
+        "tp_mm: mm per 24 h lead window (sum of four 6 h APCP buckets), cos(lat)-weighted region mean",
+        "valid_date",
+        f"{fc.LEAD_CONVENTION}. Cropped to the F5.3 wide grid ({fc.WIDE_GRID.description}); regions "
+        "from riskday.regions. A member/lead with any missing 6 h step is dropped, not zero-filled.",
+    ),
+    "era5t_regions": SourceInfo(
+        era5.SOURCE,
+        era5.LICENSE,
+        "tp_mm: mm/day (UTC day, hours D 01:00..D+1 00:00), cos(lat)-weighted region mean",
+        "date",
+        "Same daily window and wide grid as the F5.3 observations (observe.py); preliminary ERA5T "
+        "where past the final-data stop. Days with no data (all-NaN) are dropped.",
     ),
 }
 SOURCES = tuple(INFO)
@@ -225,11 +247,25 @@ def gefs_url(init_date: date, member: str, step: int) -> str:
     return f"{GEFS_BASE}/gefs.{d}/00/atmos/pgrb2ap5/{member}.t00z.pgrb2a.0p50.f{step:03d}"
 
 
-def parse_gefs_idx(text: str) -> tuple[int, int | None] | None:
-    """Byte range ``(start, end)`` of the surface APCP message in a GEFS .idx (``end`` None = to EOF)."""
+def gefs25_url(init_date: date, member: str, step: int) -> str:
+    """Operational 0.25 deg surface file: ``atmos/pgrb2sp25/gep01.t00z.pgrb2s.0p25.f024``."""
+    d = init_date.strftime("%Y%m%d")
+    return f"{GEFS_BASE}/gefs.{d}/00/atmos/pgrb2sp25/{member}.t00z.pgrb2s.0p25.f{step:03d}"
+
+
+def parse_gefs_idx(text: str, span: tuple[int, int] | None = None) -> tuple[int, int | None] | None:
+    """Byte range ``(start, end)`` of the surface APCP message in a GEFS .idx (``end`` None = to EOF).
+
+    With ``span = (start_h, end_h)`` only the message accumulated over exactly that window matches
+    (``"6-12 hour acc fcst"``); without it the first surface APCP does.
+    """
     lines = [ln.split(":") for ln in text.splitlines() if ln.strip()]
     for i, parts in enumerate(lines):
         if len(parts) > 5 and parts[3] == "APCP" and parts[4] == "surface":
+            if span is not None:
+                m = fc._ACC.match(parts[5])
+                if not m or (int(m[1]), int(m[2])) != tuple(span):
+                    continue
             start = int(parts[1])
             end = int(lines[i + 1][1]) - 1 if i + 1 < len(lines) else None
             return start, end
@@ -250,6 +286,31 @@ def fetch_gefs_apcp(init_date: date, member: str, step: int, area) -> xr.DataArr
         start, end = rng
         header = {"Range": f"bytes={start}-{'' if end is None else end}"}
         resp = client.get(url, headers=header)
+        resp.raise_for_status()
+    fields = grib_fields(resp.content, area)
+    if len(fields) != 1:
+        raise RuntimeError(f"expected one APCP message in {url}, got {len(fields)}")
+    return fields[0][1]
+
+
+def fetch_gefs25_apcp(init_date: date, member: str, step: int, area) -> xr.DataArray:
+    """6 h ``APCP`` (kg/m2 = mm) over forecast hours (step-6, step] of one operational 0.25 deg member.
+
+    The .idx must carry the surface APCP accumulated exactly over ``(step-6)-step hour acc``
+    (verified 2026-11-22: f006 is ``0-6``, f012 ``6-12`` ... f240 ``234-240``); otherwise the
+    accumulation scheme changed and the call fails instead of returning a wrong window.
+    """
+    url = gefs25_url(init_date, member, step)
+    with httpx.Client(timeout=60.0, follow_redirects=True) as client:
+        idx = client.get(url + ".idx")
+        if idx.status_code in (403, 404):
+            raise NotAvailable(f"GEFS 0.25 {init_date} 00z {member} f{step:03d} not published")
+        idx.raise_for_status()
+        rng = parse_gefs_idx(idx.text, span=(step - GEFS25_STEP, step))
+        if rng is None:
+            raise RuntimeError(f"no surface APCP {step - GEFS25_STEP}-{step} hour acc in {url}.idx")
+        start, end = rng
+        resp = client.get(url, headers={"Range": f"bytes={start}-{'' if end is None else end}"})
         resp.raise_for_status()
     fields = grib_fields(resp.content, area)
     if len(fields) != 1:
@@ -418,12 +479,136 @@ def ingest_gefs(
     raise NotAvailable(f"no GEFS run found in the last {RUN_FALLBACK_DAYS} days: {last}")
 
 
+def wide_region_means(field: xr.DataArray, masks: dict[str, np.ndarray]) -> dict[str, float]:
+    """Region means of a field regridded onto ``WIDE_GRID`` (exact selection at 0.25 deg).
+
+    Uses ``riskday.region_means`` (cos(lat) weights, NaN ignored); all-NaN regions give NaN.
+    """
+    grid = fc.WIDE_GRID
+    on_grid = xr.DataArray(
+        fc.to_target_grid(field, grid).astype("float64"),
+        dims=("lat", "lon"),
+        coords={"lat": grid.lat, "lon": grid.lon},
+    )
+    return {k: float(v) for k, v in riskday.region_means(on_grid, masks).items()}
+
+
+def ingest_gefs_regions(
+    run_date: pd.Timestamp,
+    fetcher: Callable[[date, str, int, tuple], xr.DataArray] = fetch_gefs25_apcp,
+    members: tuple[str, ...] = GEFS25_MEMBERS,
+    now: datetime | None = None,
+    **_,
+) -> pd.DataFrame:
+    """Regional daily GEFS precipitation (mm) for leads 1..10, per member, newest run <= ``run_date``.
+
+    Lead ``L`` = sum of the four 6 h buckets ending at 24(L-1)+6 .. 24 L. A member/lead with any
+    missing step is dropped. A run is accepted when at least one member has all 10 leads, so a run
+    still being published falls back to the previous one. ``df.attrs["manifest"]`` lists the
+    missing members/steps.
+    """
+    now = now or datetime.now(UTC)
+    grid = fc.WIDE_GRID
+    area = fc._margin_area(grid.area)
+    masks = riskday.regions(grid.lat, grid.lon)
+    ends = list(range(GEFS25_STEP, 24 * max(LEADS) + 1, GEFS25_STEP))
+    last: Exception | None = None
+    for init in _candidate_runs(run_date):
+        jobs = [(m, s) for m in members for s in ends]
+
+        def one(job, init=init):
+            member, step = job
+            try:
+                return job, wide_region_means(fetcher(init.date(), member, step, area), masks)
+            except NotAvailable as exc:
+                return job, exc
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            got = dict(pool.map(one, jobs))
+        rows, missing = [], {}
+        full = 0
+        for member in members:
+            lost = [s for s in ends if isinstance(got[(member, s)], NotAvailable)]
+            if lost:
+                missing[member] = lost
+            complete = 0
+            for d in LEADS:
+                steps = [e for e in ends if 24 * (d - 1) < e <= 24 * d]
+                if any(isinstance(got[(member, e)], NotAvailable) for e in steps):
+                    continue
+                complete += 1
+                for region in masks:
+                    buckets = {e: got[(member, e)][region] for e in steps}
+                    tp = daily_from_buckets(buckets, d)
+                    if np.isnan(tp):
+                        continue
+                    rows.append(
+                        {
+                            "init_date": init, "lead": d, "valid_date": init + pd.Timedelta(days=d - 1),
+                            "member": member, "region": region, "tp_mm": tp,
+                        }
+                    )  # fmt: skip
+            full += complete == len(LEADS)
+        if full == 0:
+            last = NotAvailable(
+                f"GEFS 0.25 {init:%Y-%m-%d} 00z: no member has all {len(LEADS)} leads"
+            )
+            continue
+        df = _stamp(pd.DataFrame(rows), run_date, now)
+        df["lead"] = df["lead"].astype(int)
+        df.attrs["manifest"] = {
+            "init_date": f"{init:%Y-%m-%d}",
+            "members_present": [
+                m for m in members if m not in missing or len(missing[m]) < len(ends)
+            ],
+            "missing_steps": missing,
+        }
+        return df
+    raise NotAvailable(f"no GEFS 0.25 run found in the last {RUN_FALLBACK_DAYS} days: {last}")
+
+
+def ingest_era5t_regions(
+    run_date: pd.Timestamp,
+    fetcher: Callable[..., xr.DataArray] = fetch_era5t_tp,
+    now: datetime | None = None,
+    **_,
+) -> pd.DataFrame:
+    """Daily regional ERA5T ``tp`` (mm) for UTC days ``run_date - 14`` .. ``run_date - 1``.
+
+    Same window as ``observe.py`` (F5.3 obs): day D = hourly steps D 01:00 .. D+1 00:00 summed on
+    the wide grid (m -> mm), then ``riskday.region_means``. Days missing any of the 24 hours, or
+    all-NaN (ERA5T gaps), are dropped.
+    """
+    now = now or datetime.now(UTC)
+    grid = fc.WIDE_GRID
+    masks = riskday.regions(grid.lat, grid.lon)
+    first = run_date - timedelta(days=ERA5T_DAYS)
+    tp = fetcher(first + pd.Timedelta(hours=1), run_date, grid.area)
+    times = pd.DatetimeIndex(tp["time"].values)
+    rows = []
+    for day in pd.date_range(first, run_date - pd.Timedelta(days=1)):
+        stamps = [day + pd.Timedelta(hours=h) for h in range(1, 25)]
+        if times.isin(stamps).sum() != 24:
+            continue
+        hours = tp.sel(time=stamps)
+        daily = hours.sum("time", skipna=False) * 1000.0  # m -> mm; any NaN hour -> NaN cell
+        for region, mm in wide_region_means(daily, masks).items():
+            if not np.isnan(mm):
+                rows.append({"date": day, "region": region, "tp_mm": mm})
+    cols = ["date", "region", "tp_mm"]
+    out = pd.DataFrame(rows, columns=cols)
+    out["date"] = pd.to_datetime(out["date"])
+    return _stamp(out, run_date, now)
+
+
 ADAPTERS: dict[str, Callable[..., pd.DataFrame]] = {
     "flow": ingest_flow,
     "oni": ingest_oni,
     "era5t": ingest_era5t,
     "ecmwf": ingest_ecmwf,
     "gefs": ingest_gefs,
+    "gefs_regions": ingest_gefs_regions,
+    "era5t_regions": ingest_era5t_regions,
 }
 
 # --- storage --------------------------------------------------------------------------------
@@ -439,11 +624,11 @@ def check_no_leak(df: pd.DataFrame, source: str, run_date: pd.Timestamp) -> None
         return
     if (df["available_on"] > run_date).any():
         raise ValueError(f"{source}: available_on after {run_date:%Y-%m-%d}")
-    if source in ("flow", "era5t") and (df["date"] >= run_date).any():
+    if source in ("flow", "era5t", "era5t_regions") and (df["date"] >= run_date).any():
         raise ValueError(f"{source}: value date not before {run_date:%Y-%m-%d}")
     if source == "oni" and (df["nominal_publication"] > run_date).any():
         raise ValueError(f"oni: nominal publication after {run_date:%Y-%m-%d}")
-    if source in ("ecmwf", "gefs") and (df["init_date"] > run_date).any():
+    if source in ("ecmwf", "gefs", "gefs_regions") and (df["init_date"] > run_date).any():
         raise ValueError(f"{source}: init_date after {run_date:%Y-%m-%d}")
 
 
@@ -534,6 +719,7 @@ def run_ingest(
             "last_run_date": prev.get("last_run_date"),
             "newest_value_date": prev.get("newest_value_date"), "lag_days": prev.get("lag_days"),
             "rows": prev.get("rows"), "file": prev.get("file"), "updated_at": stamp.isoformat(),
+            "detail": prev.get("detail"),
         }  # fmt: skip
         try:
             if target.exists() and not force:
@@ -542,6 +728,7 @@ def run_ingest(
             else:
                 kwargs = {"fetcher": fetchers[name]} if name in fetchers else {}
                 df = ADAPTERS[name](run, now=stamp, **kwargs)
+                extra = df.attrs.get("manifest")
                 check_no_leak(df, name, run)
                 if df.empty:
                     raise RuntimeError("source returned no rows")
@@ -554,6 +741,8 @@ def run_ingest(
                 lag_days=None if newest is None else (run - newest).days,
                 file=str(target.relative_to(root)),
             )  # fmt: skip
+            if status == "ok":
+                entry["detail"] = extra
         except Exception as exc:  # noqa: BLE001 - a failing source must not stop the others
             entry["error"] = f"{type(exc).__name__}: {exc}"
         results[name] = entry
