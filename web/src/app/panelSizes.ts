@@ -19,23 +19,28 @@ export const DEFAULT_SIZES: PanelSizes = {
 };
 /** The map card never gets smaller than this (below it the page scrolls). */
 export const MIN_MAP_W = 320;
-export const MIN_MAP_H = 400;
-export const TOPBAR_H = 56;
-/** Page padding and the gap that holds each drag handle. */
-export const BODY_PAD = 8;
+export const MIN_MAP_H = 420;
+/** Vertical chrome above and below the body: page and frame padding (2 x 24 + 2 x 24), header 44, hero 92 and two 16 px gaps. */
+export const CHROME_Y = 264;
+/** Horizontal chrome: page padding (2 x 24) and frame padding (2 x 28). */
+export const CHROME_X = 104;
+/** The gap that holds each drag handle. */
 export const HANDLE = 8;
 export const KEY_STEP = 16;
 export const STORAGE_KEY = "panel-sizes";
 
 const PANELS = Object.keys(PANEL_LIMITS) as PanelId[];
 
-/** Allowed range for a panel given the window; min wins when space runs out. The map keeps MIN_MAP_W x MIN_MAP_H. */
+/**
+ * Allowed range for a panel given the window; min wins when space runs out. The map keeps MIN_MAP_W x MIN_MAP_H. Below
+ * a window height that fits the default timeline the page scrolls instead (shell.css min-height), so it still gets its default.
+ */
 export function limitsFor(panel: PanelId, _sizes: PanelSizes, vp: Viewport): { min: number; max: number } {
   const { min, max } = PANEL_LIMITS[panel];
   const room =
     panel === "panels"
-      ? vp.width - 2 * BODY_PAD - HANDLE - MIN_MAP_W
-      : vp.height - TOPBAR_H - 2 * BODY_PAD - HANDLE - MIN_MAP_H;
+      ? vp.width - CHROME_X - HANDLE - MIN_MAP_W
+      : Math.max(vp.height, CHROME_Y + HANDLE + MIN_MAP_H + PANEL_LIMITS.timeline.def) - CHROME_Y - HANDLE - MIN_MAP_H;
   return { min, max: Math.max(min, Math.min(max, Math.floor(room))) };
 }
 

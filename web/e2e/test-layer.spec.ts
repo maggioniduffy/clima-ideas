@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
 test("test layer appears, activates and inspects with source and period", async ({ page }) => {
   await page.goto("/");

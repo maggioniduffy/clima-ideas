@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import type { FloodStationDetail } from "../api/client";
@@ -25,4 +26,14 @@ test("hosts the ENSO panel, and it wins over the flood charts", () => {
   render(<DetailCard flood={{ status: "ready", detail }} enso={enso} />);
   expect(screen.getByTestId("detail-card")).toContainElement(screen.getByTestId("enso-panel"));
   expect(screen.queryByTestId("flood-station-panel")).toBeNull();
+});
+
+test("only the forecast card is inverted, and only when no other panel wins the slot", () => {
+  const forecast = { state: { status: "loading" as const, outlook: null }, source: "S", period: "P" } as unknown as ComponentProps<typeof DetailCard>["forecast"];
+  const { rerender } = render(<DetailCard forecast={forecast} />);
+  expect(screen.getByTestId("detail-card")).toHaveAttribute("data-tone", "inverse");
+  rerender(<DetailCard forecast={forecast} flood={{ status: "ready", detail }} />);
+  expect(screen.getByTestId("detail-card")).not.toHaveAttribute("data-tone");
+  rerender(<DetailCard flood={{ status: "ready", detail }} />);
+  expect(screen.getByTestId("detail-card")).not.toHaveAttribute("data-tone");
 });

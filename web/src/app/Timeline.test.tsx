@@ -64,6 +64,8 @@ test("replay controls drive the callbacks and the cursor follows the replay time
   expect(screen.getByTestId("replay-controls")).toHaveAttribute("data-frame", "3");
   expect(screen.getByTestId("replay-time")).toHaveTextContent("2000-01-03 03:00 UTC");
   expect(screen.getByTestId("timeline-detail-cursor").style.left).toBe("50%");
+  expect(screen.getByTestId("replay-slider").style.getPropertyValue("--p")).toBe("60.00%"); // frame 3 of 6 -> 3/5
+  expect(screen.getByTestId("timeline")).toHaveTextContent(es.timeline.label);
   fireEvent.click(screen.getByRole("button", { name: es.events.play }));
   expect(replay.toggle).toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: es.events.stepBack }));

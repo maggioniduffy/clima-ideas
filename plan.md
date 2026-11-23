@@ -62,6 +62,7 @@ F6.1 + F6.4 registro con baselines: en cuanto haya F0.11
 
 ## Próximo
 
+0. Rediseño del visor "Arena" con mapa base OSM: `odd/tasks/arena-redesign.md` (hecho; términos de CARTO sin verificar).
 1. Mergear a `main` el cierre de las olas 3 y 4 (F6.2, F6.7, F6.9 y vistas del panel) para que el job diario emita el
    estacional el día 1 y publique la capa con las pestañas nuevas.
 2. Fase 6: juntar la temporada prospectiva mayo–sep 2027; pedir a la AIC caudal en tiempo real; caudal alto con

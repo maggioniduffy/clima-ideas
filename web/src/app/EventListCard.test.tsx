@@ -161,3 +161,17 @@ test("the response sort key is offered only when responses are loaded and ranks 
     es.events.filter.sortIvt, es.events.filter.sortRain, es.events.filter.sortDuration, es.events.filter.sortResponse,
   ]);
 });
+
+test("ENSO button lives in the card header: shown unless the layer has no report, toggles the panel", () => {
+  const onToggleEnso = vi.fn();
+  const props = { ...base, onSelectEvent: vi.fn(), onToggleEnso };
+  const { rerender } = render(<EventListCard {...props} ensoStatus="none" />);
+  expect(screen.queryByTestId("enso-open")).toBeNull();
+  rerender(<EventListCard {...props} ensoStatus="ready" ensoOpen />);
+  const btn = screen.getByTestId("enso-open");
+  expect(btn).toHaveTextContent(es.enso.open);
+  expect(btn).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByTestId("event-card")).toContainElement(btn);
+  fireEvent.click(btn);
+  expect(onToggleEnso).toHaveBeenCalled();
+});

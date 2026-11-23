@@ -39,9 +39,9 @@ afterEach(() => {
   localStorage.clear();
 });
 
-const regions = ["topbar", "layer-panel", "map-canvas", "inspector", "timeline"];
+const regions = ["topbar", "layer-panel", "hero", "map-canvas", "inspector", "timeline"];
 
-test("Shell renders the five regions", () => {
+test("Shell renders the regions", () => {
   render(<Shell />);
   for (const id of regions) expect(screen.getByTestId(id)).toBeInTheDocument();
   expect(screen.getByTestId("deck-mock")).toBeInTheDocument();
@@ -83,38 +83,42 @@ test("province outline, city marker and label are always drawn, with no layer ac
   expect(canvas.getAttribute("data-deck-layers")).not.toContain("points-a");
 });
 
-test("the layers drawer toggle exposes aria-expanded/aria-controls; there is no inspector drawer", () => {
+test("there is no layers drawer, drawer button or scrim; the layer pills live in the header", () => {
   render(<Shell />);
-  const layers = screen.getByTestId("drawer-toggle-layers");
-  expect(layers).toHaveAttribute("aria-controls", "layer-panel");
-  expect(screen.queryByTestId("drawer-toggle-inspector")).not.toBeInTheDocument();
-  expect(layers).toHaveAttribute("aria-expanded", "false");
-  fireEvent.click(layers);
-  expect(layers).toHaveAttribute("aria-expanded", "true");
-  expect(screen.getByTestId("shell")).toHaveAttribute("data-drawer", "layers");
-  fireEvent.keyDown(window, { key: "Escape" });
-  expect(screen.getByTestId("shell")).not.toHaveAttribute("data-drawer");
+  expect(screen.queryByTestId("drawer-toggle-layers")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("drawer-scrim")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("layers-slot")).not.toBeInTheDocument();
+  expect(screen.getByTestId("topbar")).toContainElement(screen.getByTestId("layer-panel"));
 });
 
-test("the right column holds the layers, then the inspector; the map and the timeline are its siblings", () => {
+test("the card column holds the inspector; the map and the timeline are its siblings", () => {
   render(<Shell />);
   const panels = screen.getByTestId("panels-slot");
-  expect(panels).toContainElement(screen.getByTestId("layers-slot"));
   expect(panels).toContainElement(screen.getByTestId("inspector"));
   expect(panels).not.toContainElement(screen.getByTestId("map-canvas"));
   expect(panels).not.toContainElement(screen.getByTestId("timeline-slot"));
   const order = (a: HTMLElement, b: HTMLElement) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
-  expect(order(screen.getByTestId("map-canvas"), panels)).toBeTruthy(); // narrow screens stack map, panels, timeline
+  expect(order(screen.getByTestId("topbar"), screen.getByTestId("hero"))).toBeTruthy(); // header, h1, then map
+  expect(order(screen.getByTestId("hero"), screen.getByTestId("map-canvas"))).toBeTruthy();
+  expect(order(screen.getByTestId("map-canvas"), panels)).toBeTruthy(); // narrow screens stack map, cards, timeline
   expect(order(panels, screen.getByTestId("timeline-slot"))).toBeTruthy();
   expect(screen.getByTestId("inspector")).toHaveAttribute("id", "inspector-panel");
 });
 
-test("the topbar shows the logo mark and the wordmark next to the page h1", () => {
+test("the header shows the logo pill and the theme button; the h1 is the page title until a layer is selected", () => {
   render(<Shell />);
   const bar = screen.getByTestId("topbar");
   expect(bar).toHaveTextContent("Clima Ideas");
-  expect(bar.querySelector("svg")).not.toBeNull();
-  expect(screen.getByRole("heading", { name: es.appTitle })).toBeInTheDocument();
+  expect(bar).not.toContainElement(screen.getByRole("heading", { level: 1 }));
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(es.appTitle);
+});
+
+test("selecting a layer puts its title in the h1 and its point count and source line in the hero", async () => {
+  render(<Shell />);
+  fireEvent.click(await screen.findByTestId("layer-toggle-a"));
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Capa A"));
+  await waitFor(() => expect(screen.getByTestId("hero-stat-points")).toHaveTextContent(`1${es.hero.points}`));
+  expect(screen.getByTestId("hero-source")).toHaveTextContent("Fuente X · 2000-01-01/2000-12-31");
 });
 
 test("IVT view toggle: legend control only with the AR layer; isolines add contour layers and cell readings keep working", async () => {

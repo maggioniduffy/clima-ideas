@@ -15,23 +15,35 @@ function block(selector: string): Record<string, string> {
 test("brand tokens match tokens.css", () => {
   const root = block(":root");
   for (const [k, v] of Object.entries(tokens.brand)) expect(root[`--${k}`]).toBe(v);
-  expect(root["--accent"]).toBeUndefined(); // the accent is per theme
+  expect(root["--accent"]).toBeUndefined(); // the accent lives in the theme blocks (same value in both)
 });
 
-test("per-theme accent", () => {
-  expect(tokens.light.accent).toBe("#8EB8E5");
-  expect(tokens.dark.accent).toBe("#FDDA0D");
+test("accent is the same in both themes", () => {
+  expect(tokens.light.accent).toBe("#F5CF4B");
+  expect(tokens.dark.accent).toBe("#F5CF4B");
 });
 
-test("mockup neutrals and control tokens", () => {
-  expect(tokens.light).toMatchObject({ bg: "#F1EEE6", surface: "#F9F7F2", raised: "#EFECE4", border: "#DDD8CD", "text-muted": "#5F6468", ctrl: "#3E505B", "on-ctrl": "#F5F2EA", water: "#3A6E8F", casing: "#2A343B" });
-  expect(tokens.dark).toMatchObject({ ctrl: "#4D6372", "on-ctrl": "#ECE7DC", water: "#7FA9C6", casing: "#16212A" });
+test("Arena neutrals, frame gradient and control tokens", () => {
+  expect(tokens.light).toMatchObject({
+    bg: "#E4E2DC", "frame-0": "#F3F2EE", "frame-1": "#F1EEE4", "frame-2": "#F6E9B5", surface: "#FBFAF7", raised: "#EFECE4",
+    border: "#D8D4C8", text: "#1C1C1C", "text-muted": "#5E5E5E", ctrl: "#1C1C1C", "on-ctrl": "#F3F2EE",
+    inverse: "#1C1C1C", "on-inverse": "#F3F2EE", casing: "#1C1C1C", water: "#3A6E8F",
+  });
+  expect(tokens.dark).toMatchObject({
+    bg: "#101114", "frame-0": "#1B1C20", "frame-1": "#1D1D1F", "frame-2": "#2E2814", surface: "#26272C", raised: "#2A2B30",
+    border: "#3C3D43", text: "#F1EFE8", "text-muted": "#A9A9A4", ctrl: "#F1EFE8", "on-ctrl": "#1B1C20",
+    inverse: "#F1EFE8", "on-inverse": "#1B1C20", casing: "#101114", water: "#7FA9C6", "chart-surface": "#1B1C20",
+  });
 });
 
-test.each(["light", "dark"] as const)("%s texture variables", (theme) => {
-  const b = block(`:root[data-theme="${theme}"]`);
-  expect(b["--tex"]).toBe(theme === "light" ? "radial-gradient(rgba(42, 52, 59, 0.09) 0.9px, transparent 1.3px)" : "none");
-  expect(b["--shine"]).toBe(theme === "light" ? "rgba(255, 255, 255, 0.45)" : "transparent");
+test("card texture is gone", () => {
+  expect(css).not.toMatch(/--tex\b|--shine|\.tx\b/);
+});
+
+test("Outfit is the UI font, IBM Plex Mono stays for numbers", () => {
+  const root = block(":root");
+  expect(root["--font-sans"]).toMatch(/^"Outfit"/);
+  expect(root["--font-mono"]).toMatch(/^"IBM Plex Mono"/);
 });
 
 test.each(["light", "dark"] as const)("%s neutrals match tokens.css", (theme) => {
@@ -88,6 +100,20 @@ test.each(["light", "dark"] as const)("%s chart ink keeps its contrast on the ch
   // accent and secondary dots are drawn with a casing outline: the accent itself needs 3:1 only in dark, where it is the fill
   if (theme === "light") expect(contrast(t.casing, bg)).toBeGreaterThanOrEqual(7);
   else expect(contrast(t.accent, bg)).toBeGreaterThanOrEqual(3);
+});
+
+test.each(["light", "dark"] as const)("%s text pairs meet WCAG AA", (theme) => {
+  const t = tokens[theme];
+  for (const bg of [t.surface, t.raised, t["frame-0"], t["frame-1"], t["frame-2"], t.bg]) {
+    expect(contrast(t.text, bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(t["text-muted"], bg)).toBeGreaterThanOrEqual(4.5);
+  }
+  expect(contrast(t["on-ctrl"], t.ctrl)).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(t["on-inverse"], t.inverse)).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(t.casing, t.accent)).toBeGreaterThanOrEqual(4.5); // dark text on the accent
+  // accent glyph on the play button: only light has it (dark --ctrl is light, so the glyph needs the casing instead; see docs/design.md)
+  if (theme === "light") expect(contrast(t.accent, t.ctrl)).toBeGreaterThanOrEqual(3);
+  if (theme === "light") expect(contrast(t.accent, t.inverse)).toBeGreaterThanOrEqual(3); // dark inverse is light: accent marks there carry the casing
 });
 
 test("no pure white or black anywhere, except the light chart surface", () => {

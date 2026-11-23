@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
-const regions = ["topbar", "layer-panel", "map-canvas", "inspector", "timeline"];
+const regions = ["topbar", "layer-panel", "hero", "map-canvas", "inspector", "timeline"];
 
 test("shell layout is fixed across themes without reload", async ({ page }) => {
   await page.goto("/");
@@ -28,7 +28,7 @@ test("shell layout is fixed across themes without reload", async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as { __marker: number }).__marker)).toBe(42);
 });
 
-test("narrow layout: map uses the width and the layer drawer opens", async ({ page }) => {
+test("narrow layout: map uses the width, the layer pills scroll in one row and there is no drawer", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const canvas = page.getByTestId("map-canvas");
@@ -36,15 +36,21 @@ test("narrow layout: map uses the width and the layer drawer opens", async ({ pa
   expect((await canvas.boundingBox())!.width).toBeGreaterThan(300);
   for (const sep of await page.getByRole("separator").all()) await expect(sep).toBeHidden();
 
-  const toggle = page.getByTestId("drawer-toggle-layers");
-  await expect(page.getByTestId("layer-panel")).toBeHidden();
-  await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByTestId("layer-panel")).toBeVisible();
+  await expect(page.getByTestId("drawer-toggle-layers")).toHaveCount(0);
+  await expect(page.getByTestId("drawer-scrim")).toHaveCount(0);
+  const pills = page.getByTestId("layer-panel");
+  await expect(pills).toBeVisible();
+  expect(await pills.evaluate((el) => getComputedStyle(el).overflowX)).toBe("auto");
+  const tops = await pills.locator("label").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(tops.length).toBeGreaterThan(0);
+  expect(new Set(tops).size).toBe(1); // one row
+  // header, h1, then the map
+  const top = (await page.getByTestId("topbar").boundingBox())!;
+  const hero = (await page.getByTestId("hero").boundingBox())!;
+  expect(hero.y).toBeGreaterThanOrEqual(top.y + top.height);
+  expect((await canvas.boundingBox())!.y).toBeGreaterThanOrEqual(hero.y + hero.height);
   // no inspector drawer: the card row stacks under the map and the page scrolls
   await expect(page.getByTestId("drawer-toggle-inspector")).toHaveCount(0);
-  await page.keyboard.press("Escape");
   const inspector = page.getByTestId("inspector");
   await inspector.scrollIntoViewIfNeeded();
   await expect(inspector).toBeVisible();
@@ -71,10 +77,10 @@ test("desktop layout at 1440x900: map left, panels right, timeline across the bo
   expect(Math.abs(map.y - panels.y)).toBeLessThanOrEqual(1);
   expect(timeline.y).toBeGreaterThanOrEqual(map.y + map.height); // timeline below both
   expect(timeline.y).toBeGreaterThanOrEqual(panels.y + panels.height);
-  expect(Math.abs(timeline.x - 8)).toBeLessThanOrEqual(1); // and spans the full width
-  expect(Math.abs(timeline.x + timeline.width - (1440 - 8))).toBeLessThanOrEqual(1);
-  // the layers list and the inspector live in the right column
-  for (const id of ["layers-slot", "inspector"]) {
+  expect(Math.abs(timeline.x - map.x)).toBeLessThanOrEqual(1); // and spans the frame width
+  expect(Math.abs(timeline.x + timeline.width - (panels.x + panels.width))).toBeLessThanOrEqual(1);
+  // the inspector lives in the right column
+  for (const id of ["inspector"]) {
     const b = (await page.getByTestId(id).boundingBox())!;
     expect(b.x).toBeGreaterThanOrEqual(panels.x);
     expect(b.x + b.width).toBeLessThanOrEqual(panels.x + panels.width + 1);

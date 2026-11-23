@@ -9,6 +9,7 @@ import { useArResponses } from "../layers/useArResponses";
 import { DEFAULT_TOGGLES, TOP_N, responseRatios, revealEvent, type ArToggles, type SortKey, visibleEvents } from "../layers/arFilter";
 import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
+import { buildBasemapLayer } from "../layers/basemapLayer";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
 import { CONVECTION_LAYER_ID } from "../layers/convectionIdf";
@@ -27,6 +28,7 @@ import { DetailCard } from "./DetailCard";
 import { EventListCard } from "./EventListCard";
 import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
+import { MapBackground, RELIEF_OPACITY_BOTH, readBackground, writeBackground, type MapBackgroundMode } from "./MapBackground";
 import { MapCanvas } from "./MapCanvas";
 import { MapLegend } from "./MapLegend";
 import { RainClock, RainLegend } from "./RainLegend";
@@ -41,13 +43,17 @@ import {
   type PanelId,
   type PanelSizes,
 } from "./panelSizes";
+import { Hero } from "./Hero";
+import { heroStats, type HeroInput } from "./heroStats";
 import { Timeline } from "./Timeline";
-import { TopBar, type Drawer } from "./TopBar";
+import { TopBar } from "./TopBar";
 import "./shell.css";
 
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
-/** Same breakpoint as the narrow-screen rules in shell.css: layers is a drawer and there are no handles. */
+/** Same breakpoint as the narrow-screen rules in shell.css: everything stacks and there are no handles. */
 const NARROW_MAX_W = 800;
+/** Above this height the timeline is a tall card instead of a pill (a 999 px radius would swallow its content). */
+const TALL_TIMELINE = 200;
 
 export function Shell() {
   // panel sizes (desktop only): the stored preference, re-clamped against the window on every render
@@ -92,15 +98,6 @@ export function Shell() {
     };
   };
 
-  // narrow screens: the side panels are drawers, one open at a time (CSS decides whether it applies)
-  const [drawer, setDrawer] = useState<Drawer | null>(null);
-  const toggleDrawer = (d: Drawer) => setDrawer((cur) => (cur === d ? null : d));
-  useEffect(() => {
-    if (!drawer) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawer(null);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [drawer]);
   const s = useLayers();
   const eventsLayer = s.layers.find((l) => l.kind === "events");
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
@@ -112,6 +109,12 @@ export function Shell() {
   const showEnso = ensoOpen && eventsActive && enso.status !== "none";
   const [ivtView, setIvtView] = useState<IvtView>("drape");
   const theme = useTheme();
+  const [background, setBackgroundState] = useState<MapBackgroundMode>(readBackground);
+  const setBackground = (m: MapBackgroundMode) => {
+    setBackgroundState(m);
+    writeBackground(m);
+  };
+  const basemap = useMemo(() => buildBasemapLayer(theme, background !== "relief"), [theme, background]);
   // AR event filter: year and month toggles, ranking key and the "top N" switch (state lives here, no store).
   // A selected event that the filter hides stays selected: the map and the replay keep working.
   const [arToggles, setArToggles] = useState<ArToggles>(DEFAULT_TOGGLES);
@@ -119,16 +122,19 @@ export function Shell() {
   const [arTopOn, setArTopOn] = useState(false);
   const ar = useArEvents(eventsLayer, eventsActive, { relief: s.activeRelief?.data ?? null, view: ivtView, toggles: arToggles });
   // In the drape view the relief itself carries the IVT: swap its slate colors for the frame's drape colors.
+  const reliefOpacity = background === "both" ? RELIEF_OPACITY_BOTH : 1;
   const baseLayers = useMemo(
     () =>
-      ar.drapeColors && s.activeRelief
-        ? s.deckLayers.map((l) =>
-            l.id === `relief-${s.activeRelief!.layerId}`
-              ? buildReliefLayer(s.activeRelief!.layerId, s.activeRelief!.data, theme, ar.drapeColors!)
-              : l,
-          )
-        : s.deckLayers,
-    [s.deckLayers, s.activeRelief, ar.drapeColors, theme],
+      s.deckLayers.map((l) => {
+        if (!l.id.startsWith("relief-")) return l;
+        if (background === "basemap") return l.clone({ visible: false });
+        return ar.drapeColors && s.activeRelief && l.id === `relief-${s.activeRelief.layerId}`
+          ? buildReliefLayer(s.activeRelief.layerId, s.activeRelief.data, theme, ar.drapeColors, reliefOpacity)
+          : reliefOpacity === 1
+            ? l
+            : l.clone({ opacity: reliefOpacity });
+      }),
+    [s.deckLayers, s.activeRelief, ar.drapeColors, theme, background, reliefOpacity],
   );
   // Flood stations replace the generic points layer: sized by value, hollow when regulated.
   const { select: selectLayer, selectPoint, selectedId, selectedPointId } = s;
@@ -172,6 +178,15 @@ export function Shell() {
     () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn, TOP_N, ratios),
     [ar.events, arToggles, arSortKey, arTopOn, ratios],
   );
+  // Hero numbers: only what the selected layer's own panel already computes.
+  const sel = s.selectedLayer;
+  const heroInput: HeroInput = {};
+  if (sel && s.activeIds.has(sel.id)) {
+    if (sel.id === eventsLayer?.id && ar.status === "ready") heroInput.events = { shown: arVisible.events.length, total: ar.events.length };
+    if (s.selectedFeatures.length > 0) heroInput.points = { count: s.selectedFeatures.length, station: sel.id === FLOOD_LAYER_ID };
+    if (sel.id === debrisLayer?.id && debris.status === "ready") heroInput.catchments = debris.shownCount;
+  }
+  const hero = heroStats(heroInput);
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);
@@ -196,7 +211,6 @@ export function Shell() {
     <div
       className="shell"
       data-testid="shell"
-      data-drawer={drawer ?? undefined}
       style={
         {
           "--panels-w": `${sizes.panels}px`,
@@ -204,9 +218,21 @@ export function Shell() {
         } as CSSProperties
       }
     >
-      <TopBar drawer={drawer} onToggleDrawer={toggleDrawer} />
+      <div className="frame" data-testid="frame">
+      <TopBar>
+        <LayerPanel
+          layers={s.layers}
+          status={s.status}
+          activeIds={s.activeIds}
+          selectedId={s.selectedId}
+          onToggle={s.toggle}
+          onSelect={s.select}
+        />
+      </TopBar>
+      <Hero title={s.selectedLayer?.title ?? es.appTitle} stats={hero} source={hero.length > 0 && s.selectedLayer ? s.selectedLayer : null} />
       <div className="shell-body" data-expanded={expanded ? "" : undefined}>
         <MapCanvas
+          basemap={basemap}
           markers={conv.markers}
           focus={debris.focus}
           layers={[
@@ -225,6 +251,7 @@ export function Shell() {
               <DebrisLegend domain={debris.domain} source={debrisLayer.source} />
             )}
           </div>
+          <MapBackground value={background} onChange={setBackground} />
           <div className="map-clocks" data-testid="map-clocks">
             {ar.selectedEvent && ar.cursorMs != null && (
               <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />
@@ -252,24 +279,6 @@ export function Shell() {
               )}
             </svg>
           </button>
-        </div>
-        <div className="layers-slot card tx" data-testid="layers-slot">
-          <LayerPanel
-            layers={s.layers}
-            status={s.status}
-            activeIds={s.activeIds}
-            selectedId={s.selectedId}
-            onToggle={s.toggle}
-            onSelect={s.select}
-            events={
-              eventsLayer && {
-                layerId: eventsLayer.id,
-                ensoStatus: enso.status,
-                ensoOpen: showEnso,
-                onToggleEnso: () => setEnsoOpen((o) => !o),
-              }
-            }
-          />
         </div>
 
           <Inspector
@@ -330,11 +339,14 @@ export function Shell() {
               hasResponses={!!responses}
               selectedEventId={ar.selectedEventId}
               onSelectEvent={selectEvent}
+              ensoStatus={enso.status}
+              ensoOpen={showEnso}
+              onToggleEnso={() => setEnsoOpen((o) => !o)}
             />
           )}
         </div>
         <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
-        <div className="timeline-slot card tx" data-testid="timeline-slot" hidden={collapsed("timeline")}>
+        <div className="timeline-slot" data-testid="timeline-slot" data-tall={sizes.timeline > TALL_TIMELINE ? "" : undefined} hidden={collapsed("timeline")}>
           <Timeline
             events={eventsActive ? arVisible.filtered : []}
             peakIds={arVisible.peakIds}
@@ -346,14 +358,7 @@ export function Shell() {
           />
         </div>
       </div>
-      <button
-        type="button"
-        className="drawer-scrim"
-        data-testid="drawer-scrim"
-        aria-label={es.drawers.close}
-        tabIndex={-1}
-        onClick={() => setDrawer(null)}
-      />
+      </div>
     </div>
   );
 }

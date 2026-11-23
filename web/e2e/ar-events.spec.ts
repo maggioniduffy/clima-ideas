@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
 test("AR events: enable layer, choose an event, replay it and inspect a cell value", async ({ page }) => {
   const errors: string[] = [];
@@ -6,7 +6,7 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await expect(page.getByTestId("layer-item-ar-events")).toContainText("Ríos atmosféricos");
+  await expect(page.getByTestId("layer-item-ar-events")).toHaveAttribute("title", "Ríos atmosféricos");
   await expect(page.getByTestId("timeline")).toContainText("Sin serie temporal");
 
   await page.getByTestId("layer-toggle-ar-events").check();
@@ -226,9 +226,7 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
 
   // narrow screen: the detail card takes the map width
   await page.setViewportSize({ width: 600, height: 820 });
-  await page.getByTestId("drawer-toggle-layers").click();
   await page.getByTestId("enso-open").click();
-  await page.getByTestId("drawer-scrim").click({ position: { x: 560, y: 100 } }); // right of the drawer
   const narrowMap = (await page.getByTestId("map-canvas").boundingBox())!;
   const narrow = (await page.getByTestId("detail-card").boundingBox())!;
   expect(narrow.width).toBeGreaterThan(narrowMap.width - 24);

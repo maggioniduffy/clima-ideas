@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
 test("relief layer appears, activates and renders as a point cloud without console errors", async ({ page }) => {
   const errors: string[] = [];

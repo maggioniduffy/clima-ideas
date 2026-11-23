@@ -32,6 +32,10 @@ interface Props {
   hasResponses?: boolean;
   selectedEventId: string | null;
   onSelectEvent: (id: string) => void;
+  /** ENSO-phase statistics (F1.8): the button shows unless the layer publishes no report ("none"/absent). */
+  ensoStatus?: "none" | "loading" | "ready" | "error";
+  ensoOpen?: boolean;
+  onToggleEnso?: () => void;
 }
 
 const SORT_LABEL: Record<SortKey, string> = {
@@ -119,6 +123,9 @@ export function EventListCard({
   hasResponses = false,
   selectedEventId,
   onSelectEvent,
+  ensoStatus,
+  ensoOpen = false,
+  onToggleEnso,
 }: Props) {
   const years = useMemo(() => groupByYearMonth(items), [items]);
   const [openYears, setOpenYears] = useState<ReadonlySet<number>>(new Set());
@@ -133,10 +140,24 @@ export function EventListCard({
   const showTree = status === "ready" && items.length > 0;
 
   return (
-    <section className="event-card card tx" data-testid="event-card" aria-labelledby="event-card-title">
-      <h2 id="event-card-title" className="card-title">
-        {es.events.list} <span className="num card-count" data-testid="event-count">{shown.length}</span>
-      </h2>
+    <section className="event-card card" data-testid="event-card" aria-labelledby="event-card-title">
+      <div className="card-head">
+        <h2 id="event-card-title" className="card-title">
+          {es.events.list} <span className="num card-count" data-testid="event-count">{shown.length}</span>
+        </h2>
+        {ensoStatus && ensoStatus !== "none" && (
+          <button
+            type="button"
+            className="enso-open"
+            data-testid="enso-open"
+            aria-pressed={ensoOpen}
+            aria-controls="enso-panel"
+            onClick={onToggleEnso}
+          >
+            {es.enso.open}
+          </button>
+        )}
+      </div>
       {status === "loading" && <p className="empty">{es.events.loading}</p>}
       {status === "error" && <p className="empty">{es.events.error}</p>}
       {status === "ready" && items.length === 0 && <p className="empty">{es.events.none}</p>}
