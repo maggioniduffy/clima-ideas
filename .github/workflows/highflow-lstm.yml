@@ -66,7 +66,7 @@ jobs:
           ls -l data/raw/camels-cl/zip
           uv run python -c "
           from clima_nqn.io import camels_cl as c
-          t, a = c.load_camels(c.DEFAULT_DIR, c.DEFAULT_OUT)
+          t, a = c.load_camels("data/raw/camels-cl/zip", "data/raw/camels-cl/camels_cl.parquet")
           print(len(t), 'rows,', len(c.select_basins(t)), 'basins selected')"
           rm -rf data/raw/camels-cl/zip
       - name: Fetch the operational GEFS windows (2020-2025 floods)
@@ -127,7 +127,7 @@ jobs:
           path: packed
       - run: tar -xf ../packed/camels.tar
       - name: Pretrain this seed on CAMELS-CL
-        run: uv run clima-nqn flow highflow --pretrain-only --seed-list ${{ matrix.seed }} --seeds ${{ inputs.seeds || '5' }} --work-dir work
+        run: uv run clima-nqn flow highflow --pretrain-only --seed-list ${{ matrix.seed }} --seeds ${{ inputs.seeds || '5' }} --work-dir work --camels-dir data/raw/camels-cl/zip --camels-cache data/raw/camels-cl/camels_cl.parquet
       - uses: actions/upload-artifact@v7
         with:
           name: pretrain-seed-${{ matrix.seed }}
@@ -165,7 +165,7 @@ jobs:
       - name: Fine-tune this seed on this fold
         run: |
           uv run clima-nqn flow highflow --train-only --fold ${{ matrix.fold }} --seed-list ${{ matrix.seed }} \
-            --seeds ${{ inputs.seeds || '5' }} --work-dir work
+            --seeds ${{ inputs.seeds || '5' }} --work-dir work --camels-dir data/raw/camels-cl/zip --camels-cache data/raw/camels-cl/camels_cl.parquet
       - uses: actions/upload-artifact@v7
         with:
           name: train-${{ matrix.fold }}-${{ matrix.seed }}
@@ -210,7 +210,7 @@ jobs:
           done
           ls work work/fold-* | head -80
       - name: Assemble (GR4J, forecasts, dressing, scores, report)
-        run: uv run clima-nqn flow highflow --seeds ${{ inputs.seeds || '5' }} --work-dir work --report-dir report --no-retrain
+        run: uv run clima-nqn flow highflow --seeds ${{ inputs.seeds || '5' }} --work-dir work --report-dir report --no-retrain --camels-dir data/raw/camels-cl/zip --camels-cache data/raw/camels-cl/camels_cl.parquet
       - name: Commit to the data branch
         run: |
           rm -rf work-train
