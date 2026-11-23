@@ -32,7 +32,7 @@ test("Arena neutrals, frame gradient and control tokens", () => {
   expect(tokens.dark).toMatchObject({
     bg: "#101114", "frame-0": "#1B1C20", "frame-1": "#1D1D1F", "frame-2": "#2E2814", surface: "#26272C", raised: "#2A2B30",
     border: "#3C3D43", text: "#F1EFE8", "text-muted": "#A9A9A4", ctrl: "#F1EFE8", "on-ctrl": "#1B1C20",
-    inverse: "#F1EFE8", "on-inverse": "#1B1C20", casing: "#101114", water: "#7FA9C6", "chart-surface": "#1B1C20",
+    inverse: "#34353B", "on-inverse": "#F1EFE8", casing: "#101114", water: "#7FA9C6", "chart-surface": "#1B1C20",
   });
 });
 
@@ -113,7 +113,7 @@ test.each(["light", "dark"] as const)("%s text pairs meet WCAG AA", (theme) => {
   expect(contrast(t.casing, t.accent)).toBeGreaterThanOrEqual(4.5); // dark text on the accent
   // accent glyph on the play button: only light has it (dark --ctrl is light, so the glyph needs the casing instead; see docs/design.md)
   if (theme === "light") expect(contrast(t.accent, t.ctrl)).toBeGreaterThanOrEqual(3);
-  if (theme === "light") expect(contrast(t.accent, t.inverse)).toBeGreaterThanOrEqual(3); // dark inverse is light: accent marks there carry the casing
+  expect(contrast(t.accent, t.inverse)).toBeGreaterThanOrEqual(3);
 });
 
 test("no pure white or black anywhere, except the light chart surface", () => {

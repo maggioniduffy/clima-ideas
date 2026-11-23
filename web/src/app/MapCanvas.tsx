@@ -123,12 +123,12 @@ export function MapCanvas({
         </div>
       ))}
       {children}
-      <p className="map-attribution" data-testid="map-attribution" aria-label={es.map.attribution}>
+      {basemap && <p className="map-attribution" data-testid="map-attribution" aria-label={es.map.attribution}>
         {es.map.attributionPrefix}
         <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noreferrer">{es.map.attributionOsm}</a>
         {es.map.attributionSep}
         <a href={BASEMAP_ATTRIBUTION_URL} target="_blank" rel="noreferrer">{es.map.attributionCarto}</a>
-      </p>
+      </p>}
     </main>
   );
 }

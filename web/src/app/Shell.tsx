@@ -9,7 +9,7 @@ import { useArResponses } from "../layers/useArResponses";
 import { DEFAULT_TOGGLES, TOP_N, responseRatios, revealEvent, type ArToggles, type SortKey, visibleEvents } from "../layers/arFilter";
 import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
-import { buildBasemapLayer } from "../layers/basemapLayer";
+import { basemapAvailable, buildBasemapLayer } from "../layers/basemapLayer";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
 import { CONVECTION_LAYER_ID } from "../layers/convectionIdf";
@@ -40,6 +40,7 @@ import {
   loadSizes,
   PANEL_LIMITS,
   saveSizes,
+  timelineMinFor,
   type PanelId,
   type PanelSizes,
 } from "./panelSizes";
@@ -109,12 +110,18 @@ export function Shell() {
   const showEnso = ensoOpen && eventsActive && enso.status !== "none";
   const [ivtView, setIvtView] = useState<IvtView>("drape");
   const theme = useTheme();
-  const [background, setBackgroundState] = useState<MapBackgroundMode>(readBackground);
+  const [storedBackground, setBackgroundState] = useState<MapBackgroundMode>(readBackground);
+  // Without a CARTO key there is no basemap: relief only, and no background control.
+  const hasBasemap = basemapAvailable();
+  const background: MapBackgroundMode = hasBasemap ? storedBackground : "relief";
   const setBackground = (m: MapBackgroundMode) => {
     setBackgroundState(m);
     writeBackground(m);
   };
-  const basemap = useMemo(() => buildBasemapLayer(theme, background !== "relief"), [theme, background]);
+  const basemap = useMemo(
+    () => (hasBasemap ? buildBasemapLayer(theme, background !== "relief") : null),
+    [hasBasemap, theme, background],
+  );
   // AR event filter: year and month toggles, ranking key and the "top N" switch (state lives here, no store).
   // A selected event that the filter hides stays selected: the map and the replay keep working.
   const [arToggles, setArToggles] = useState<ArToggles>(DEFAULT_TOGGLES);
@@ -207,6 +214,9 @@ export function Shell() {
     setArToggles((t) => revealEvent(t, pendingEvent));
     ar.select(pendingEvent.event_id);
   }
+  // Replay rows stack (storm replay, AR replay): the strip grows to hold them unless it is collapsed (0) or the window is narrow.
+  const timelineRows = { convection: convActive && conv.status === "ready", ar: !!ar.selectedEvent };
+  const timelineH = sizes.timeline === 0 ? 0 : Math.max(sizes.timeline, timelineMinFor(timelineRows));
   return (
     <div
       className="shell"
@@ -214,7 +224,7 @@ export function Shell() {
       style={
         {
           "--panels-w": `${sizes.panels}px`,
-          "--timeline-h": `${sizes.timeline}px`,
+          "--timeline-h": `${timelineH}px`,
         } as CSSProperties
       }
     >
@@ -251,7 +261,7 @@ export function Shell() {
               <DebrisLegend domain={debris.domain} source={debrisLayer.source} />
             )}
           </div>
-          <MapBackground value={background} onChange={setBackground} />
+          {hasBasemap && <MapBackground value={background} onChange={setBackground} />}
           <div className="map-clocks" data-testid="map-clocks">
             {ar.selectedEvent && ar.cursorMs != null && (
               <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />
@@ -346,7 +356,7 @@ export function Shell() {
           )}
         </div>
         <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
-        <div className="timeline-slot" data-testid="timeline-slot" data-tall={sizes.timeline > TALL_TIMELINE ? "" : undefined} hidden={collapsed("timeline")}>
+        <div className="timeline-slot" data-testid="timeline-slot" data-tall={timelineH > TALL_TIMELINE ? "" : undefined} hidden={collapsed("timeline")}>
           <Timeline
             events={eventsActive ? arVisible.filtered : []}
             peakIds={arVisible.peakIds}

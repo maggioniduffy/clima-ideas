@@ -45,6 +45,8 @@ export function PanelResizer({ className, orientation, dir, value, min, max, def
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     setDragging(false);
     document.body.style.userSelect = "";
+    // a pointer drag must not leave the accent line behind: only keyboard focus keeps it
+    if (!e.currentTarget.matches(":focus-visible")) e.currentTarget.blur();
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const next = stepSize(e.key, orientation, dir, value, min, max, defaultValue);
