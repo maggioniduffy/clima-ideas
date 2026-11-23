@@ -663,7 +663,9 @@ def train_lstm_fold(
             progress(f"fold {fold_year}: seed {seed} loaded from {wp}")
         else:
             if not allow_train:
-                raise FileNotFoundError(f"fold {fold_year}: no saved weights for seed {seed} ({wp})")
+                raise FileNotFoundError(
+                    f"fold {fold_year}: no saved weights for seed {seed} ({wp})"
+                )
             model = None
             if pre:
                 model = lstm.new_model(cfg)

@@ -1,0 +1,253 @@
+# F6.7 (plan/06): LSTM part of the leave-one-flood-out high-flow test, at the exact F2.5 config
+# (5 seeds, defaults of `clima-nqn flow highflow`), run on GitHub Actions instead of locally.
+# Manual, plus one run when this file changes on the work branch (dispatch needs the file on main).
+# Sharded by seed: `prepare` fetches the inputs (data branches, CAMELS-CL from PANGAEA, operational GEFS
+# windows) and lists the folds; `pretrain` (seed 0..4, CAMELS-CL only) -> `train` (fold x seed, fine-tuning,
+# weights saved) -> `assemble` (`flow highflow --no-retrain`: loads every saved seed, runs GR4J, forecasts,
+# dressing, fold.json and the report) and commits the work dir + F6.7.{md,json} to the orphan branch
+# `data/f67-highflow` (force-pushed, like F5.1/F5.3). Measured locally under 2x CPU contention: one
+# pretraining epoch 5-14 min (10 epochs), fine-tuning 4-12 h per fold for 5 seeds, so one job per
+# (fold, seed) stays well inside the 6 h job limit.
+name: High-flow LSTM (F6.7)
+
+on:
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: "LSTM ensemble size (the F2.5 config is 5)"
+        default: "5"
+  push: # one full run from the work branch (dispatch needs the file on main)
+    branches: [claude/phase6-waves-3-4]
+    paths: [.github/workflows/highflow-lstm.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  OUT_BRANCH: data/f67-highflow
+  PANGAEA_BASE: https://store.pangaea.de/Publications/Alvarez-Garreton-etal_2018
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    outputs:
+      pretrain_matrix: ${{ steps.plan.outputs.pretrain_matrix }}
+      train_matrix: ${{ steps.plan.outputs.train_matrix }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked --group ml
+      - name: Fetch the data branches (f25-flow, f25-forcing, f53-alldays)
+        run: |
+          for b in f25-flow f25-forcing f53-alldays; do
+            git clone -q --depth 1 --branch "data/$b" "https://github.com/${GITHUB_REPOSITORY}.git" "data/$b"
+            rm -rf "data/$b/.git"
+          done
+          du -sh data/*
+      - name: Download CAMELS-CL (PANGAEA, CC-BY-4.0) and build the tidy table
+        run: |
+          mkdir -p data/raw/camels-cl/zip
+          python3 - <<'PY'
+          import os, re, subprocess, sys
+          sys.path.insert(0, "src")
+          names = re.findall(r'\("([0-9]+_CAMELScl_[a-z0-9_]+\.zip)"', open("src/clima_nqn/io/camels_cl.py").read())
+          assert len(names) == 7, names
+          for n in names:
+              subprocess.run(["curl", "-fsSL", "--retry", "5", "-o", f"data/raw/camels-cl/zip/{n}",
+                              f"{os.environ['PANGAEA_BASE']}/{n}"], check=True)
+          PY
+          ls -l data/raw/camels-cl/zip
+          uv run python -c "
+          from clima_nqn.io import camels_cl as c
+          t, a = c.load_camels(c.DEFAULT_DIR, c.DEFAULT_OUT)
+          print(len(t), 'rows,', len(c.select_basins(t)), 'basins selected')"
+          rm -rf data/raw/camels-cl/zip
+      - name: Fetch the operational GEFS windows (2020-2025 floods)
+        run: uv run clima-nqn flow highflow-fetch-ops --retry-missing
+      - name: List the folds and plan the matrices
+        id: plan
+        env:
+          SEEDS: ${{ inputs.seeds || '5' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess, sys
+          n = os.environ["SEEDS"]
+          if not re.fullmatch(r"\d+", n) or not 1 <= int(n) <= 16:
+              sys.exit(f"invalid seeds: {n!r}")
+          out = subprocess.run(["uv", "run", "clima-nqn", "flow", "highflow", "--list-folds", "--seeds", n],
+                               check=True, capture_output=True, text=True).stdout
+          folds = json.loads(out.strip().splitlines()[-1])
+          assert folds and all(isinstance(y, int) for y in folds), out
+          seeds = list(range(int(n)))
+          print("folds", folds, "seeds", seeds)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("pretrain_matrix=" + json.dumps({"seed": seeds}) + "\n")
+              f.write("train_matrix=" + json.dumps({"include": [{"fold": y, "seed": s} for y in folds for s in seeds]}) + "\n")
+          PY
+      - name: Pack the inputs
+        run: |
+          mkdir ../packed
+          tar -cf ../packed/stations.tar data/f25-flow data/f25-forcing
+          tar -cf ../packed/camels.tar data/raw/camels-cl
+          tar -cf ../packed/forecasts.tar data/f53-alldays data/forecast/f67-gefs-ops
+          ls -l ../packed
+      - uses: actions/upload-artifact@v7
+        with:
+          name: inputs
+          path: packed
+          retention-days: 14
+
+  pretrain:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.pretrain_matrix) }}
+    name: pretrain seed ${{ matrix.seed }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked --group ml
+      - uses: actions/download-artifact@v7
+        with:
+          name: inputs
+          path: packed
+      - run: tar -xf ../packed/camels.tar
+      - name: Pretrain this seed on CAMELS-CL
+        run: uv run clima-nqn flow highflow --pretrain-only --seed-list ${{ matrix.seed }} --seeds ${{ inputs.seeds || '5' }} --work-dir work
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pretrain-seed-${{ matrix.seed }}
+          path: backend/work/pretrain
+          retention-days: 14
+
+  train:
+    needs: [prepare, pretrain]
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJSON(needs.prepare.outputs.train_matrix) }}
+    name: train fold ${{ matrix.fold }} seed ${{ matrix.seed }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked --group ml
+      - uses: actions/download-artifact@v7
+        with:
+          name: inputs
+          path: packed
+      - run: tar -xf ../packed/stations.tar
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: pretrain-seed-*
+          merge-multiple: true
+          path: backend/work/pretrain
+      - name: Fine-tune this seed on this fold
+        run: |
+          uv run clima-nqn flow highflow --train-only --fold ${{ matrix.fold }} --seed-list ${{ matrix.seed }} \
+            --seeds ${{ inputs.seeds || '5' }} --work-dir work
+      - uses: actions/upload-artifact@v7
+        with:
+          name: train-${{ matrix.fold }}-${{ matrix.seed }}
+          path: backend/work/fold-${{ matrix.fold }}
+          retention-days: 14
+
+  assemble:
+    needs: [prepare, pretrain, train]
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked --group ml
+      - uses: actions/download-artifact@v7
+        with:
+          name: inputs
+          path: packed
+      - run: |
+          for t in stations camels forecasts; do tar -xf "../packed/$t.tar"; done
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: pretrain-seed-*
+          merge-multiple: true
+          path: backend/work/pretrain
+      - name: Download the fine-tuned seeds
+        uses: actions/download-artifact@v7
+        with:
+          pattern: train-*
+          path: backend/work-train
+      - name: Merge the fold directories
+        run: |
+          for d in work-train/train-*; do
+            fold="${d##*/train-}"; fold="${fold%-*}"
+            mkdir -p "work/fold-$fold"
+            cp -r "$d"/. "work/fold-$fold"/
+          done
+          ls work work/fold-* | head -80
+      - name: Assemble (GR4J, forecasts, dressing, scores, report)
+        run: uv run clima-nqn flow highflow --seeds ${{ inputs.seeds || '5' }} --work-dir work --report-dir report --no-retrain
+      - name: Commit to the data branch
+        run: |
+          rm -rf work-train
+          mkdir out
+          cp -r work out/work
+          cp -r report out/report
+          du -sh out out/*
+          [ "$(du -sk out | cut -f1)" -lt 100000 ] || { echo "out is over 100 MB"; exit 1; }
+          cd out
+          git init -q -b "$OUT_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cat > README.md <<EOF
+          F6.7 high-flow leave-one-flood-out test, LSTM + GR4J (plan/06-forecast.md), built by
+          .github/workflows/highflow-lstm.yml run ${GITHUB_RUN_ID}
+          (${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) at commit ${GITHUB_SHA}.
+          Not code; can be deleted after use.
+          Files: report/F6.7.md and F6.7.json (the report); work/pretrain (CAMELS-CL pretraining: norm.json,
+          pretrain.json, model_seed*.pt, history); work/fold-YYYY (per fold: fold.json, sims.parquet,
+          inputs.parquet, lstm_seed*.pt weights, lstm_history_seed*.json, lstm_config.json).
+          Config: the defaults of \`clima-nqn flow highflow\` (5 seeds, 10 pretraining + up to 30 fine-tuning
+          epochs, 20000 windows per epoch), one job per (fold, seed); no scoring in the training jobs.
+          Sources: daily flow and ERA5 forcing from branches data/f25-flow and data/f25-forcing
+          (SNIH flow; Copernicus ERA5, licence-to-use with attribution); GEFSv12 reforecast from
+          data/f53-alldays (NOAA NODD: open, attribution requested, no NOAA endorsement implied) and the
+          operational GEFS 0.25 deg windows of the 2020-2025 floods (NOAA NODD, same terms);
+          pretraining on CAMELS-CL: Alvarez-Garreton et al. (2018), HESS 22, 5817-5846, PANGAEA
+          DOI 10.1594/PANGAEA.894885, CC-BY-4.0 (CR2MET forcing, not ERA5).
+          Not an official alert system: retrospective test for technical users.
+          EOF
+          git add -A
+          git commit -qm "data: F6.7 high-flow test from run ${GITHUB_RUN_ID}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$OUT_BRANCH"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: highflow-report
+          path: |
+            backend/report
+            backend/work/fold-*/fold.json
+          retention-days: 30

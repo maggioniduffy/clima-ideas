@@ -127,17 +127,18 @@ def highflow(
     ] = False,
     train_only: Annotated[
         bool,
-        typer.Option(help="Only fine-tune --fold Y for --seed-list and save the weights; no scoring."),
+        typer.Option(
+            help="Only fine-tune --fold Y for --seed-list and save the weights; no scoring."
+        ),
     ] = False,
     seed_list: Annotated[
-        list[int] | None, typer.Option(help="LSTM seed (repeatable) for --pretrain-only/--train-only.")
+        list[int] | None,
+        typer.Option(help="LSTM seed (repeatable) for --pretrain-only/--train-only."),
     ] = None,
     no_retrain: Annotated[
         bool, typer.Option(help="Fail if a fold lacks saved LSTM weights instead of training them.")
     ] = False,
-    list_folds: Annotated[
-        bool, typer.Option(help="Print the fold years (JSON) and exit.")
-    ] = False,
+    list_folds: Annotated[bool, typer.Option(help="Print the fold years (JSON) and exit.")] = False,
 ) -> None:
     """Leave-one-flood-out high-flow test (F6.7): folds, scores and reports/06/F6.7.{md,json}.
 
@@ -166,7 +167,9 @@ def highflow(
     if pretrain_only:
         table, attrs = camels_cl.load_camels(camels_dir, camels_cache)
         camels = flood_lstm.camels_basins(table, attrs, camels_cl.select_basins(table))
-        hf.pretrain_once(camels, rc, work_dir / "pretrain", progress=typer.echo, seed_list=seed_list)
+        hf.pretrain_once(
+            camels, rc, work_dir / "pretrain", progress=typer.echo, seed_list=seed_list
+        )
         return
     if train_only:
         try:

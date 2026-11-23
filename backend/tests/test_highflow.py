@@ -451,17 +451,31 @@ def _tiny_stations() -> dict[int, hf.Station]:
     return {1: hf.Station(sid=1, basin=b, area_km2=100.0, lat=-37.0, flow=flow_df)}
 
 
+@pytest.fixture
+def fast_train(monkeypatch):
+    """Few validation windows per epoch so that the tiny LSTM runs take seconds."""
+    import dataclasses
+
+    orig = hf.RunConfig.train_config
+    monkeypatch.setattr(
+        hf.RunConfig,
+        "train_config",
+        lambda self, p: dataclasses.replace(orig(self, p), val_samples=32),
+    )
+
+
 def _same_state(a, b) -> bool:
     return all(np.array_equal(a[k].numpy(), b[k].numpy()) for k in a)
 
 
-def test_sharded_pretrain_and_fold_training_match_unsharded(tmp_path):
+@pytest.mark.slow
+def test_sharded_pretrain_and_fold_training_match_unsharded(tmp_path, fast_train):
     pytest.importorskip("torch")
     rc = hf.RunConfig(seeds=2, epochs=1, pretrain_epochs=1, samples_per_epoch=64)
     camels = [_tiny("camels", 5)]
     stations = _tiny_stations()
     fold = 2010
-    quiet = lambda *_: None  # noqa: E731
+    quiet = lambda *_: None
 
     # unsharded: everything in one process
     pre_a = hf.pretrain_once(camels, rc, tmp_path / "a" / "pretrain", quiet)
@@ -494,7 +508,7 @@ def test_sharded_pretrain_and_fold_training_match_unsharded(tmp_path):
     assert info_a["best_epochs"] == info_b["best_epochs"]
 
 
-def test_saved_weights_are_required_and_config_is_checked(tmp_path):
+def test_saved_weights_are_required_and_config_is_checked(tmp_path, fast_train):
     pytest.importorskip("torch")
     rc = hf.RunConfig(seeds=1, epochs=1, pretrain_epochs=1, samples_per_epoch=64)
     stations = _tiny_stations()
