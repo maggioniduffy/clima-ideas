@@ -78,10 +78,10 @@ Chart data, `[fecha]`, `[Q]` and the hero numbers in the artboards are placehold
 
 ## Tasks
 
-- [ ] T1 Tokens, fonts, base styles, design doc — S1, S2, S3, S12
+- [x] T1 Tokens, fonts, base styles, design doc — S1, S2, S3, S12
 - [ ] T2 Frame, header pills, hero row, layout — S3, S4, S5, S6, S13
 - [ ] T3 Cards, inverse card, timeline, charts — S6, S7, S8
-- [ ] T4 Basemap, background control, camera limits — S9, S10, S11
+- [x] T4 Basemap, background control, camera limits — S9, S10, S11
 - [ ] T5 Verify: unit, typecheck, lint, e2e; screenshots light and dark at 1440×900 and 390 wide against the artboards
 
 Order: T1 → T2 → T3 (share `shell.css`), T4 can run after T1 (touches `MapCanvas.tsx` and map layers only).
@@ -95,3 +95,6 @@ e2e never reaches the tile server: tile requests are routed to a fixture tile.
   shouldn't zoom out more than the covered area and it must fill its container"
 - L3 (2026-11-23) Basemap drawn inside deck.gl (raster tiles) instead of a MapLibre canvas: keeps the single
   deck.gl camera, the pitched 3D relief and every existing layer and test unchanged.
+- L4 (2026-11-23) T1 764fe70 + 714b0ef (layer color fixtures). T4 a34a3d3: unit 347, lint, typecheck, e2e 33 pass;
+  CARTO terms "sin verificar" (proxy blocked carto.com, `reports/web/T4-basemap.md`); relief opacity 0.55 not tuned
+  yet; initial zoom is now the cover zoom (~6.4 at 1440×900).
