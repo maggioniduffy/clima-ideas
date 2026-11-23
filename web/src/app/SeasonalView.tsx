@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import { es } from "../i18n/es";
-import type { Seasonal, SeasonalLead, SeasonalModel, SeasonalTarget } from "../layers/forecast";
+import type { OutOfRangeInput, Seasonal, SeasonalLead, SeasonalModel, SeasonalTarget } from "../layers/forecast";
 import { NO_DATA } from "../layers/hindcast";
 import { formatDateEs } from "./floodCharts";
 import { fmt2s, interval, pct, phys } from "./forecastFormat";
@@ -13,6 +13,14 @@ export const monthLabel = (ym: string): string => {
   const name = m ? t.months[Number(m[2]) - 1] : undefined;
   return m && name ? `${name} ${m[1]}` : ym;
 };
+
+/** Three significant digits, es-AR decimals (`0,45`, `0,0123`). */
+const sig = (v: number | null): string => (v == null || !Number.isFinite(v) ? NO_DATA : v.toLocaleString("es-AR", { maximumSignificantDigits: 3 }));
+
+const oorText = (items: OutOfRangeInput[]): string =>
+  `${t.oor.title}: ${items
+    .map((x) => t.oor.item(x.label ?? x.feature, sig(x.value), x.unit ?? "", sig(x.min), sig(x.max)))
+    .join("; ")}.`;
 
 const tercileText = (m: SeasonalModel) => {
   const p = m.p_terciles;
@@ -44,19 +52,22 @@ function ModelCells({ m, lead }: { m: SeasonalModel; lead: SeasonalLead }) {
   );
 }
 
+const oorOf = (m: SeasonalModel): OutOfRangeInput[] => (m.emitted && m.out_of_range ? m.out_of_range : []);
+
 function LeadCells({ lead, unit }: { lead: SeasonalLead; unit: string }) {
+  const rows = lead.models.length + lead.models.filter((m) => oorOf(m).length > 0).length;
   const sk = lead.skill;
   const u = es.forecast.seasonal.unitNames[unit] ?? unit;
   return (
     <>
-      <th scope="rowgroup" className="fc-left" rowSpan={lead.models.length} data-testid={`seasonal-month-${lead.lead_months}`}>
+      <th scope="rowgroup" className="fc-left" rowSpan={rows} data-testid={`seasonal-month-${lead.lead_months}`}>
         <span className="num">{monthLabel(lead.target_month)}</span>
         <span className="num fc-sub">{t.lead(lead.lead_months)}</span>
       </th>
-      <td className="fc-left" rowSpan={lead.models.length} data-testid={`seasonal-edges-${lead.lead_months}`}>
+      <td className="fc-left" rowSpan={rows} data-testid={`seasonal-edges-${lead.lead_months}`}>
         {lead.edges ? t.edges(phys(lead.edges.lower_up_to), phys(lead.edges.upper_from), u) : NO_DATA}
       </td>
-      <td className="fc-left" rowSpan={lead.models.length} data-testid={`seasonal-skill-${lead.lead_months}`}>
+      <td className="fc-left" rowSpan={rows} data-testid={`seasonal-skill-${lead.lead_months}`}>
         {sk ? (
           <>
             <span className="num">{t.skill(fmt2s(sk.rpss_vs_clim), interval(sk.ci95?.[0], sk.ci95?.[1], fmt2s))}</span>
@@ -90,10 +101,19 @@ function TargetTable({ target }: { target: SeasonalTarget }) {
         {target.leads.map((lead) => (
           <tbody key={lead.lead_months} data-testid={`seasonal-lead-${lead.lead_months}`}>
             {lead.models.map((m, i) => (
-              <tr key={m.name} data-model={m.name}>
-                {i === 0 && <LeadCells lead={lead} unit={target.unit} />}
-                <ModelCells m={m} lead={lead} />
-              </tr>
+              <Fragment key={m.name}>
+                <tr data-model={m.name}>
+                  {i === 0 && <LeadCells lead={lead} unit={target.unit} />}
+                  <ModelCells m={m} lead={lead} />
+                </tr>
+                {oorOf(m).length > 0 && (
+                  <tr data-model={`${m.name}-oor`}>
+                    <td className="fc-left fc-sub-cell" colSpan={3} data-testid={`seasonal-oor-${lead.lead_months}-${m.name}`}>
+                      {oorText(oorOf(m))} {t.oor.explain}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         ))}

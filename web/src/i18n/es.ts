@@ -168,6 +168,11 @@ export const es = {
       skill: (rpss: string, ci: string) => `RPSS ${rpss} [${ci}] frente a la climatología`,
       beats: (yes: boolean) => `supera a la climatología: ${yes ? "sí" : "no"}`,
       notEmitted: (reason: string) => `No emitido: ${reason}`,
+      oor: {
+        title: "Entradas fuera del rango entrenado",
+        item: (label: string, value: string, unit: string, lo: string, hi: string) => `${label} (${value}${unit ? ` ${unit}` : ""}; entrenamiento ${lo}–${hi})`,
+        explain: "El modelo extrapola: la probabilidad puede no ser confiable.",
+      },
       unitNames: { "m3/s": "m³/s" } as Record<string, string>,
       noTargets: "Sin variables objetivo en esta emisión",
       noteLabel: "Nota",

@@ -67,6 +67,16 @@ export interface Outlook {
 
 export type Pair = [number | null, number | null];
 
+/** An input of the frozen logistic outside the range seen in training (information only). */
+export interface OutOfRangeInput {
+  feature: string;
+  label: string | null;
+  value: number | null;
+  min: number | null;
+  max: number | null;
+  unit: string | null;
+}
+
 export interface SeasonalModel {
   name: string;
   label: string;
@@ -77,6 +87,8 @@ export interface SeasonalModel {
   interval_level?: number;
   model_version?: string;
   training_period?: string;
+  /** Logistic only. `null` or absent = unknown (older emission); `[]` = every input inside the trained range. */
+  out_of_range?: OutOfRangeInput[] | null;
 }
 
 export interface SeasonalLead {

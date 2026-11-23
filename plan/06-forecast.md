@@ -223,8 +223,9 @@ lo que ya se observó.
 - Caudal en tiempo real: SNIH no lo tiene; pedir a la AIC acceso operativo (restringido). Sin eso, F6.3 y F6.7 de caudal no son verificables en el día.
 - `registry.append` relee la cadena entera en cada llamada; la emisión usa `append_many` (una verificación por lote).
 - ARCO-ERA5 iba 6,2 días atrasado el 2026-11-23 (F6.2 supuso 5): si falta la hora de emisión − 5 días, la emisión
-  estacional sale solo con baselines (`model_skipped`). En la prueba del 2026-11-01 el agua de suelo estaba +2 a +4 σ:
-  extrapolación; falta marcar entradas fuera del rango entrenado.
+  estacional sale solo con baselines (`model_skipped`). Las entradas fuera del rango entrenado se marcan en el registro
+  (`fuera_de_rango`) y en el panel; el 2026-11-01 solo el agua de suelo capa 3 de 12004 (0,325 m³/m³, entrenamiento
+  0,175–0,319).
 - Caudal alto: forzar los días pronosticados con la temperatura de GEFS (la climatología es la principal fuente de
   error en F6.7) y sumar años con el archivo operativo desde 2020-09 antes de repetir la prueba.
 - La verificación estacional tarda meses en juntar muestras; el hindcast de F6.2 da la primera estimación.

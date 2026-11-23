@@ -58,6 +58,30 @@ test("seasonal: header, month labels, terciles per model, edges, skill and reaso
   expect(screen.getByTestId("seasonal-reason-2-logistica")).toBeInTheDocument();
 });
 
+test("seasonal: out-of-range note only where the list is non-empty; unknown shows nothing", () => {
+  panel();
+  fireEvent.click(screen.getByTestId("forecast-view-seasonal"));
+  fireEvent.click(screen.getByTestId("seasonal-target-flow12004"));
+  const note = screen.getByTestId("seasonal-oor-1-logistica");
+  expect(note).toHaveTextContent(
+    "Entradas fuera del rango entrenado: agua de suelo capa 1, cuenca 12004 (0,45 m³/m³; entrenamiento 0,12–0,38). El modelo extrapola: la probabilidad puede no ser confiable.",
+  );
+  expect(note.getAttribute("class") ?? "").not.toMatch(/warn|alert|error/);
+  expect(screen.queryByTestId("seasonal-oor-2-logistica")).toBeNull(); // [] -> no note
+  expect(screen.queryByTestId("seasonal-oor-3-logistica")).toBeNull(); // absent (older emission) -> no note
+  expect(screen.getByTestId("seasonal-p-1-logistica")).toBeInTheDocument(); // probabilities untouched
+});
+
+test("seasonal: empty out-of-range list shows no note", () => {
+  const o = structuredClone(fixture);
+  const lead = o.seasonal!.targets!.find((x) => x.id === "flow12004")!.leads[0]!;
+  lead.models.find((m) => m.name === "logistica")!.out_of_range = [];
+  render(<SeasonalView seasonal={o.seasonal} />);
+  fireEvent.click(screen.getByTestId("seasonal-target-flow12004"));
+  expect(screen.getByTestId("seasonal-p-1-logistica")).toBeInTheDocument();
+  expect(screen.queryByTestId("seasonal-oor-1-logistica")).toBeNull();
+});
+
 test("seasonal: available:false shows only the note; missing block shows a default", () => {
   const { unmount } = render(<SeasonalView seasonal={{ available: false, note: "Próxima emisión el 1 de diciembre" } as Seasonal} />);
   expect(screen.getByTestId("seasonal-unavailable-note")).toHaveTextContent("Próxima emisión el 1 de diciembre");

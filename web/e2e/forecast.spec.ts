@@ -110,6 +110,11 @@ test("forecast views: switch to seasonal and high flow, keyboard, no horizontal 
   await expect(page.getByTestId("seasonal-p-1-logistica")).toContainText("%");
   await expect(page.getByTestId("seasonal-edges-1")).toContainText("m³/s");
   await expect(page.getByTestId("seasonal-note")).toBeVisible();
+  await expect(page.getByTestId("seasonal-oor-1-logistica")).toContainText(
+    "Entradas fuera del rango entrenado: agua de suelo capa 1, cuenca 12004 (0,45 m³/m³; entrenamiento 0,12–0,38)",
+  );
+  await expect(page.getByTestId("seasonal-oor-1-logistica")).toContainText("El modelo extrapola");
+  await expect(page.locator('[data-testid^="seasonal-oor-"]')).toHaveCount(1);
 
   await page.getByTestId("forecast-view-seasonal").focus();
   await page.keyboard.press("ArrowRight");
