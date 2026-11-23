@@ -31,6 +31,20 @@ REF_LABEL = {
 PHASE_LABEL = {"nino": "El Niño", "nina": "La Niña", "neutral": "neutro", "": "sin dato"}
 
 
+LECTURA = (
+    "Revisada el 2026-11-23. Solo el caudal medio mensual le gana a la climatología: Paso de Indios (12004) y "
+    "Bajada del Agrio (12010) a 1–3 meses, con la logística y con LightGBM, en el esquema externo y en el "
+    "control de origen móvil. A 4–6 meses el IC incluye 0. La señal sale de la nieve y la humedad de suelo al "
+    "emitir. La lluvia en cordillera queda apenas debajo de la climatología. La cantidad de ríos atmosféricos "
+    "no le gana a la climatología empírica: la ventaja frente a 1/3 viene de los empates (54 % de meses sin "
+    "eventos). El modelo de caudal pierde contra la persistencia del último caudal mensual, que en la práctica "
+    "no existe al emitir (SNIH con 236 días de rezago, F6.1). Tendencia o regulación pueden inflar el skill: "
+    "sin verificar. Con 48 pruebas se esperan unas 2 falsas positivas al 5 %; que las dos estaciones y los dos "
+    "modelos coincidan en 1–3 meses lo hace menos probable. Por el criterio 3 se muestra la logística. El "
+    "estacional queda \u00abExperimental\u00bb y nunca se promueve."
+)
+
+
 def _f(x, nd=3) -> str:
     return "—" if x is None or (isinstance(x, float) and math.isnan(x)) else f"{x:.{nd}f}"
 
@@ -383,7 +397,7 @@ def build_markdown(js: dict, meta: dict) -> str:
         "Entradas históricas son reanálisis, no pronósticos: el modelo no usa pronósticos GEFS ni ENSO pronosticado.",
     ):
         w(f"- {line}")
-    w("\n## Lectura\n\n(pendiente de revisión)\n")
+    w("\n## Lectura\n\n" + LECTURA + "\n")
     return "\n".join(out)
 
 
