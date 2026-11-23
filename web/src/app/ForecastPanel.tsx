@@ -83,12 +83,12 @@ function LeadRow({ l }: { l: OutlookLead }) {
         {l.above_cap ? es.forecast.above(pct(l.prob_cap)) : pct(l.p_shown)}
       </td>
       <td className="num" data-testid={`forecast-interval-${l.lead}`}>{interval(l.p_low, l.p_high, capped(l.prob_cap))}</td>
+      <td className="fc-left" data-testid={`forecast-estado-${l.lead}`}>
+        {l.estado}
+      </td>
       <td className="num">
         {pct(l.clim_p)}
         <span className="fc-sub">{interval(l.clim_low, l.clim_high, pct)}</span>
-      </td>
-      <td className="fc-left" data-testid={`forecast-estado-${l.lead}`}>
-        {l.estado}
       </td>
       <td className="fc-left" data-testid={`forecast-hindcast-${l.lead}`}>
         {hc ? (
@@ -119,8 +119,8 @@ function RegionTable({ r, level }: { r: OutlookRegion; level: number }) {
             <th scope="col" className="fc-left">{es.forecast.head.lead}</th>
             <th scope="col">{es.forecast.head.prob}</th>
             <th scope="col">{es.forecast.head.interval(Math.round(level * 100))}</th>
-            <th scope="col">{es.forecast.head.clim}</th>
             <th scope="col" className="fc-left">{es.forecast.head.estado}</th>
+            <th scope="col">{es.forecast.head.clim}</th>
             <th scope="col" className="fc-left">{es.forecast.head.hindcast}</th>
             <th scope="col" className="fc-left">{es.forecast.head.history}</th>
           </tr>

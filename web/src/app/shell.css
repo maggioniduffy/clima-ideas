@@ -515,7 +515,8 @@
 .fc-title { margin: 0; font-size: 14px; font-weight: 600; }
 .fc-table { min-width: 0; font-size: 12px; }
 .fc-table th, .fc-table td { padding-left: 6px; padding-right: 6px; }
-.fc-table th:nth-child(5), .fc-table td:nth-child(5) { min-width: 84px; }
+.fc-table td:nth-child(3), .fc-table td:nth-child(5), .fc-table td:nth-child(5) .fc-sub { white-space: nowrap; }
+.fc-table th:nth-child(4), .fc-table td:nth-child(4) { min-width: 84px; }
 .fc-table th:nth-child(6), .fc-table td:nth-child(6) { min-width: 190px; }
 .fc-table th:nth-child(7), .fc-table td:nth-child(7) { min-width: 220px; }
 .fc-table th.fc-left, .fc-table td.fc-left { text-align: left; }
@@ -529,7 +530,7 @@ h4 .fc-sub { display: inline; }
 .fc-inputs ul { margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.35; }
 
 /* Panel header with the expand / collapse button; expanded, the column covers the map area */
-.panels-head { display: flex; justify-content: flex-end; position: sticky; top: 0; z-index: 2; }
+.panels-head { display: flex; justify-content: flex-end; }
 .panel-expand {
   width: 44px; height: 44px; border-radius: var(--radius-md); border: 0; flex: none;
   background: var(--raised); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;

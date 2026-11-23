@@ -31,13 +31,6 @@ test("forecast outlook: prediction, state, history, notices and official links",
   // a prediction, its state and its history
   const table = page.getByTestId("forecast-table");
   await expect(table.getByRole("row")).toHaveCount(11);
-  await expect(page.getByTestId("forecast-p-1")).toContainText("%");
-  await expect(page.getByTestId("forecast-estado-1")).toHaveText(/Experimental|Perspectiva de riesgo/);
-  await expect(page.getByTestId("forecast-history-1")).toContainText("POD");
-  await expect(page.getByTestId("forecast-history-1")).toContainText("FAR");
-  await expect(page.getByTestId("forecast-hindcast-1")).toContainText("BSS");
-  await expect(page.getByTestId("forecast-states")).toContainText("Perspectiva de riesgo");
-
   // formatted numbers, no doubled period, Estado column header visible in the normal panel
   await expect(page.getByTestId("forecast-panel")).not.toContainText(/\d\.\d{4,}/);
   await expect(page.getByTestId("forecast-source")).not.toContainText("..");
@@ -48,6 +41,13 @@ test("forecast outlook: prediction, state, history, notices and official links",
   expect(estadoBox.x + estadoBox.width).toBeLessThanOrEqual(wrapBox.x + wrapBox.width + 1);
   await page.getByTestId("forecast-row-10").scrollIntoViewIfNeeded();
   await expect(page.getByTestId("forecast-row-10")).toBeVisible();
+
+  await expect(page.getByTestId("forecast-p-1")).toContainText("%");
+  await expect(page.getByTestId("forecast-estado-1")).toHaveText(/Experimental|Perspectiva de riesgo/);
+  await expect(page.getByTestId("forecast-history-1")).toContainText("POD");
+  await expect(page.getByTestId("forecast-history-1")).toContainText("FAR");
+  await expect(page.getByTestId("forecast-hindcast-1")).toContainText("BSS");
+  await expect(page.getByTestId("forecast-states")).toContainText("Perspectiva de riesgo");
 
   // region selector
   await page.getByTestId("forecast-region-confluencia").click();
@@ -66,10 +66,10 @@ for (const [name, size] of [["desktop", { width: 1280, height: 800 }], ["phone",
   test(`right panel expands and collapses (${name})`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/");
-    await page.getByTestId("layer-toggle-forecast-outlook").check().catch(async () => {
-      await page.getByRole("button", { name: "Capas" }).click();
-      await page.getByTestId("layer-toggle-forecast-outlook").check();
-    });
+    if (size.width <= 800) await page.locator(".drawer-toggle").click();
+    await page.getByTestId("layer-toggle-forecast-outlook").check();
+    if (size.width <= 800) await page.locator(".drawer-toggle").click();
+    await expect(page.getByTestId("forecast-panel")).toBeVisible();
     const btn = page.getByTestId("panel-expand");
     await expect(btn).toHaveAttribute("aria-label", "Expandir panel");
     await expect(btn).toHaveAttribute("aria-expanded", "false");
