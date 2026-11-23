@@ -204,6 +204,35 @@ def emit_riskday_cmd(
     typer.echo(f"Cabeza del registro: {reg.verify()}")
 
 
+@forecast_app.command("emit-seasonal")
+def emit_seasonal_cmd(
+    registry: Path = typer.Option(..., help="Archivo JSONL del registro."),
+    oni: Path = typer.Option(
+        ..., help="Carpeta con <fecha>.parquet de ONI (ops ingest) o un Parquet date/oni."
+    ),
+    issue_date: str = typer.Option(None, help="AAAA-MM-01; por defecto hoy (UTC). Solo día 1."),
+    models_dir: Path = typer.Option(Path("models/seasonal-v1"), help="Modelos y referencia."),
+    f62: Path = typer.Option(Path("../reports/06/F6.2.json"), help="Veredicto del hindcast F6.2."),
+) -> None:
+    """Emite la perspectiva estacional mensual «Experimental» (terciles, anticipaciones 1-6 meses)."""
+    from clima_nqn.stages.seasonal import emit as se
+
+    day = date.fromisoformat(issue_date) if issue_date else datetime.now(UTC).date()
+    path = max(oni.glob("*.parquet")) if oni.is_dir() else oni
+    fetchers = se.arco_fetchers(lambda: pd.read_parquet(path))
+    reg = PredictionRegistry(registry)
+    try:
+        res = se.emit_seasonal(reg, day, fetchers, models_dir, f62)
+    except (se.SeasonalEmitError, RegistryError, OSError, ValueError) as e:
+        typer.echo(f"estacional: {e}", err=True)
+        raise typer.Exit(1) from e
+    for what, why in res.skipped.items():
+        typer.echo(f"omitido {what}: {why}")
+    typer.echo(f"ARCO-ERA5T, última hora disponible: {res.arco_latest}")
+    typer.echo(f"estacional: {len(res.records)} predicciones nuevas")
+    typer.echo(f"Cabeza del registro: {reg.verify()}")
+
+
 @forecast_app.command("promote")
 def promote_cmd(
     status: Path = typer.Option(..., help="Registro de estados JSONL (status/outlook.jsonl)."),

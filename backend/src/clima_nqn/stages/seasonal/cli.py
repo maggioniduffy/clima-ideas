@@ -119,3 +119,16 @@ def report_cmd(
     summary.write_json(js, json_out)
     report.write_markdown(js, meta, md_out)
     typer.echo(f"{json_out} {md_out}; winners: {winners or 'none'}")
+
+
+@seasonal_app.command("reference")
+def reference_cmd(
+    out: Annotated[Path, typer.Option(help="Frozen reference for the emission.")] = Path(
+        "models/seasonal-v1/reference.json"
+    ),
+) -> None:
+    """Freeze the baseline reference (tercile values, ENSO-analog counts) from data/seasonal/inputs."""
+    from clima_nqn.stages.seasonal import data, emit
+
+    ref = emit.build_reference(data.load_inputs(), out)
+    typer.echo(f"{out}: {len(ref['targets'])} targets")
