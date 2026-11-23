@@ -55,6 +55,15 @@ VERSION = "seasonal-v1"
 MODEL_SKIPPED = "entradas no disponibles"
 RAIN_WINDOW_DAYS = 90
 PERSIST_RAIN_REGION = "lluvia-cordillera-12004"
+PERSIST_SKIP_REASONS = {
+    "rain": "lluvia ERA5T del mes M-2 incompleta o no disponible",
+    "ar": "persistencia de ríos atmosféricos: el catálogo F1.3 es retrospectivo, sin entrada operativa",
+    "flow": (
+        "persistencia de caudal: el caudal SNIH del mes M-1 llega con ~236 días de rezago (F6.1), "
+        "no está disponible a la emisión"
+    ),
+}
+ENSO_SKIP_REASON = "sin ONI del mes M-3 a la fecha de emisión"
 
 # target -> registry region, label, unit, input boxes
 TARGET_INFO: dict[str, dict[str, str]] = {
@@ -387,18 +396,15 @@ def emit_seasonal(
                 pd.date_range(pm, pm + pd.offsets.MonthEnd(0))
             )  # fmt: skip
             if d is None or d.isna().any():
-                persist_note = "lluvia ERA5T del mes M-2 incompleta o no disponible"
+                persist_note = PERSIST_SKIP_REASONS["rain"]
             else:
                 ref_v = np.asarray(ref_t["tercile_reference"][str(pm.month)], float)
                 persist_class = int(model.tercile_classes(ref_v, np.array([d.sum()]))[0][0])
                 persist_val = float(d.sum())
         elif target == "ar":
-            persist_note = "persistencia de ríos atmosféricos: el catálogo F1.3 es retrospectivo, sin entrada operativa"
+            persist_note = PERSIST_SKIP_REASONS["ar"]
         else:
-            persist_note = (
-                "persistencia de caudal: el caudal SNIH del mes M-1 llega con ~236 días de rezago (F6.1), "
-                "no está disponible a la emisión"
-            )
+            persist_note = PERSIST_SKIP_REASONS["flow"]
         if persist_class is None:
             res.skipped[f"persistencia/{target}"] = persist_note
 

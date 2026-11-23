@@ -311,8 +311,19 @@ def outlook_layer_cmd(
     gate: Path = typer.Option(
         Path("../reports/05/F5.8.json"), help="Veredicto del hindcast (F5.8)."
     ),
+    f62: Path = typer.Option(
+        Path("../reports/06/F6.2.json"), help="Hindcast estacional (F6.2); si falta, sin skill."
+    ),
+    f67: Path = typer.Option(
+        Path("../reports/06/F6.7.json"),
+        help="Prueba de caudal alto (F6.7); si falta, no disponible.",
+    ),
+    f69: Path = typer.Option(
+        Path("../reports/06/F6.9.json"),
+        help="Climatología condicional (F6.9); si falta, no disponible.",
+    ),
 ) -> None:
-    """Escribe la capa del visor con la última predicción de día de riesgo (F6.6)."""
+    """Escribe la capa del visor: día de riesgo (F6.6), perspectiva estacional y evidencia de caudal alto."""
     from clima_nqn.forecast.registry import RegistryTamperError
     from clima_nqn.layers import forecast_outlook as fo
 
@@ -320,7 +331,7 @@ def outlook_layer_cmd(
         typer.echo(f"No existe el veredicto del hindcast: {gate}", err=True)
         raise typer.Exit(1)
     try:
-        fo.build(registry, out, scores, status, gate)
+        fo.build(registry, out, scores, status, gate, f62, f67, f69, extras_blocks=True)
     except (fo.OutlookError, RegistryTamperError) as e:
         typer.echo(f"forecast-outlook: {e}", err=True)
         raise typer.Exit(1) from e

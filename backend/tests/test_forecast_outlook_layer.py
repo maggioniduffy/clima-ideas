@@ -19,8 +19,10 @@ from clima_nqn.forecast import riskday_model as rm
 from clima_nqn.forecast import status as st
 from clima_nqn.forecast.registry import PredictionRegistry
 from clima_nqn.layers import forecast_outlook as fo
+from clima_nqn.layers import forecast_outlook_extras as extras
 from clima_nqn.layers.manifest import load_manifest
 from clima_nqn.stages.hindcast import riskday as rd
+from clima_nqn.stages.seasonal import data, emit
 
 TODAY = date(2026, 1, 1)
 NOW = datetime(2026, 1, 1, 10, 17, tzinfo=UTC)
@@ -379,6 +381,200 @@ def test_real_gate_file_feeds_the_layer(tmp_path):
     out = fo.build(make_registry(tmp_path).path, tmp_path / "o", gate=F58)
     o = json.loads((out / "outlook.json").read_text())
     assert o["regions"][0]["leads"][0]["hindcast"]["n_events_pooled"] > 0
+
+
+# --- seasonal and high-flow blocks (extras) -------------------------------------------------------
+
+ROOT = Path(__file__).resolve().parents[2]
+F62 = ROOT / "reports/06/F6.2.json"
+F69 = ROOT / "reports/06/F6.9.json"
+F67 = ROOT / "backend/data/forecast/f67-gr4j/report/F6.7.json"
+MODELS = ROOT / "backend/models/seasonal-v1"
+needs_reports = pytest.mark.skipif(
+    not (F62.is_file() and F69.is_file() and F67.is_file() and MODELS.is_dir()),
+    reason="reports/06 and seasonal models not present",
+)
+
+
+def seasonal_fetchers(state_ok: bool = True) -> emit.Fetchers:
+    oni = pd.DataFrame({"date": pd.to_datetime(["2025-10-01"]), "oni": [-0.6], "phase": ["nina"]})
+
+    def rain(first, last):
+        return {b: pd.Series(2.0, index=pd.date_range(first, last)) for b in (12004, 12010)}
+
+    def state(t):
+        if not state_ok:
+            return None
+        return {b: {"sd": 0.001, "swvl1": 0.19, "swvl2": 0.19, "swvl3": 0.2} for b in data.BOXES}
+
+    return emit.Fetchers(state=state, rain_daily=rain, oni=lambda: oni)
+
+
+def seasonal_registry(tmp_path: Path, state_ok: bool = True) -> PredictionRegistry:
+    reg = make_registry(tmp_path)  # NOW is 2026-01-01, a 1st: the seasonal issue day too
+    emit.emit_seasonal(reg, TODAY, seasonal_fetchers(state_ok), MODELS, F62)
+    return reg
+
+
+def build_extras(tmp_path: Path, reg, **kw) -> dict:
+    kw.setdefault("today", reg.now().date())
+    out = fo.build(reg.path, tmp_path / "layer", extras_blocks=True, **kw)
+    return json.loads(
+        (out / "outlook.json").read_text(encoding="utf-8"),
+        parse_constant=lambda c: pytest.fail(f"non-strict JSON constant {c}"),
+    )
+
+
+def lead_of(o: dict, target: str, k: int) -> dict:
+    t = next(t for t in o["seasonal"]["targets"] if t["id"] == target)
+    return next(x for x in t["leads"] if x["lead_months"] == k)
+
+
+@needs_reports
+def test_seasonal_grouped_by_target_and_lead(tmp_path):
+    o = build_extras(tmp_path, seasonal_registry(tmp_path), f62=F62)
+    s = o["seasonal"]
+    assert s["available"] and s["estado"] == "Experimental" and s["issue_date"] == "2026-01-01"
+    assert s["source"] and s["period"].startswith("2026-01-01/")
+    assert [t["id"] for t in s["targets"]] == ["rain", "ar", "flow12004", "flow12010"]
+    assert all([x["lead_months"] for x in t["leads"]] == [1, 2, 3, 4, 5, 6] for t in s["targets"])
+    cell = lead_of(o, "flow12004", 1)
+    assert [m["name"] for m in cell["models"]] == list(extras.MODEL_ORDER)
+    by = {m["name"]: m for m in cell["models"]}
+    assert by["logistica"]["emitted"] and by["climatologia"]["emitted"]
+    assert sum(by["logistica"]["p_terciles"].values()) == pytest.approx(1)
+    assert by["climatologia"]["p_terciles"]["medio"] == pytest.approx(1 / 3)
+    assert by["logistica"]["model_version"].startswith("seasonal-v1") and by["logistica"]["inputs"]
+    assert by["logistica"]["training_period"].count("/") == 1
+    assert all("latency_hours" in i for i in by["logistica"]["inputs"])
+    e = cell["edges"]
+    assert e["unit"] == "m3/s" and e["lower_up_to"] <= e["upper_from"]
+    assert cell["target_month"] == "2026-01"
+    assert lead_of(o, "rain", 1)["models"][2]["emitted"]  # persistence only for rain
+    ar_pers = next(m for m in lead_of(o, "ar", 1)["models"] if m["name"] == "persistencia")
+    assert not ar_pers["emitted"] and "ríos atmosféricos" in ar_pers["reason"]
+    assert "236" in by["persistencia"]["reason"]
+    no_model = next(m for m in lead_of(o, "rain", 1)["models"] if m["name"] == "logistica")
+    assert not no_model["emitted"] and "hindcast" in no_model["reason"]
+
+
+@needs_reports
+def test_seasonal_skill_and_notes_from_f62(tmp_path):
+    o = build_extras(tmp_path, seasonal_registry(tmp_path), f62=F62)
+    sk = lead_of(o, "rain", 1)["skill"]
+    assert sk["beats_climatology"] is False and len(sk["ci95"]) == 2 and sk["rpss_vs_clim"] < 0.01
+    assert "F6.2" in sk["source"]
+    sk2 = lead_of(o, "flow12004", 1)["skill"]
+    assert sk2["beats_climatology"] is True and sk2["ci95"][0] > 0
+    notes = {t["id"]: t["note"] for t in o["seasonal"]["targets"]}
+    assert notes["rain"] == "Sin skill sobre la climatología en el hindcast: solo referencias."
+    assert notes["ar"] == notes["rain"]
+    assert "anticipación de 1, 2, 3" in notes["flow12004"]
+
+
+@needs_reports
+def test_seasonal_without_f62_has_no_skill(tmp_path):
+    o = build_extras(tmp_path, seasonal_registry(tmp_path), f62=tmp_path / "no.json")
+    assert lead_of(o, "rain", 1)["skill"] is None
+    assert o["seasonal"]["targets"][0]["note"].startswith("Sin verificar")
+
+
+@needs_reports
+def test_seasonal_skipped_model_carries_reason(tmp_path):
+    o = build_extras(tmp_path, seasonal_registry(tmp_path, state_ok=False), f62=F62)
+    cell = lead_of(o, "flow12004", 1)
+    m = next(m for m in cell["models"] if m["name"] == "logistica")
+    assert m == {
+        "name": "logistica",
+        "label": extras.MODEL_LABELS["logistica"],
+        "emitted": False,
+        "reason": emit.MODEL_SKIPPED,
+    }
+    assert any(x["emitted"] for x in cell["models"])  # baselines remain
+
+
+def test_seasonal_empty_registry_note_computes_next_first(tmp_path):
+    reg = make_registry(tmp_path, now=datetime(2026, 11, 23, 10, 17, tzinfo=UTC))
+    o = build_extras(tmp_path, reg)
+    assert o["seasonal"] == {
+        "available": False,
+        "note": "La primera emisión estacional sale el 1 de diciembre de 2026 (día 1 de cada mes).",
+    }
+    (tmp_path / "b").mkdir()
+    reg2 = make_registry(tmp_path / "b", now=datetime(2026, 12, 15, 9, 0, tzinfo=UTC))
+    assert "1 de enero de 2027" in build_extras(tmp_path / "b", reg2)["seasonal"]["note"]
+    assert extras.next_first_of_month(date(2026, 3, 1)) == date(2026, 3, 1)
+    assert extras.next_first_of_month(date(2026, 3, 2)) == date(2026, 4, 1)
+
+
+@needs_reports
+def test_highflow_f67_and_f69_extraction(tmp_path):
+    o = build_extras(tmp_path, make_registry(tmp_path), f67=F67, f69=F69)
+    h = o["highflow"]
+    assert (
+        h["estado"] == "Experimental" and h["note"] == "Prueba retrospectiva, no es un pronóstico"
+    )
+    f67 = h["f67"]
+    assert f67["available"] and f67["estado"] == "Experimental" and f67["period"] and f67["source"]
+    assert f67["independent_years"]["required"] == 20 and 0 < f67["independent_years"]["n"] < 20
+    assert f67["independent_years"]["n"] == len(f67["independent_years"]["years"])
+    main = f67["variants"]["main"]
+    assert "mediana de los máximos anuales" in main["threshold_rule"]
+    lead1 = main["models"]["gr4j"]["1"]
+    raw = json.loads(F67.read_text())["metrics"]["main"]["gr4j"]["1"]
+    assert lead1["n_floods"] == raw["n_floods"] and lead1["rises"] == raw["rises"]
+    assert lead1["coverage_ci95"] == raw["coverage_ci"] and lead1["coverage_nominal"] == 0.9
+    assert lead1["bss_clim_ci95"] == [raw["bss_clim"]["lo"], raw["bss_clim"]["hi"]]
+    assert lead1["verdict"] == "no pasa"
+    f69 = h["f69"]
+    assert f69["available"] and f69["period"] and f69["source"] and f69["gefs_period"]
+    p95 = f69["thresholds"]["p95"]
+    pooled = p95["era5"]["vs_climatology"]["pooled"]
+    assert pooled["bss"] == pytest.approx(0.0882, abs=1e-3) and pooled["ci95"][0] > 0
+    assert set(p95["era5"]["vs_persistence"]["stations"]) == {"12004", "12010", "12012"}
+    assert list(p95["gefs_by_lead"]) == [str(k) for k in range(1, 11)]
+    assert p95["gefs_by_lead"]["1"]["vs_climatology"]["pooled"]["ci_excludes_0"] is False
+
+
+def test_highflow_missing_files(tmp_path):
+    o = build_extras(tmp_path, make_registry(tmp_path), f67=tmp_path / "a", f69=tmp_path / "b")
+    assert o["highflow"]["f67"] == {"available": False}
+    assert o["highflow"]["f69"] == {"available": False}
+    assert extras.build_highflow(None, {})["f69"] == {"available": False}
+
+
+def test_extras_off_keeps_outlook_unchanged(tmp_path):
+    out = fo.build(make_registry(tmp_path).path, tmp_path / "plain")
+    o = json.loads((out / "outlook.json").read_text())
+    assert "seasonal" not in o and "highflow" not in o
+
+
+@needs_reports
+def test_cli_outlook_layer_extras_flags(tmp_path):
+    reg = seasonal_registry(tmp_path)
+    g = tmp_path / "gate.json"
+    g.write_text(json.dumps(gate()))
+    out = tmp_path / "layer"
+    base = [
+        "forecast",
+        "outlook-layer",
+        "--registry",
+        str(reg.path),
+        "--gate",
+        str(g),
+        "--out",
+        str(out),
+    ]
+    r = CliRunner().invoke(app, [*base, "--f62", str(F62), "--f67", str(F67), "--f69", str(F69)])
+    assert r.exit_code == 0, r.output
+    o = json.loads((out / "outlook.json").read_text())
+    assert o["seasonal"]["available"]
+    assert o["highflow"]["f67"]["available"] and o["highflow"]["f69"]["available"]
+    assert load_manifest(out / "manifest.json").files == ["outlook.json"]
+    gone = [str(tmp_path / n) for n in ("x", "y", "z")]  # missing optional reports do not fail
+    r = CliRunner().invoke(app, [*base, "--f62", gone[0], "--f67", gone[1], "--f69", gone[2]])
+    assert r.exit_code == 0, r.output
+    assert json.loads((out / "outlook.json").read_text())["highflow"]["f67"] == {"available": False}
 
 
 # --- fixture for the web e2e ------------------------------------------------------------------------
