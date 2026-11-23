@@ -140,7 +140,7 @@ def highflow(
     except (FileNotFoundError, ValueError, KeyError) as e:
         raise typer.BadParameter(str(e)) from e
     inc = floods[floods["included"]]
-    years = sorted(inc["hydro_year"].unique())
+    years = sorted(int(y) for y in inc["hydro_year"].unique())
     if fold:
         years = [y for y in years if y in set(fold)]
     typer.echo(

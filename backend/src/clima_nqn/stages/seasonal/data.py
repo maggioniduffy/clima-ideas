@@ -75,7 +75,9 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
 
 
-def monthly_from_daily(daily: pd.Series, how: str = "sum", min_days: int | None = None) -> pd.Series:
+def monthly_from_daily(
+    daily: pd.Series, how: str = "sum", min_days: int | None = None
+) -> pd.Series:
     """Monthly sum/mean; a month needs ``min_days`` valid days (default: all days of the month)."""
     g = daily.groupby(daily.index.to_period("M"))
     agg = getattr(g, how)()

@@ -30,7 +30,9 @@ def year_means(values: np.ndarray, years: np.ndarray, mask: np.ndarray | None = 
     return ys, np.array([values[ok & (years == y)].mean() for y in ys])
 
 
-def skill_ci(model_by_year: np.ndarray, ref_by_year: np.ndarray, n_boot: int = N_BOOT, seed: int = SEED):
+def skill_ci(
+    model_by_year: np.ndarray, ref_by_year: np.ndarray, n_boot: int = N_BOOT, seed: int = SEED
+):
     """``1 - mean(model)/mean(ref)`` over years with a bootstrap CI resampling years.
 
     Returns ``(skill, lo, hi)``; NaN when the reference mean is 0 or there are no years.

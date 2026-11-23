@@ -20,7 +20,9 @@ from clima_nqn.stages.seasonal import data, folds, model
 from clima_nqn.stages.seasonal.fetch import DATA_DIR
 
 PRED_DIR = DATA_DIR / "preds"
-OUTER_YEARS = list(range(1981, 2025))  # complete hydrological years (Apr y .. Mar y+1) with full features
+OUTER_YEARS = list(
+    range(1981, 2025)
+)  # complete hydrological years (Apr y .. Mar y+1) with full features
 CONTROL_YEARS = list(range(1995, 2025))
 MODELS = ("logit", "lgbm", "logit_lead", "logit_flow")
 BASELINES = ("clim", "clim_emp", "persist", "persist_cond", "enso")
@@ -28,7 +30,7 @@ BASELINES = ("clim", "clim_emp", "persist", "persist_cond", "enso")
 
 def _flow_select(S, train_idx):
     """Logistic with SRMF: only C is chosen (inner), the feature set is fixed."""
-    cfg, fset, sc, _ = model.select(S, "logit", train_idx, sets=("SRMF",))
+    cfg, fset, _sc, _ = model.select(S, "logit", train_idx, sets=("SRMF",))
     return cfg, fset
 
 
@@ -59,7 +61,9 @@ def run_fold(S: data.Samples, fold: folds.Fold, models=MODELS) -> tuple[pd.DataF
         if name in ("logit", "lgbm"):
             kind = name
             cfg, fset, sc, _ = model.select(S, kind, tr)
-            cfgs.append({"test_year": fold.test_year, "model": name, "fset": fset, **cfg, "inner_rps": sc})
+            cfgs.append(
+                {"test_year": fold.test_year, "model": name, "fset": fset, **cfg, "inner_rps": sc}
+            )
             put(name, model.fit_predict(S, kind, cfg, fset, tr, te))
         elif name == "logit_lead":
             p = np.full((len(te), 3), np.nan)
@@ -81,7 +85,12 @@ def run_fold(S: data.Samples, fold: folds.Fold, models=MODELS) -> tuple[pd.DataF
 
 
 def run_scheme(
-    scheme: str, target: str, inp: data.Inputs, n_jobs: int = 2, force: bool = False, models=MODELS,
+    scheme: str,
+    target: str,
+    inp: data.Inputs,
+    n_jobs: int = 2,
+    force: bool = False,
+    models=MODELS,
     log=print,
 ) -> Path:
     PRED_DIR.mkdir(parents=True, exist_ok=True)

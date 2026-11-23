@@ -34,7 +34,9 @@ def fetch_state(
 @seasonal_app.command("validate")
 def validate_cmd(
     scheme: Annotated[str, typer.Option(help="outer | control | both")] = "both",
-    target: Annotated[list[str] | None, typer.Option(help="Target (repeatable); default all.")] = None,
+    target: Annotated[
+        list[str] | None, typer.Option(help="Target (repeatable); default all.")
+    ] = None,
     n_jobs: Annotated[int, typer.Option(help="Parallel folds.")] = 2,
     force: Annotated[bool, typer.Option(help="Recompute cached predictions.")] = False,
 ) -> None:
@@ -51,12 +53,13 @@ def validate_cmd(
 
 @seasonal_app.command("report")
 def report_cmd(
-    json_out: Annotated[Path, typer.Option(help="F6.2.json path.")] = Path("../reports/06/F6.2.json"),
+    json_out: Annotated[Path, typer.Option(help="F6.2.json path.")] = Path(
+        "../reports/06/F6.2.json"
+    ),
     md_out: Annotated[Path, typer.Option(help="F6.2.md path.")] = Path("../reports/06/F6.2.md"),
     final: Annotated[bool, typer.Option(help="Fit and save final models for winners.")] = True,
 ) -> None:
     """Score the cached predictions, write F6.2.json and F6.2.md, and save final models if any beats clim."""
-    import json
 
     import pandas as pd
 
@@ -84,7 +87,9 @@ def report_cmd(
     for t in data.MAIN_TARGETS:
         vt = [v for v in js["verdicts"] if v["target"] == t]
         wins = {v["model"] for v in vt if v["beats_climatology"] and v["lead"] != "all"}
-        allr = {v["model"]: v["rpss_vs_clim"] for v in vt if v["lead"] == "all" and v["model"] in wins}
+        allr = {
+            v["model"]: v["rpss_vs_clim"] for v in vt if v["lead"] == "all" and v["model"] in wins
+        }
         if allr:
             winners[t] = max(allr, key=lambda m: allr[m])
     saved = []
@@ -94,7 +99,10 @@ def report_cmd(
         meta["final_note"] = (
             "Al menos una variable y anticipación supera a la climatología; modelos guardados en "
             "`backend/models/seasonal-v1/` (entrenados con todos los años): "
-            + "; ".join(f"{s['target']} ({s['kind']}, conjunto {s['feature_set']}, {s['config']}, hash de entradas {s['input_hash']})" for s in saved)
+            + "; ".join(
+                f"{s['target']} ({s['kind']}, conjunto {s['feature_set']}, {s['config']}, hash de entradas {s['input_hash']})"
+                for s in saved
+            )
             + ". La emisión al registro es un paso posterior; sigue siendo Experimental."
         )
     else:

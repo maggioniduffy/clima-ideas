@@ -1069,7 +1069,7 @@ def render_report(res: dict) -> str:
         "## Resultado",
         "",
         (
-            f"- Crecidas puntuadas: {n_fl} en {n_years} años hidrológicos (criterio 1 pide al menos 20 eventos "
+            f"- Crecidas puntuadas: {n_fl} en {n_years} año(s) hidrológico(s) (criterio 1 pide al menos 20 eventos "
             f"independientes{'; no se alcanzan' if n_years < 20 else ''})."
         ),
         "- Anticipaciones que pasan (BSS contra climatología con IC 95 % por encima de 0, cobertura del "

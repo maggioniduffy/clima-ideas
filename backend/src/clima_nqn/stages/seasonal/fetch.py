@@ -17,7 +17,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from clima_nqn.io import era5, forcing, snow
@@ -101,7 +100,9 @@ def fetch_state(
         def load():
             lazy = raw[[name]].sel(time=[t])
             ds = era5.crop_to_area(lazy, area, {name: ARCO_VARS[name]}).load()
-            return {b: float(forcing.box_mean(ds[ARCO_VARS[name]], box)[0]) for b, box in boxes.items()}
+            return {
+                b: float(forcing.box_mean(ds[ARCO_VARS[name]], box)[0]) for b, box in boxes.items()
+            }
 
         return era5._retry(load, retries, retry_wait, f"{t:%Y-%m-%d} {name}")
 
@@ -124,7 +125,9 @@ def fetch_state(
         )
         new["era5t"] = new["available_on"] > stop
         frames.append(new)
-        cur = pd.concat(frames, ignore_index=True).drop_duplicates(["issue_date", "box"], keep="last")
+        cur = pd.concat(frames, ignore_index=True).drop_duplicates(
+            ["issue_date", "box"], keep="last"
+        )
         frames = [cur]
         _write(cur, out)
         log(f"{min(i + batch, len(todo))}/{len(todo)} issues, {time.monotonic() - started:.0f}s")

@@ -16,16 +16,20 @@ def _samples(first="1980-05-01", last="2025-12-01", leads=range(1, 7)):
 
 
 def test_target_month_lead1_is_issue_month():
-    iss, lead, tm = _samples("2000-03-01", "2000-03-01")
+    _iss, _lead, tm = _samples("2000-03-01", "2000-03-01")
     assert tm[0] == pd.Timestamp("2000-03-01") and tm[-1] == pd.Timestamp("2000-08-01")
 
 
 def test_hydro_year():
-    assert list(folds.hydro_year(pd.to_datetime(["2000-03-01", "2000-04-01", "2001-01-01"]))) == [1999, 2000, 2000]
+    assert list(folds.hydro_year(pd.to_datetime(["2000-03-01", "2000-04-01", "2001-01-01"]))) == [
+        1999,
+        2000,
+        2000,
+    ]
 
 
 def test_outer_folds_no_test_or_gap_date_in_training():
-    iss, lead, tm = _samples()
+    iss, _lead, tm = _samples()
     for f in folds.outer_folds(iss, tm, range(1981, 2025)):
         start, end = pd.Timestamp(f.test_year, 4, 1), pd.Timestamp(f.test_year + 1, 4, 1)
         lo, hi = start - pd.DateOffset(months=6), end + pd.DateOffset(months=6)
@@ -44,7 +48,7 @@ def test_outer_folds_no_test_or_gap_date_in_training():
 
 
 def test_inner_folds_only_outer_training_years_and_strictly_before():
-    iss, lead, tm = _samples()
+    iss, _lead, tm = _samples()
     f = folds.outer_folds(iss, tm, [2000])[0]
     inner = folds.inner_folds(iss, tm, f.train, min_years=15, block_years=5)
     assert inner
@@ -57,24 +61,28 @@ def test_inner_folds_only_outer_training_years_and_strictly_before():
         val_start = iss[va].min()
         assert (iss[tr] < val_start).all()
         assert ((tm[tr] + pd.offsets.MonthBegin(1)) <= val_start).all()
-        assert len(set(folds.hydro_year(iss[tr]))) >= 15 - 1  # first block validates the 16th year onwards
+        assert (
+            len(set(folds.hydro_year(iss[tr]))) >= 15 - 1
+        )  # first block validates the 16th year onwards
         assert set(tr).isdisjoint(va)
 
 
 def test_inner_first_block_has_min_years():
-    iss, lead, tm = _samples()
+    iss, _lead, tm = _samples()
     f = folds.outer_folds(iss, tm, [2010])[0]
-    tr, va = folds.inner_folds(iss, tm, f.train, min_years=15, block_years=5)[0]
+    _tr, va = folds.inner_folds(iss, tm, f.train, min_years=15, block_years=5)[0]
     yrs = np.unique(folds.hydro_year(iss[f.train]))
     assert set(folds.hydro_year(iss[va])) == set(yrs[15:20])
 
 
 def test_rolling_origin_trains_strictly_before():
-    iss, lead, tm = _samples()
+    iss, _lead, tm = _samples()
     for f in folds.rolling_origin(iss, tm, range(1995, 2025)):
         start = pd.Timestamp(f.test_year, 4, 1)
         assert (iss[f.train] < start).all()
-        assert ((tm[f.train] + pd.offsets.MonthBegin(1)) <= start).all()  # target months over before the test
+        assert (
+            (tm[f.train] + pd.offsets.MonthBegin(1)) <= start
+        ).all()  # target months over before the test
         assert (iss[f.test] >= start).all() and (iss[f.test] < start + pd.DateOffset(years=1)).all()
         assert len(f.train) > 0
 
@@ -105,12 +113,16 @@ def test_built_features_respect_issue_date():
     )  # fmt: skip
     S = data.build_samples(inp, "rain")
     assert len(S) > 0
-    assert (S.avail.apply(lambda c: pd.DatetimeIndex(c).values) <= S.meta["issue"].values[:, None]).all().all()
+    assert (
+        (S.avail.apply(lambda c: pd.DatetimeIndex(c).values) <= S.meta["issue"].values[:, None])
+        .all()
+        .all()
+    )
     assert (S.avail["sd_12004"] == S.meta["issue"] - pd.Timedelta(days=5)).all()
     # rain windows end with day I-6: shifting the day I-5 value must not change rain30
     r = inp.rain_daily[12004].copy()
     d = S.meta["issue"].iloc[0]
-    r.loc[d - pd.Timedelta(days=5): d] = 1000.0
+    r.loc[d - pd.Timedelta(days=5) : d] = 1000.0
     inp.rain_daily[12004] = r
     S2 = data.build_samples(inp, "rain")
     assert S2.X["rain30"].iloc[0] == S.X["rain30"].iloc[0] == 30.0
@@ -128,7 +140,9 @@ def test_tercile_edges_from_training_only():
     ref_months = idx[:48]
     cls, _ = model.class_labels(series, ref_months, idx[[48, 59]], series.iloc[[48, 59]].values)
     assert list(cls) == [2, 2]
-    cls2, _ = model.class_labels(series, ref_months, idx[[0, 12, 24]], series.iloc[[0, 12, 24]].values)
+    cls2, _ = model.class_labels(
+        series, ref_months, idx[[0, 12, 24]], series.iloc[[0, 12, 24]].values
+    )
     assert list(cls2) == [0, 1, 1]  # Jan refs 0,12,24,36: p = .125, .375, .625
 
 
@@ -168,7 +182,9 @@ def test_monthly_series_rules():
     d.loc["2000-02-10"] = np.nan
     assert np.isnan(data.monthly_from_daily(d, "sum").loc["2000-02-01"])
     assert data.monthly_from_daily(d, "mean", 25).loc["2000-02-01"] == 1.0  # >= 25 valid days
-    ev = pd.DataFrame({"start": pd.to_datetime(["2000-01-05 06:00", "2000-01-20 00:00", "2000-03-01 00:00"])})
+    ev = pd.DataFrame(
+        {"start": pd.to_datetime(["2000-01-05 06:00", "2000-01-20 00:00", "2000-03-01 00:00"])}
+    )
     ar = data.ar_monthly(ev, pd.Timestamp("2000-01-01"), pd.Timestamp("2000-03-01"))
     assert list(ar) == [2, 0, 1]
 
@@ -176,6 +192,8 @@ def test_monthly_series_rules():
 def test_persistence_rule_and_oni_lag():
     assert data.persistence_months("rain") == 2 and data.persistence_months("ar") == 2
     assert data.persistence_months("flow") == 1
-    oni = pd.DataFrame({"date": pd.date_range("2000-01-01", periods=12, freq="MS"), "oni": range(12), "phase": "x"})
+    oni = pd.DataFrame(
+        {"date": pd.date_range("2000-01-01", periods=12, freq="MS"), "oni": range(12), "phase": "x"}
+    )
     v, _ = data.oni_at_issue(oni, pd.Timestamp("2000-06-01"))
     assert v == 2  # season centred on March (ending April), issue in June

@@ -64,7 +64,12 @@ def outer_folds(issue, target_month, test_years, gap_months: int = GAP_MONTHS) -
         test = (issue >= start) & (issue < end)
         touches = ((issue >= lo) & (issue < hi)) | ((tm_end > lo) & (tm < hi))
         folds.append(
-            Fold(int(y), np.flatnonzero(~touches), np.flatnonzero(test), np.flatnonzero(touches & ~test))
+            Fold(
+                int(y),
+                np.flatnonzero(~touches),
+                np.flatnonzero(test),
+                np.flatnonzero(touches & ~test),
+            )
         )
     return folds
 

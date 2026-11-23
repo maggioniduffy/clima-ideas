@@ -193,7 +193,9 @@ def fit_predict(S, kind, cfg, fset, train_idx, test_idx, ytr=None) -> np.ndarray
     return predict(S, mdl, prep, test_idx)
 
 
-def inner_score(S: Samples, kind: str, cfg: dict, fset: str, inner, lead: int | None = None) -> float:
+def inner_score(
+    S: Samples, kind: str, cfg: dict, fset: str, inner, lead: int | None = None
+) -> float:
     """Mean RPS over the inner validation blocks (pooled samples)."""
     tot, n = 0.0, 0
     for tr, va in inner:
@@ -276,7 +278,12 @@ def baseline_probs(S: Samples, train_idx, test_idx) -> dict[str, np.ndarray]:
     for i, j in enumerate(test_idx):
         if not ph[j]:
             continue
-        sel = (ytr >= 0) & (ph[train_idx] == ph[j]) & (im[train_idx] == im[j]) & (lead[train_idx] == lead[j])
+        sel = (
+            (ytr >= 0)
+            & (ph[train_idx] == ph[j])
+            & (im[train_idx] == im[j])
+            & (lead[train_idx] == lead[j])
+        )
         cnt = np.bincount(ytr[sel], minlength=3) + LAPLACE
         en[i] = cnt / cnt.sum()
     out["enso"] = en

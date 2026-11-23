@@ -36,9 +36,11 @@ def fit_final(inp: data.Inputs, target: str, kind: str, out_dir: Path = MODEL_DI
         "leads": list(data.LEADS),
         "training_issues": [str(S.meta["issue"].min().date()), str(S.meta["issue"].max().date())],
         "training_target_months": [str(tm.min().date()), str(tm.max().date())],
-        "n_samples": int(len(S)),
+        "n_samples": len(S),
         "tercile_rule": "mid-rank: p=(n_below+0.5 n_equal)/n per calendar month; low p<1/3, high p>2/3",
-        "tercile_reference": {str(m): sorted(ref[ref.index.month == m].tolist()) for m in range(1, 13)},
+        "tercile_reference": {
+            str(m): sorted(ref[ref.index.month == m].tolist()) for m in range(1, 13)
+        },
         "anomaly_stats": {
             str(m): {c: [float(mu[i]), float(sd[i])] for i, c in enumerate(prep.anom)}
             for m, (mu, sd) in prep.stats.items()
@@ -47,7 +49,9 @@ def fit_final(inp: data.Inputs, target: str, kind: str, out_dir: Path = MODEL_DI
         "no_enso_input": True,
         "note": "Experimental; not an official alert. ERA5 0.25 deg, not ERA5-Land; boxes sin verificar.",
     }
-    meta["input_hash"] = hashlib.sha256(json.dumps(inp.hashes, sort_keys=True).encode()).hexdigest()[:16]
+    meta["input_hash"] = hashlib.sha256(
+        json.dumps(inp.hashes, sort_keys=True).encode()
+    ).hexdigest()[:16]
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     if kind == "logit":
@@ -56,4 +60,7 @@ def fit_final(inp: data.Inputs, target: str, kind: str, out_dir: Path = MODEL_DI
     else:
         mdl.booster_.save_model(str(out_dir / f"{target}.txt"))
     (out_dir / f"{target}.json").write_text(json.dumps(meta, indent=1, default=float) + "\n")
-    return {k: meta[k] for k in ("target", "kind", "feature_set", "config", "training_issues", "input_hash")}
+    return {
+        k: meta[k]
+        for k in ("target", "kind", "feature_set", "config", "training_issues", "input_hash")
+    }

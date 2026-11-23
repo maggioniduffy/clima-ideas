@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 from clima_nqn.stages.seasonal import data, score, validate
-from clima_nqn.stages.seasonal.fetch import DATA_DIR
 
 REPORT_JSON = Path("../reports/06/F6.2.json")
 MODEL_NAMES = ("logit", "lgbm", "logit_lead", "logit_flow")
@@ -32,7 +31,7 @@ def skill_row(df: pd.DataFrame, model: str, ref: str, lead) -> dict | None:
     y, yr = d["y"].values[ok], d["test_year"].values[ok]
     pm, pr = pm[ok], pr[ok]
     row = {"model": model, "ref": ref, "lead": lead, "n_samples": int(ok.sum()),
-           "n_years": int(len(np.unique(yr)))}  # fmt: skip
+           "n_years": len(np.unique(yr))}  # fmt: skip
     for key, fm, fr in (
         ("rps", score.rps(pm, y), score.rps(pr, y)),
         ("bs_upper", score.brier(pm, y, 2), score.brier(pr, y, 2)),
@@ -52,11 +51,13 @@ def skill_row(df: pd.DataFrame, model: str, ref: str, lead) -> dict | None:
 def by_year(df: pd.DataFrame, oni: pd.DataFrame, models: list[str]) -> list[dict]:
     rows = []
     for y, g in df.groupby("test_year"):
-        row = {"year": int(y), "phase": data.hydro_phase(oni, int(y)), "n": int(len(g))}
+        row = {"year": int(y), "phase": data.hydro_phase(oni, int(y)), "n": len(g)}
         for name in [*models, *REF_NAMES]:
             p = _probs(g, name)
             ok = np.isfinite(p).all(1) & (g["y"].values >= 0)
-            row[f"rps_{name}"] = float(score.rps(p[ok], g["y"].values[ok]).mean()) if ok.any() else None
+            row[f"rps_{name}"] = (
+                float(score.rps(p[ok], g["y"].values[ok]).mean()) if ok.any() else None
+            )
             row[f"bs_upper_{name}"] = (
                 float(score.brier(p[ok], g["y"].values[ok], 2).mean()) if ok.any() else None
             )
@@ -80,7 +81,9 @@ def by_phase(df: pd.DataFrame, oni: pd.DataFrame, models: list[str]) -> list[dic
     return rows
 
 
-def summarize_target(target: str, scheme: str, oni: pd.DataFrame, pred_dir: Path = validate.PRED_DIR) -> dict | None:
+def summarize_target(
+    target: str, scheme: str, oni: pd.DataFrame, pred_dir: Path = validate.PRED_DIR
+) -> dict | None:
     path = Path(pred_dir) / f"{scheme}-{target}.parquet"
     if not path.exists():
         return None
