@@ -598,16 +598,36 @@ def write_fixture(tmp_path: Path, dest: Path) -> Path:
     return out
 
 
+EXTRA_KEYS = ("seasonal", "highflow")
+
+
 def test_fixture_matches_builder(tmp_path):
+    # The e2e fixture also carries small hand-made `seasonal` and `highflow` blocks (EXTRA_KEYS) for the
+    # viewer tests; the builder part is compared without them, and a rewrite keeps them.
+    extra = {
+        k: v
+        for k, v in json.loads((FIXTURE / "outlook.json").read_text(encoding="utf-8")).items()
+        if k in EXTRA_KEYS
+    }
     if os.environ.get("FORECAST_OUTLOOK_WRITE_FIXTURE"):
         (tmp_path / "w").mkdir()
-        write_fixture(tmp_path / "w", FIXTURE)
+        w = write_fixture(tmp_path / "w", FIXTURE)
+        o = json.loads((w / "outlook.json").read_text(encoding="utf-8")) | extra
+        (w / "outlook.json").write_text(
+            json.dumps(o, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+        )
     (tmp_path / "c").mkdir()
     out = write_fixture(tmp_path / "c", tmp_path / "fx")
-    for name in ("manifest.json", "outlook.json"):
-        assert (FIXTURE / name).read_text(encoding="utf-8") == (out / name).read_text(
-            encoding="utf-8"
-        ), f"{name} is stale: rerun with FORECAST_OUTLOOK_WRITE_FIXTURE=1"
+    assert (FIXTURE / "manifest.json").read_text(encoding="utf-8") == (
+        out / "manifest.json"
+    ).read_text(encoding="utf-8"), (
+        "manifest.json is stale: rerun with FORECAST_OUTLOOK_WRITE_FIXTURE=1"
+    )
+    fixed = json.loads((FIXTURE / "outlook.json").read_text(encoding="utf-8"))
+    built = json.loads((out / "outlook.json").read_text(encoding="utf-8"))
+    assert {k: v for k, v in fixed.items() if k not in EXTRA_KEYS} == built, (
+        "outlook.json is stale: rerun with FORECAST_OUTLOOK_WRITE_FIXTURE=1"
+    )
     o = json.loads((FIXTURE / "outlook.json").read_text(encoding="utf-8"))
     assert any(c["above_cap"] for _, c in cells(o))
     assert any(c["history"]["n"] > 0 for _, c in cells(o))

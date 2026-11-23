@@ -91,3 +91,44 @@ for (const [name, size] of [["desktop", { width: 1280, height: 800 }], ["phone",
     await expect(btn).toHaveAttribute("aria-expanded", "false");
   });
 }
+
+test("forecast views: switch to seasonal and high flow, keyboard, no horizontal page scroll", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/");
+  await page.getByTestId("layer-toggle-forecast-outlook").check();
+  await expect(page.getByTestId("forecast-view-riskday")).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("forecast-table")).toBeVisible();
+
+  await page.getByTestId("forecast-view-seasonal").click();
+  await expect(page.getByTestId("seasonal-estado")).toHaveText("Experimental");
+  await expect(page.getByTestId("forecast-table")).toHaveCount(0);
+  await expect(page.getByTestId("seasonal-month-1")).toContainText("ene 2026");
+  await expect(page.getByTestId("forecast-official")).toBeVisible();
+  await page.getByTestId("seasonal-target-flow12004").click();
+  await expect(page.getByTestId("seasonal-p-1-logistica")).toContainText("%");
+  await expect(page.getByTestId("seasonal-edges-1")).toContainText("m³/s");
+  await expect(page.getByTestId("seasonal-note")).toBeVisible();
+
+  await page.getByTestId("forecast-view-seasonal").focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByTestId("forecast-view-highflow")).toBeFocused();
+  await expect(page.getByTestId("highflow-note")).toHaveText("Prueba retrospectiva, no es un pronóstico");
+  await expect(page.getByTestId("f67-table-gr4j").getByRole("row")).toHaveCount(11);
+  await page.getByTestId("highflow-variant-thr_p95").click();
+  await expect(page.getByTestId("highflow-threshold-rule")).toContainText("p95");
+  await expect(page.getByTestId("f69-era5-table")).toBeVisible();
+
+  for (const width of [1280, 360]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const v of ["seasonal", "highflow"]) {
+      await page.getByTestId(`forecast-view-${v}`).click();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+      expect(overflow, `page overflow ${v} at ${width}px`).toBe(false);
+    }
+  }
+  await page.getByTestId("forecast-view-riskday").click();
+  await expect(page.getByTestId("forecast-table")).toBeVisible();
+  expect(errors).toEqual([]);
+});

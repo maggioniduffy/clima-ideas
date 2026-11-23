@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { es } from "../i18n/es";
 import type { Outlook, OutlookLead, OutlookRegion } from "../layers/forecast";
 import { fmt0, fmt1, fmt2, NO_DATA } from "../layers/hindcast";
 import type { ForecastState } from "../layers/useForecastOutlook";
 import { formatDateEs } from "./floodCharts";
+import { fmt2s, interval, pct } from "./forecastFormat";
+import { HighflowView } from "./HighflowView";
+import { SeasonalView } from "./SeasonalView";
 
 export interface ForecastPanelProps {
   state: ForecastState;
@@ -15,13 +18,6 @@ export interface ForecastPanelProps {
   outlookStatus?: string;
 }
 
-const pct = (v: number | null | undefined): string => {
-  if (v == null || !Number.isFinite(v)) return NO_DATA;
-  const x = v * 100;
-  return `${x.toLocaleString("es-AR", { minimumFractionDigits: x < 10 ? 1 : 0, maximumFractionDigits: x < 10 ? 1 : 0 })} %`;
-};
-const interval = (lo: number | null | undefined, hi: number | null | undefined, f: (v: number | null) => string) =>
-  lo == null || hi == null ? NO_DATA : es.forecast.range(f(lo), f(hi));
 const slug = (s: string) =>
   s
     .normalize("NFD")
@@ -29,9 +25,8 @@ const slug = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-const fmt2s = (v: number | null) => (v == null ? NO_DATA : v.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
-function Notices({ o }: { o: Outlook }) {
+export function Notices({ o }: { o: Outlook }) {
   return (
     <section className="fc-notices flood-warn" data-testid="forecast-notices" aria-label={es.forecast.noticesLabel}>
       <p data-testid="forecast-official">{o.notices.official}</p>
@@ -49,6 +44,44 @@ function Notices({ o }: { o: Outlook }) {
       </p>
       <p data-testid="forecast-audience">{o.notices.audience}</p>
     </section>
+  );
+}
+
+const VIEWS = ["riskday", "seasonal", "highflow"] as const;
+type View = (typeof VIEWS)[number];
+
+function ViewTabs({ view, onChange }: { view: View; onChange: (v: View) => void }) {
+  const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const onKey = (e: KeyboardEvent) => {
+    const i = VIEWS.indexOf(view);
+    const next = e.key === "ArrowRight" ? (i + 1) % VIEWS.length : e.key === "ArrowLeft" ? (i + VIEWS.length - 1) % VIEWS.length : e.key === "Home" ? 0 : e.key === "End" ? VIEWS.length - 1 : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    const v = VIEWS[next]!;
+    onChange(v);
+    refs.current[v]?.focus();
+  };
+  return (
+    <div className="fc-tabs" role="tablist" aria-label={es.forecast.views.label} onKeyDown={onKey}>
+      {VIEWS.map((v) => (
+        <button
+          key={v}
+          ref={(el) => {
+            refs.current[v] = el;
+          }}
+          type="button"
+          role="tab"
+          id={`forecast-tab-${v}`}
+          aria-controls="forecast-tabpanel"
+          aria-selected={view === v}
+          tabIndex={view === v ? 0 : -1}
+          data-testid={`forecast-view-${v}`}
+          onClick={() => onChange(v)}
+        >
+          {es.forecast.views[v]}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -136,12 +169,19 @@ function RegionTable({ r, level }: { r: OutlookRegion; level: number }) {
 }
 
 function Loaded({ o, source, period, license, outlookStatus }: { o: Outlook; source: string; period: string; license?: string; outlookStatus?: string }) {
+  const [view, setView] = useState<View>("riskday");
   const [regionId, setRegionId] = useState(o.regions[0]?.id ?? "");
   const r = o.regions.find((x) => x.id === regionId) ?? o.regions[0];
   const level = r?.leads[0]?.interval_level ?? 0.9;
   return (
-    <div className="conv-panel hind-panel fc-panel" data-testid="forecast-panel" data-region={r?.id} data-status={outlookStatus}>
+    <div className="conv-panel hind-panel fc-panel" data-testid="forecast-panel" data-region={r?.id} data-status={outlookStatus} data-view={view}>
+      <ViewTabs view={view} onChange={setView} />
       <Notices o={o} />
+      <div className="fc-tabpanel" role="tabpanel" id="forecast-tabpanel" aria-labelledby={`forecast-tab-${view}`}>
+      {view === "seasonal" && <SeasonalView seasonal={o.seasonal} />}
+      {view === "highflow" && <HighflowView highflow={o.highflow} />}
+      {view === "riskday" && (
+        <>
       <h3 className="fc-title" data-testid="forecast-variable">
         {o.variable_label}
       </h3>
@@ -205,6 +245,9 @@ function Loaded({ o, source, period, license, outlookStatus }: { o: Outlook; sou
       <p className="conv-note" data-testid="forecast-history-note">
         {o.history_note}
       </p>
+        </>
+      )}
+      </div>
     </div>
   );
 }

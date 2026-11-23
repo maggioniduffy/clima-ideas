@@ -243,7 +243,7 @@ def highflow(
     if no_report or not done:
         return
     ctx = {
-        "forcing_period": info.get("12004", {}).get("forcing_period", ""),
+        "forcing_period": info.get("12004", {}).get("forcing_period", "").replace(" to ", "/"),
         "pretrain": pretrain_note,
         "n_boot": n_boot,
         "elevation_filled": info.get("elevation_filled_from_F2.5-bands"),

@@ -303,7 +303,7 @@ def build_f67(f67: dict | None) -> dict:
         "estado": ESTADO,
         "note": RETRO_NOTE,
         "source": F67_SOURCE,
-        "period": ctx.get("forcing_period"),
+        "period": (ctx.get("forcing_period") or "").replace(" to ", "/") or None,
         "independent_years": {"n": len(years), "required": REQUIRED_INDEPENDENT, "years": years},
         "n_floods": sum(1 for f in f67.get("floods", []) if f.get("included")),
         "variants": variants,
