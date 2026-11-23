@@ -11,6 +11,8 @@ export default defineConfig({
     },
     {
       command: "pnpm dev",
+      // Any non-empty key turns the basemap on; tile requests are answered by e2e/fixtures/test.ts.
+      env: { VITE_CARTO_KEY: "e2e-fixture-key" },
       url: "http://localhost:5173",
       reuseExistingServer: true,
     },

@@ -9,7 +9,7 @@ test("basemap tiles come from the routed fixture and the attribution is always v
   await expect(attribution).toContainText("© OpenStreetMap contributors © CARTO");
   await expect(attribution.getByRole("link", { name: "CARTO" })).toHaveAttribute("href", /carto\.com/);
   await expect.poll(() => tiles.length).toBeGreaterThan(0);
-  expect(tiles.every((u) => /^https:\/\/[a-d]\.basemaps\.cartocdn\.com\/(light_all|dark_all)\/\d+\/\d+\/\d+@2x\.png$/.test(u))).toBe(true);
+  expect(tiles.every((u) => /^https:\/\/basemaps\.cartocdn\.com\/rastertiles\/(light_all|dark_all)\/\d+\/\d+\/\d+@2x\.png\?key=e2e-fixture-key$/.test(u))).toBe(true);
   // the basemap is the bottom layer but is not listed among the data layers
   await expect(page.getByTestId("map-canvas")).not.toHaveAttribute("data-deck-layers", /basemap/);
 });

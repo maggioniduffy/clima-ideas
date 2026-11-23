@@ -45,6 +45,9 @@ jobs:
       - name: Build
         env:
           VITE_DATA_URL: ${{ inputs.data_url || 'https://pub-89e22e4a31da4ba2bde9dd24522147a9.r2.dev' }}
+          # CARTO basemaps key (public in the bundle; restrict it to the site's domain in the CARTO dashboard).
+          # Unset: the viewer builds without a basemap.
+          VITE_CARTO_KEY: ${{ secrets.CARTO_BASEMAPS_KEY }}
         run: pnpm build
       - name: Deploy
         env:
