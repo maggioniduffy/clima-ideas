@@ -121,7 +121,7 @@
 }
 
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
-.card-title { margin: 0; font-size: 14px; font-weight: 600; }
+.card-title { margin: 0; font-size: 22px; font-weight: 400; }
 .card-count { font-weight: 400; color: var(--text-muted); }
 .layer-list,
 .feature-list { list-style: none; margin: 0; padding: 0; }
@@ -133,7 +133,7 @@
 
 /* Inspector: title, muted subtitle, label-left / mono-value-right rows (min 28 px) */
 .inspector-body { display: flex; flex-direction: column; }
-.inspector-title { margin: 0; font-size: 16px; font-weight: 600; }
+.inspector-title { margin: 0 0 var(--space-1); font-size: 22px; font-weight: 400; }
 .inspector-sub { margin: 0 0 var(--space-2); font-size: 13px; color: var(--text-muted); }
 .shell-inspector h3 { margin: var(--space-2) 0 var(--space-1); font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .inspector-meta, .inspector-point { margin: 0; }
@@ -155,7 +155,7 @@
 }
 .event-row[aria-pressed="true"] { background: var(--raised); }
 .event-dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; }
-.event-row[aria-pressed="true"] .event-dot { background: var(--accent); }
+.event-row[aria-pressed="true"] .event-dot { background: var(--accent); box-shadow: 0 0 0 1px var(--casing); }
 .event-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .event-value { display: flex; flex-direction: column; align-items: flex-end; font-size: 13px; line-height: 1.3; white-space: nowrap; }
 .event-date { color: var(--text-muted); }
@@ -185,19 +185,45 @@
 .ar-label { flex: 1; min-width: 0; text-transform: capitalize; }
 .ar-count { color: var(--text-muted); font-size: 13px; }
 
-/* Timeline strip: 44 px prev / play / next, slider and mono replay time, then the track */
-.shell-timeline { display: flex; flex-direction: column; gap: var(--space-2); }
-.replay-controls { display: flex; align-items: center; gap: var(--space-1); }
+/* Timeline: a --surface pill. Label, then 44 px round prev / play (on --ctrl, accent glyph) / next, a 6 px track on --raised
+   with --accent progress, the mono time, and the event track underneath. Above 200 px high it is a card (data-tall). */
+.timeline-slot {
+  box-sizing: border-box; background: var(--surface); border-radius: var(--radius-pill); padding: 10px 36px; justify-content: center;
+}
+.timeline-slot[data-tall] { border-radius: var(--radius-card); padding: 16px 28px; }
+.shell-timeline { display: flex; flex-direction: row; align-items: stretch; gap: var(--space-5); }
+.timeline-label { flex: none; align-self: center; font-size: 13px; color: var(--text-muted); }
+.timeline-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); }
+.shell-timeline > .empty { margin: 0; }
+.replay-controls { display: flex; align-items: center; gap: var(--space-2); }
 .replay-controls button {
-  flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius-md);
+  flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: var(--raised); color: var(--text); cursor: pointer;
 }
 .replay-controls .replay-play { background: var(--ctrl); color: var(--on-ctrl); }
-.replay-controls input[type="range"] { flex: 1; min-width: 0; margin: 0 var(--space-3); accent-color: var(--ctrl); }
+/* The accent glyph keeps a --casing outline so it reads on the light --ctrl of the dark theme */
+.replay-controls .replay-play svg path { fill: var(--accent); stroke: var(--casing); stroke-width: 1.2; paint-order: stroke; stroke-linejoin: round; }
+.replay-controls input[type="range"] {
+  --p: 0%; flex: 1; min-width: 0; height: 44px; margin: 0 var(--space-3); padding: 0; background: transparent;
+  -webkit-appearance: none; appearance: none; cursor: pointer;
+}
+.replay-controls input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--accent) var(--p), var(--raised) var(--p));
+}
+.replay-controls input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--raised); }
+.replay-controls input[type="range"]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--accent); }
+.replay-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--casing); box-sizing: border-box;
+}
+.replay-controls input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 2px solid var(--casing); box-sizing: border-box;
+}
+.replay-controls input[type="range"]:disabled { opacity: 0.5; cursor: default; }
 .replay-time { min-width: 150px; text-align: right; font-size: 13px; color: var(--text-muted); }
 
-.timeline-track, .timeline-detail { position: relative; background: var(--bg); border-radius: var(--radius-sm); }
+.timeline-track, .timeline-detail { position: relative; background: var(--raised); border-radius: var(--radius-sm); }
 .timeline-track { height: 32px; }
 .timeline-track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--border); }
 .timeline-detail { height: 14px; }
@@ -211,7 +237,7 @@
   position: absolute; top: -2px; bottom: -2px; width: 5px; margin-left: -2.5px;
   background: var(--accent); box-shadow: 0 0 0 1px var(--casing); pointer-events: none; z-index: 2;
 }
-.timeline-span { position: absolute; inset: 4px 0; background: var(--raised); }
+.timeline-span { position: absolute; inset: 4px 0; background: var(--border); }
 
 /* Map legend (bottom-left) and replay clock (top-right) over the canvas */
 /* Legends stack in one container (bottom-left, newest at the bottom) so two layers never overlap; clocks do the same top-right */
@@ -331,7 +357,8 @@
   .shell-panels { overflow: visible; }
   .event-card { flex: none; max-height: none; }
   .event-list { overflow: visible; }
-  .timeline-slot { height: auto; }
+  .timeline-slot, .timeline-slot[data-tall] { height: auto; border-radius: var(--radius-card); padding: 16px; }
+  .shell-timeline { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .replay-time { min-width: 0; font-size: 12px; }
   .map-legends { width: 200px; left: var(--space-2); bottom: var(--space-2); }
   .map-clocks { top: var(--space-2); right: var(--space-2); }
@@ -346,10 +373,10 @@
 .flood-figure { margin: 0; min-width: 0; }
 .flood-figure figcaption { font-size: 13px; line-height: 1.35; color: var(--text-muted); overflow-wrap: anywhere; }
 .flood-warn { margin: var(--space-1) 0 0; font-size: 13px; color: var(--text); }
-/* Every chart sits on --chart-surface (plain white in light, a flat well in dark; no grain) with a hairline border */
+/* Every chart sits on --chart-surface (plain white in light, a flat well in dark; no grain, no border); marks in --text, highlights in --accent with --casing */
 .flood-chart, .enso-chart {
   display: block; box-sizing: border-box; width: 100%; max-width: 100%; height: auto; overflow: hidden; padding: var(--space-2);
-  background: var(--chart-surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--chart-surface); border: 0; border-radius: var(--radius-lg);
 }
 .flood-panel .enso-tabs button { min-height: 44px; padding: 0 var(--space-3); font-size: 13px; }
 .flood-tick, .flood-axis { font-family: var(--font-mono); font-size: 12px; fill: var(--text-muted); }
@@ -357,7 +384,7 @@
 .flood-curve, .flood-series { fill: none; stroke: var(--text); stroke-width: 1.5; stroke-linejoin: round; }
 .flood-series { stroke-width: 0.75; }
 .flood-band { fill: var(--text-muted); fill-opacity: 0.25; stroke: none; }
-.flood-dot { fill: var(--text-muted); }
+.flood-dot { fill: var(--text); }
 .flood-dot-top { fill: var(--accent); stroke: var(--casing); stroke-width: 1; }
 .flood-top { list-style: none; margin: 0; padding: 0; font-size: 13px; }
 .flood-top li { display: grid; min-height: 28px; align-items: center; grid-template-columns: auto 1fr auto; column-gap: var(--space-2); padding: 2px 0; border-bottom: 1px solid var(--border); }
@@ -597,4 +624,17 @@ h4 .fc-sub { display: inline; }
 }
 .map-bg-btn[aria-pressed="true"] { background: var(--ctrl); color: var(--on-ctrl); }
 .map-bg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (max-width: 800px) { .map-bg { right: var(--space-2); } .map-attribution { right: var(--space-2); } }
+@media (max-width: 800px) { .map-bg { right: auto; left: var(--space-2); top: var(--space-2); bottom: auto; } .map-attribution { right: var(--space-2); } }
+
+/* Inverse card (forecast / model): --inverse with --on-inverse text. The text tokens are rescoped so every panel inside follows,
+   and focus rings use --casing on the light inverse of the dark theme. */
+.detail-card[data-tone="inverse"] {
+  --text: var(--on-inverse);
+  --text-muted: color-mix(in srgb, var(--on-inverse) 72%, var(--inverse));
+  --raised: color-mix(in srgb, var(--on-inverse) 12%, var(--inverse));
+  --border: color-mix(in srgb, var(--on-inverse) 28%, var(--inverse));
+  --ctrl: var(--on-inverse);
+  --on-ctrl: var(--inverse);
+  background-color: var(--inverse); color: var(--on-inverse);
+}
+:root[data-theme="dark"] .detail-card[data-tone="inverse"] :focus-visible { outline-color: var(--casing); }

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import type { ArEvent } from "../api/client";
 import { es } from "../i18n/es";
 import { eventDomain, eventSpans, fractionOf, formatUtc, periodDomain } from "../layers/arEvents";
@@ -55,8 +55,11 @@ export function Timeline({ events = [], peakIds, period, selectedEventId = null,
     );
   }
 
+  const progress = replay && replay.nFrames > 1 ? (replay.frame / (replay.nFrames - 1)) * 100 : 0;
   return (
     <footer className="shell-timeline" data-testid="timeline">
+      <span className="timeline-label">{es.timeline.label}</span>
+      <div className="timeline-body">
       {conv}
       {replay && selected && (
         <div className="replay-controls" data-testid="replay-controls" data-frame={replay.frame} data-playing={replay.playing}>
@@ -90,6 +93,8 @@ export function Timeline({ events = [], peakIds, period, selectedEventId = null,
           </button>
           <input
             type="range"
+            className="replay-range"
+            style={{ "--p": `${progress.toFixed(2)}%` } as CSSProperties}
             data-testid="replay-slider"
             aria-label={es.events.hour}
             min={0}
@@ -137,6 +142,7 @@ export function Timeline({ events = [], peakIds, period, selectedEventId = null,
           />
         </div>
       )}
+      </div>
     </footer>
   );
 }

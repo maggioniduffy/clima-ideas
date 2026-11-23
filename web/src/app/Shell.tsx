@@ -52,6 +52,8 @@ import "./shell.css";
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
 /** Same breakpoint as the narrow-screen rules in shell.css: everything stacks and there are no handles. */
 const NARROW_MAX_W = 800;
+/** Above this height the timeline is a tall card instead of a pill (a 999 px radius would swallow its content). */
+const TALL_TIMELINE = 200;
 
 export function Shell() {
   // panel sizes (desktop only): the stored preference, re-clamped against the window on every render
@@ -344,7 +346,7 @@ export function Shell() {
           )}
         </div>
         <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
-        <div className="timeline-slot" data-testid="timeline-slot" hidden={collapsed("timeline")}>
+        <div className="timeline-slot" data-testid="timeline-slot" data-tall={sizes.timeline > TALL_TIMELINE ? "" : undefined} hidden={collapsed("timeline")}>
           <Timeline
             events={eventsActive ? arVisible.filtered : []}
             peakIds={arVisible.peakIds}

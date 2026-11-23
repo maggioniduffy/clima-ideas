@@ -363,7 +363,7 @@ export const es = {
       "No es un sistema de alerta oficial: análisis retrospectivo de lluvias de diseño.",
     ],
   },
-  timeline: { empty: "Sin serie temporal", events: "Eventos en la línea de tiempo", cursor: "Hora de la reproducción" },
+  timeline: { label: "Línea de tiempo", empty: "Sin serie temporal", events: "Eventos en la línea de tiempo", cursor: "Hora de la reproducción" },
   map: {
     city: "Neuquén",
     legendTitle: "IVT (kg m⁻¹ s⁻¹)",
