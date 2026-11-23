@@ -116,7 +116,7 @@ def score_cmd(
     pending = int((scores["status"] == "pending").sum())
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "source": "Registro de predicciones F6.4 + " + SOURCE + " + ERA5T regional (p_dia_riesgo)",
+        "source": "Registro de predicciones + " + SOURCE + " + ERA5T regional (p_dia_riesgo)",
         "records": len(records),
         "pending": pending,
         "n_boot": n_boot,

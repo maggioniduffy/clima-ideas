@@ -57,9 +57,9 @@ RAIN_WINDOW_DAYS = 90
 PERSIST_RAIN_REGION = "lluvia-cordillera-12004"
 PERSIST_SKIP_REASONS = {
     "rain": "lluvia ERA5T del mes M-2 incompleta o no disponible",
-    "ar": "persistencia de ríos atmosféricos: el catálogo F1.3 es retrospectivo, sin entrada operativa",
+    "ar": "persistencia de ríos atmosféricos: el catálogo de ríos atmosféricos (ERA5) es retrospectivo, sin entrada operativa",
     "flow": (
-        "persistencia de caudal: el caudal SNIH del mes M-1 llega con ~236 días de rezago (F6.1), "
+        "persistencia de caudal: el caudal SNIH del mes M-1 llega con ~236 días de rezago (medido el 2026-11-22), "
         "no está disponible a la emisión"
     ),
 }
@@ -89,11 +89,11 @@ AVISOS = (
     ),
     (
         "Probabilidad junto a la climatológica (1/3 por tercil); la incertidumbre es la distribución de "
-        "los tres terciles. Historial de aciertos: solo el hindcast de F6.2; n prospectivo = 0 (sin verificar)."
+        "los tres terciles. Historial de aciertos: solo el hindcast estacional; n prospectivo = 0 (sin verificar)."
     ),
     (
         "Entradas: ERA5 (Copernicus C3S) vía ARCO-ERA5, 0,25°, cajas de la cuenca alta aproximadas (sin "
-        "verificar); ONI de NOAA CPC; historia de caudal SNIH y catálogo de ríos atmosféricos (F1.3) hasta "
+        "verificar); ONI de NOAA CPC; historia de caudal SNIH y catálogo de ríos atmosféricos (ERA5) hasta "
         "el período de entrenamiento."
     ),
 )
@@ -437,7 +437,7 @@ def emit_seasonal(
                 "bordes_terciles": {"inferior_hasta": lo_e, "superior_desde": hi_e, "unidad": tinfo["unit"]},
                 "periodo_entrenamiento": period,
                 "avisos": list(AVISOS),
-                "historial": {"n_prospectivo": 0, "nota": "sin verificar; solo hindcast F6.2"},
+                "historial": {"n_prospectivo": 0, "nota": "sin verificar; solo hindcast estacional"},
                 "reference_sha256": ref_sha,
             }  # fmt: skip
             model_wanted = (target, k) in beats

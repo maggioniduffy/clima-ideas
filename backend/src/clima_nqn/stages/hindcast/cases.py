@@ -43,7 +43,7 @@ POOLS = (
 )
 
 RULE = (
-    "event case = UTC day of ivt_max_time of each F1.3 event; control case = per event case inside a "
+    "event case = UTC day of ivt_max_time of each catalog event; control case = per event case inside a "
     "pool, one seeded uniform draw among days of the same calendar month within the pool period "
     f"with no AR event within +-{GUARD_DAYS} days (event [start,end) widened), not an event day, "
     "not repeated. Pools: "

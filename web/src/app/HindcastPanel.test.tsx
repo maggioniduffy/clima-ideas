@@ -59,7 +59,7 @@ test("choosing a lead moves the readouts, the markers and the gate table", () =>
   expect(screen.getByTestId("hindcast-skill-marker")).toHaveAttribute("data-lead", "6");
   expect(screen.getByTestId("hindcast-skill-crpss")).toHaveTextContent("0,50 (0,33 a 0,60)");
   expect(screen.getByTestId("hindcast-gate-table")).toHaveAttribute("data-lead", "6");
-  expect(screen.getByTestId("hindcast-gate-status-cordillera_norte")).toHaveTextContent("pasa hindcast (espera prospectiva F6.8)");
+  expect(screen.getByTestId("hindcast-gate-status-cordillera_norte")).toHaveTextContent("pasa hindcast (espera la temporada prospectiva)");
   expect(screen.getByTestId("hindcast-gate-status-cordillera_sur")).toHaveTextContent("Experimental");
   fireEvent.click(screen.getByTestId("hindcast-lead-1"));
   expect(screen.getByTestId("hindcast-gate-status-cordillera_sur")).toHaveTextContent("pasa hindcast");

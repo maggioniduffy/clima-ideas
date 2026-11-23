@@ -221,7 +221,7 @@ def promote(
             why.append(f"anticipación {lead}: faltan las más cortas {missing} (criterio 2)")
         h = (f58.get("regions") or {}).get(region, {}).get(str(lead))
         if not h or not (h.get("pass_raw") and h.get("pass_contiguous")):
-            why.append(f"anticipación {lead}: no pasa el hindcast F5.8 (criterio 1)")
+            why.append(f"anticipación {lead}: no pasa el hindcast (criterio 1)")
         if season_end(season) >= now.date():
             why.append(f"la temporada {season} (mayo–septiembre) no terminó (criterio 5)")
         row = _season_row(rows, model, variable, region, lead, season)

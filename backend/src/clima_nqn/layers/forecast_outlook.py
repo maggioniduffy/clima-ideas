@@ -274,6 +274,7 @@ def build(
             records, _read_json(f62), today or datetime.now(UTC).date()
         )
         outlook["highflow"] = extras.build_highflow(_read_json(f67), _read_json(f69))
+    outlook = extras.plain_tree(outlook)
     valid = [c["valid_date"] for r in outlook["regions"] for c in r["leads"]]
     manifest = LayerManifest(
         id=LAYER_ID,

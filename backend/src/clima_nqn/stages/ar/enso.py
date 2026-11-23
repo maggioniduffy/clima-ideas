@@ -48,7 +48,7 @@ METRICS = {
     "ar_share": ("Fracción de lluvia por RA (%)", 100.0, 1),
 }
 SOURCE = (
-    "ERA5 via ARCO-ERA5 (CC-BY 4.0); detecciones TECA BARD 6.0.0 (catálogo F1.3); "
+    "ERA5 via ARCO-ERA5 (CC-BY 4.0); detecciones TECA BARD 6.0.0 (catálogo de ríos atmosféricos); "
     f"ONI de {io_enso.SOURCE}"
 )
 TABLE_COLUMNS = [

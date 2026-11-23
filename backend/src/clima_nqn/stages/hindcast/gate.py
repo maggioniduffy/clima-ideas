@@ -23,7 +23,7 @@ REGIONS = rd.REGIONS
 MIN_EVENTS = rd.MIN_EVENTS
 MIN_BIN_DAYS = 20  # forecast days a reliability bin needs to count for the probability cap
 FIT_END = rd.VALID[1]  # Markov / logistic fit data end here (2014-12-31)
-STATE_PASS = "pasa hindcast (espera prospectiva F6.8)"
+STATE_PASS = "pasa hindcast (espera la temporada prospectiva)"
 STATE_EXP = "Experimental"
 SEASON_MONTHS = (5, 6, 7, 8, 9)
 

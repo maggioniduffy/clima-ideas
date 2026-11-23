@@ -119,7 +119,7 @@ def gate() -> dict:
     cell = lambda ok: {
         "bss_log_clim": {"value": 0.7, "lo": 0.57, "hi": 0.8},
         "n_events_pooled": 118,
-        "status": "pasa hindcast (espera prospectiva F6.8)" if ok else "Experimental",
+        "status": "pasa hindcast (espera la temporada prospectiva)" if ok else "Experimental",
     }
     return {"regions": {r: {str(lead): cell(lead <= 7) for lead in rm.LEADS} for r in rd.REGIONS}}
 
@@ -261,7 +261,7 @@ def test_hindcast_from_gate_and_null_when_missing(tmp_path):
     assert h == {
         "bss_clim": 0.7,
         "ci": [0.57, 0.8],
-        "verdict": "pasa hindcast (espera prospectiva F6.8)",
+        "verdict": "pasa hindcast (espera la temporada prospectiva)",
         "n_events_pooled": 118,
     }
     assert fo.build_outlook(recs)["regions"][0]["leads"][0]["hindcast"] is None
@@ -463,7 +463,7 @@ def test_seasonal_skill_and_notes_from_f62(tmp_path):
     o = build_extras(tmp_path, seasonal_registry(tmp_path), f62=F62)
     sk = lead_of(o, "rain", 1)["skill"]
     assert sk["beats_climatology"] is False and len(sk["ci95"]) == 2 and sk["rpss_vs_clim"] < 0.01
-    assert "F6.2" in sk["source"]
+    assert "Hindcast estacional" in sk["source"]
     sk2 = lead_of(o, "flow12004", 1)["skill"]
     assert sk2["beats_climatology"] is True and sk2["ci95"][0] > 0
     notes = {t["id"]: t["note"] for t in o["seasonal"]["targets"]}

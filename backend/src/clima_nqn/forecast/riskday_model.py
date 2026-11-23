@@ -272,7 +272,7 @@ def _file_sha256(path: Path) -> str:
 
 
 CAP_RULE = (
-    "Tope de probabilidad vigente (F5.8, decisión del usuario 2026-11-22): borde superior del bin de "
+    "Tope de probabilidad vigente (decisión del usuario 2026-11-22): borde superior del bin de "
     "confiabilidad más alto con al menos 20 días pronosticados, agrupando los días de test de las "
     "anticipaciones L-1, L y L+1, y no creciente en L. Por encima del tope se muestra «> tope»."
 )

@@ -81,7 +81,7 @@ _IDF_DEPTH_MM = {
 IDF_PARQUET = (
     idf_mod.OUT_PATH
 )  # optional: read instead of the constant when present (method gev_lmom)
-IDF_SOURCE = "GPM IMERG Final V07 (NASA GES DISC), IDF de F3.3 (GEV por L-momentos), celda de Neuquén capital"
+IDF_SOURCE = "GPM IMERG Final V07 (NASA GES DISC), IDF propia (GEV por L-momentos), celda de Neuquén capital"
 IDF_NOTE = (
     "IDF solo con IMERG, sin corrección de sesgo: es un piso de la lluvia de diseño. Está ajustada en la celda de "
     "la capital; aplicarla a las cuencas de las Rutas 5 y 7 (cerca de Añelo) es sin verificar."
@@ -414,7 +414,7 @@ def build(
         id=LAYER_ID,
         title=TITLE,
         kind="polygons",
-        source="Copernicus DEM GLO-30 (cuencas, F4.1); IMERG Final V07 (IDF, F3.3); escenarios de CN de TR-55",
+        source="Copernicus DEM GLO-30 (cuencas); IMERG Final V07 (IDF); escenarios de CN de TR-55",
         period=RAIN_PERIOD,
         license=LICENSE,
         updated_at=datetime.now(UTC),

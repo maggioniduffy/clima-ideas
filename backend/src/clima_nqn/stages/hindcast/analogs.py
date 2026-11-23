@@ -604,7 +604,7 @@ def build_records(
 
 METHOD = {
     "library": "media diaria de 00/06/12/18 UTC de viwve y viwvn (ERA5, ARCO-ERA5, 0,25°) en N -34 / W -74 / S -43 / E -66",
-    "target": "día UTC del IVT máximo de cada evento F1.3",
+    "target": "día UTC del IVT máximo de cada evento del catálogo",
     "distance": "euclídea sobre anomalías (climatología del día del año, ventana ±15 días) ponderadas por sqrt(cos(lat))",
     "candidates": "±30 días del día del año del evento en cualquier año; se excluyen ±15 días del evento",
     "one_per_system": "no se eligen dos análogos a ±3 días",

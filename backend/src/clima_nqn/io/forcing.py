@@ -53,7 +53,7 @@ GSC = 0.0820  # solar constant, MJ m-2 min-1 (FAO-56)
 LAMBDA_RHO = 2.45  # MJ/kg latent heat of vaporisation (rho = 1000 kg/m3 turns m/d into mm/d x 1000)
 COLUMNS = ["station_id", "date", "precip_mm", "deg0l_m", "tmean_c", "tmin_c", "tmax_c", "pet_mm"]
 UNITS = "precip_mm: mm/day; deg0l_m: m; tmean_c, tmin_c, tmax_c: degC; pet_mm: mm/day (Oudin et al. 2005)"
-DAY_NOTE = "Days are UTC days; the SNIH flow days are local (UTC-3). The offset is not corrected, as in F2.3."
+DAY_NOTE = "Days are UTC days; the SNIH flow days are local (UTC-3). The offset is not corrected, as in the flood-cause labelling."
 BOX_AVERAGE_NOTE = (
     "Box mean over the ERA5 0.25 degree cells whose centre is inside the box (edges included), "
     "weighted by cos(latitude)."

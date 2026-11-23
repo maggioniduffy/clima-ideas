@@ -14,6 +14,7 @@ Nothing is invented: absent values are ``null``. No levels, colors or advice in 
 from __future__ import annotations
 
 import math
+import re
 from datetime import date
 from typing import Any
 
@@ -38,6 +39,37 @@ MONTHS_ES = [
     "noviembre",
     "diciembre",
 ]
+# Phase/task ids ("F6.2") that older registry records or reports may carry in their text; the viewer shows
+# plain Spanish instead. Ordered: specific phrases first, then a generic cleanup of parenthesised ids.
+_PLAIN = (
+    (re.compile(r"espera prospectiva F6\.8"), "espera la temporada prospectiva"),
+    (re.compile(r"catálogo de ríos atmosféricos \(F1\.3\)"), "catálogo de ríos atmosféricos (ERA5)"),
+    (re.compile(r"catálogo F1\.3"), "catálogo de ríos atmosféricos (ERA5)"),
+    (re.compile(r"\(F6\.1\)"), "(medido el 2026-11-22)"),
+    (re.compile(r"[Hh]indcast (?:de )?F6\.2"), "hindcast estacional"),
+    (re.compile(r"\(F\d\.\d+, "), "("),
+    (re.compile(r" ?\(F\d\.\d+\)"), ""),
+)
+
+
+def plain_text(text: str) -> str:
+    """Replace internal phase ids in a text by plain Spanish (see ``_PLAIN``)."""
+    for rx, repl in _PLAIN:
+        text = rx.sub(repl, text)
+    return text
+
+
+def plain_tree(obj: Any) -> Any:
+    """``plain_text`` over every string value of a JSON-like structure (keys untouched)."""
+    if isinstance(obj, str):
+        return plain_text(obj)
+    if isinstance(obj, list):
+        return [plain_tree(v) for v in obj]
+    if isinstance(obj, dict):
+        return {k: plain_tree(v) for k, v in obj.items()}
+    return obj
+
+
 MODEL_LABELS = {
     "climatologia": "Climatología (1/3 por tercil)",
     "analogos_enso": "Análogos ENSO",
@@ -45,14 +77,14 @@ MODEL_LABELS = {
     "logistica": "Modelo logístico",
 }
 MODEL_ORDER = tuple(MODEL_LABELS)
-NO_MODEL_REASON = "no supera a la climatología en el hindcast de F6.2: no se emite"
+NO_MODEL_REASON = "no supera a la climatología en el hindcast estacional: no se emite"
 SEASONAL_SOURCE = (
     "Emisión mensual propia (registro de pronósticos): referencias climatológicas, análogos ENSO (NOAA CPC ONI) y "
     "persistencia con ERA5 (Copernicus C3S, ARCO-ERA5); modelo logístico congelado solo donde supera a la "
-    "climatología. Hindcast de F6.2."
+    "climatología. Hindcast estacional."
 )
 F67_SOURCE = (
-    "Prueba retrospectiva dejando afuera cada crecida grande (F6.7): GR4J propio con entradas GEFSv12 "
+    "Prueba retrospectiva dejando afuera cada crecida grande: GR4J propio con entradas GEFSv12 "
     "(NOAA, NODD) y caudal SNIH (Red Hidrológica Nacional)."
 )
 F67_VARIANTS = {
@@ -118,13 +150,13 @@ def _skill(f62: dict | None, target: str, lead: int) -> dict | None:
         "rpss_vs_clim": _num(v.get("rpss_vs_clim")),
         "ci95": _pair(v.get("ci_vs_clim")),
         "beats_climatology": bool(v.get("beats_climatology")),
-        "source": "Hindcast F6.2 (reports/06/F6.2.json), validación temporal",
+        "source": "Hindcast estacional, validación temporal",
     }
 
 
 def _target_note(f62: dict | None, target: str) -> str:
     if not f62:
-        return "Sin verificar: falta el hindcast de F6.2; solo referencias."
+        return "Sin verificar: falta el hindcast estacional; solo referencias."
     leads = sorted(
         x["lead"]
         for x in f62.get("verdicts", [])
@@ -363,7 +395,7 @@ def build_f69(f69: dict | None) -> dict:
         "estado": ESTADO,
         "note": RETRO_NOTE,
         "source": (
-            "Climatología condicional de caudal alto (F6.9): "
+            "Climatología condicional de caudal alto: "
             f"eventos {(src.get('events') or {}).get('source')}; caudal {(src.get('flow') or {}).get('source')}; "
             f"IVT pronosticado: {gefs.get('source')}"
         ),
