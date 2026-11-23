@@ -40,6 +40,7 @@ from clima_nqn.stages.flood import hydro_models as flood_hydro
 from clima_nqn.stages.flood import lstm as flood_lstm
 from clima_nqn.stages.flood import streamflow_eval
 from clima_nqn.stages.hindcast.cli import hindcast_app
+from clima_nqn.stages.seasonal.cli import seasonal_app
 from clima_nqn.stages.stations import qc as station_qc
 
 app = typer.Typer(help="clima-nqn command line interface.")
@@ -59,6 +60,7 @@ def version() -> None:
 app.add_typer(ops_app, name="ops")
 app.add_typer(forecast_app, name="forecast")
 app.add_typer(hindcast_app, name="hindcast")
+app.add_typer(seasonal_app, name="seasonal")
 
 enso_app = typer.Typer(help="Shared ENSO index (NOAA CPC ONI).")
 app.add_typer(enso_app, name="enso")
@@ -137,6 +139,15 @@ def debris_layer(
 
 flow_app = typer.Typer(help="Daily streamflow from SNIH (phase 2).")
 app.add_typer(flow_app, name="flow")
+
+from clima_nqn.stages.flood import conditional_clim_cli
+
+flow_app.command("conditional-clim")(conditional_clim_cli.conditional_clim)
+
+from clima_nqn.stages.flood import highflow_cli  # noqa: E402
+
+flow_app.command("highflow-fetch-ops")(highflow_cli.fetch_ops)
+flow_app.command("highflow")(highflow_cli.highflow)
 
 
 @flow_app.command("fetch")
