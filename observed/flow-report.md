@@ -1,11 +1,11 @@
 # F2.1 — Caudales diarios del SNIH y control de huecos
 
-Fecha de consulta (última actualización de los datos): 2026-11-22 · Tarea: `plan/02-floods.md`, F2.1
+Fecha de consulta (última actualización de los datos): 2026-11-23 · Tarea: `plan/02-floods.md`, F2.1
 
 ## Fuente y método
 
 - Fuente: SNIH (SIPH) — Red Hidrológica Nacional, Subsecretaría de Recursos Hídricos de la Nación (https://snih.hidricosargentina.gob.ar). Parámetro 101, caudal medio diario (m³/s), valores validados.
-- Términos del SNIH (`/Terminos.aspx`, §7): uso libre; hay que mantener el sentido original, citar al SIPH/SNIH (y a la red aportante) como fuente y declarar la fecha de última actualización (2026-11-22).
+- Términos del SNIH (`/Terminos.aspx`, §7): uso libre; hay que mantener el sentido original, citar al SIPH/SNIH (y a la red aportante) como fuente y declarar la fecha de última actualización (2026-11-23).
 - Ingesta: se descartan fechas duplicadas exactas (se conserva la primera), los valores no numéricos o negativos pasan a NaN y la serie se reindexa a días consecutivos, de modo que cada hueco es una fila NaN.
 - Año hidrológico: empieza en el mes `MesHidrologico` del SNIH (abril para estas estaciones) y se rotula con el año de inicio (2023 = 2023-04-01 a 2024-03-31).
 - Regla de año completo: ≥ 330 días válidos. Es un supuesto del proyecto (S5), no viene del SNIH.

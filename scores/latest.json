@@ -1,11 +1,11 @@
 {
- "source": "Registro de predicciones F6.4 + SNIH (SIPH) — Red Hidrológica Nacional + ERA5T regional (p_dia_riesgo)",
- "records": 100,
- "pending": 100,
+ "source": "Registro de predicciones + SNIH (SIPH) — Red Hidrológica Nacional + ERA5T regional (p_dia_riesgo)",
+ "records": 200,
+ "pending": 200,
  "n_boot": 2000,
  "seed": 0,
  "table": [],
- "scored_on": "2026-11-22",
+ "scored_on": "2026-11-23",
  "seasons": [],
  "events_pooled": {}
 }
