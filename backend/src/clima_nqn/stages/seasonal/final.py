@@ -14,6 +14,22 @@ from clima_nqn.stages.seasonal import data, model
 MODEL_DIR = Path("models/seasonal-v1")
 
 
+# raw inputs whose out-of-range state matters (lead and the month sin/cos are fixed by construction)
+RANGE_EXCLUDE = frozenset({"lead", "tm_sin", "tm_cos"})
+
+
+def feature_range(X: pd.DataFrame, features: list[str]) -> dict[str, list[float]]:
+    """Min and max of each raw model input over ``X`` (the training rows only); ``lead`` and the month
+    harmonics are left out. Used to flag, at emission, inputs the frozen model never saw."""
+    out: dict[str, list[float]] = {}
+    for c in features:
+        if c in RANGE_EXCLUDE:
+            continue
+        v = X[c].to_numpy(float)
+        out[c] = [float(np.nanmin(v)), float(np.nanmax(v))]
+    return out
+
+
 def fit_final(inp: data.Inputs, target: str, kind: str, out_dir: Path = MODEL_DIR) -> dict:
     """Select the spec by nested rolling origin over all years, fit on all years and save."""
     S = data.build_samples(inp, target)
@@ -22,6 +38,7 @@ def fit_final(inp: data.Inputs, target: str, kind: str, out_dir: Path = MODEL_DI
     ytr, _ = model.fold_labels(S, idx, idx)
     mdl, prep = model.fit_model(S, kind, cfg, fset, idx, ytr)
     tm = pd.DatetimeIndex(np.unique(S.meta["target_month"].values))
+    train_X = S.X.iloc[idx[ytr >= 0]]  # the rows fit_model trained on
     ref = S.series.reindex(tm).dropna()
     meta = {
         "version": "seasonal-v1",
@@ -45,6 +62,7 @@ def fit_final(inp: data.Inputs, target: str, kind: str, out_dir: Path = MODEL_DI
             str(m): {c: [float(mu[i]), float(sd[i])] for i, c in enumerate(prep.anom)}
             for m, (mu, sd) in prep.stats.items()
         },
+        "feature_range": feature_range(train_X, data.FEATURE_SETS[fset]),
         "input_hashes": inp.hashes,
         "no_enso_input": True,
         "note": "Experimental; not an official alert. ERA5 0.25 deg, not ERA5-Land; boxes sin verificar.",

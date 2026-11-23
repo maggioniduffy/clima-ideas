@@ -186,6 +186,22 @@ def _missing_reason(name: str, target: str) -> str:
     return NO_MODEL_REASON
 
 
+def _oor(items: object) -> list[dict] | None:
+    if not isinstance(items, list):
+        return None
+    return [
+        {
+            "feature": x.get("feature"),
+            "label": x.get("label_es"),
+            "value": _num(x.get("value")),
+            "min": _num(x.get("min")),
+            "max": _num(x.get("max")),
+            "unit": x.get("unit"),
+        }
+        for x in items
+    ]
+
+
 def _model_entry(name: str, target: str, rec: PredictionRecord | None, skipped: str | None) -> dict:
     if rec is None:
         return {
@@ -204,6 +220,10 @@ def _model_entry(name: str, target: str, rec: PredictionRecord | None, skipped: 
         "interval_level": rec.interval_level,
         "model_version": rec.model_version,
         "training_period": rec.training_period,
+        # None = unknown (record emitted before the flag existed); [] = all inputs inside the trained range
+        **(
+            {"out_of_range": _oor(rec.details.get("fuera_de_rango"))} if name == "logistica" else {}
+        ),
         "inputs": [{"name": i.name, "latency_hours": i.latency_hours} for i in rec.inputs],
     }
 

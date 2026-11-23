@@ -247,6 +247,38 @@ def logistic_probs(
     return e / e.sum()
 
 
+# --- inputs outside the trained range -------------------------------------------------------------
+
+FEATURE_UNITS = {"sd": "m de agua equivalente", "swvl": "m³/m³", "rain": "mm"}
+
+
+def feature_info(name: str, rain_box: int | None = None) -> tuple[str, str]:
+    """Spanish label and unit of a model input (``sd_12004``, ``swvl2_12010``, ``rain30``, ``rain90``)."""
+    if name.startswith("rain"):
+        box = f", cuenca {rain_box}" if rain_box else ""
+        return f"lluvia acumulada de {name.removeprefix('rain')} días{box}", FEATURE_UNITS["rain"]
+    var, _, box = name.partition("_")
+    if var == "sd":
+        return f"nieve (agua equivalente), cuenca {box}", FEATURE_UNITS["sd"]
+    if var.startswith("swvl"):
+        return f"agua de suelo capa {var.removeprefix('swvl')}, cuenca {box}", FEATURE_UNITS["swvl"]
+    return name, ""
+
+
+def out_of_range(meta: dict, feats: dict[str, float], rain_box: int | None = None) -> list[dict]:
+    """Inputs outside the [min, max] seen in training (``meta["feature_range"]``). Information only: the
+    probabilities are never changed. Raises ``KeyError`` if the model has no ``feature_range``."""
+    out = []
+    for name, (lo, hi) in meta["feature_range"].items():
+        v = float(feats[name])
+        if v < lo or v > hi:
+            label, unit = feature_info(name, rain_box)
+            out.append(
+                {"feature": name, "label_es": label, "value": v, "min": lo, "max": hi, "unit": unit}
+            )
+    return out
+
+
 # --- helpers ------------------------------------------------------------------------------------
 
 
@@ -506,12 +538,19 @@ def emit_seasonal(
                         name="ERA5T (ARCO-ERA5) lluvia diaria de la caja, 30 y 90 días hasta emisión - 6 d",
                         latency_hours=float((now_ts - (iss - pd.Timedelta(days=fetch.LATENCY_DAYS))).total_seconds() / 3600),
                     ))  # fmt: skip
+                # models frozen before ``feature_range`` existed: key absent (unknown), not an empty list
+                oor = (
+                    {"fuera_de_rango": out_of_range(meta, feats, spec["box"])}
+                    if "feature_range" in meta
+                    else {}
+                )
                 add("logistica", p3, None, srcs,
                     hash_inputs({"model": _sha(mp), "input_hash": meta["input_hash"], "feats": feats,
                                  "sample": str(sample), "k": k}),
                     {"modelo": meta["kind"], "conjunto": meta["feature_set"],
                      "entradas_entrenamiento_hash": meta["input_hash"],
                      "periodo_entrenamiento_modelo": f"{meta['training_issues'][0]}/{meta['training_issues'][1]}",
+                     **oor,
                      "hora_muestra_estado": str(sample),
                      "arco_ultima_hora_era5t": res.arco_latest,
                      "intervalo": "sin intervalo propio (modelo determinista); ver hindcast",

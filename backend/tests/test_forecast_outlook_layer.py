@@ -632,3 +632,45 @@ def test_fixture_matches_builder(tmp_path):
     assert any(c["above_cap"] for _, c in cells(o))
     assert any(c["history"]["n"] > 0 for _, c in cells(o))
     assert load_manifest(FIXTURE / "manifest.json").outlook_status == "mixto"
+
+
+@needs_reports
+def test_seasonal_out_of_range_passthrough(tmp_path):
+    o = build_extras(tmp_path, seasonal_registry(tmp_path), f62=F62)
+    m = next(m for m in lead_of(o, "flow12004", 1)["models"] if m["name"] == "logistica")
+    assert m["out_of_range"] == []  # fixture values are inside the trained range
+
+    def state(t):
+        s = {b: {"sd": 0.001, "swvl1": 0.19, "swvl2": 0.19, "swvl3": 0.2} for b in data.BOXES}
+        s[12004]["swvl1"] = 0.45
+        return s
+
+    f = seasonal_fetchers()
+    f.state = state
+    (tmp_path / "x").mkdir()
+    reg = make_registry(tmp_path / "x")
+    emit.emit_seasonal(reg, TODAY, f, MODELS, F62)
+    o2 = build_extras(tmp_path / "x", reg, f62=F62)
+    m2 = next(m for m in lead_of(o2, "flow12004", 1)["models"] if m["name"] == "logistica")
+    (item,) = m2["out_of_range"]
+    assert item["feature"] == "swvl1_12004" and item["value"] == 0.45 and item["unit"] == "m³/m³"
+    assert item["min"] < item["max"] < 0.45 and item["label"].startswith("agua de suelo capa 1")
+    assert "out_of_range" not in next(
+        m for m in lead_of(o2, "flow12004", 1)["models"] if m["name"] == "climatologia"
+    )
+
+
+@needs_reports
+def test_seasonal_old_record_is_unknown(tmp_path):
+    old = tmp_path / "models"  # models frozen before feature_range: records carry no fuera_de_rango
+    old.mkdir()
+    for p in MODELS.glob("*.json"):
+        d = json.loads(p.read_text())
+        d.pop("feature_range", None)
+        (old / p.name).write_text(json.dumps(d))
+    (tmp_path / "r").mkdir()
+    reg = make_registry(tmp_path / "r")
+    emit.emit_seasonal(reg, TODAY, seasonal_fetchers(), old, F62)
+    o = build_extras(tmp_path / "r", reg, f62=F62)
+    m = next(m for m in lead_of(o, "flow12004", 1)["models"] if m["name"] == "logistica")
+    assert m["out_of_range"] is None

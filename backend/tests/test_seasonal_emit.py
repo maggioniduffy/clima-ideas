@@ -187,3 +187,80 @@ def test_logistic_probs_sum_to_one_and_follow_coefficients():
     )  # anomalies 0, lead 3 -> intercept
     z = np.asarray(meta["intercept"]) + np.asarray(meta["coef"])[:, -1] * ((3 - 3.5) / 1.7)
     assert p.sum() == pytest.approx(1) and np.allclose(p, np.exp(z) / np.exp(z).sum())
+
+
+# --- inputs outside the trained range ---------------------------------------------------------
+
+
+def test_feature_range_uses_training_rows_only_and_skips_lead():
+    from clima_nqn.stages.seasonal import final
+
+    X = pd.DataFrame(
+        {"swvl1_12004": [0.2, 0.3, 0.9], "rain30": [10.0, np.nan, 500.0], "lead": [1.0, 2.0, 3.0],
+         "tm_sin": [0.0, 0.5, 1.0]}
+    )  # fmt: skip
+    rng = final.feature_range(X.iloc[[0, 1]], ["swvl1_12004", "rain30", "lead", "tm_sin"])
+    assert rng == {
+        "swvl1_12004": [0.2, 0.3],
+        "rain30": [10.0, 10.0],
+    }  # row 2 not trained on; NaN ignored
+
+
+def test_saved_models_carry_a_range_for_every_input():
+    for t in ("flow12004", "flow12010"):
+        meta = json.loads((MODELS / f"{t}.json").read_text())
+        assert set(meta["feature_range"]) == set(meta["features"]) - {"lead"}
+        assert all(lo <= hi for lo, hi in meta["feature_range"].values())
+
+
+def _logistic(res, target="flow12004", k=1):
+    return next(
+        r for r in res.records
+        if r.model_name == "logistica" and r.details["objetivo"] == target and r.details["lead_months"] == k
+    )  # fmt: skip
+
+
+def test_out_of_range_flagged_and_probabilities_unchanged(tmp_path):
+    base = _logistic(_run(tmp_path / "a"))
+    assert base.details["fuera_de_rango"] == []  # fetcher values are inside the trained range
+
+    def state(t):
+        s = {b: {"sd": 0.001, "swvl1": 0.19, "swvl2": 0.19, "swvl3": 0.2} for b in data.BOXES}
+        s[12004]["swvl1"] = 0.45  # above the training max
+        return s
+
+    f = _fetchers()
+    f.state = state
+    res = emit.emit_seasonal(_reg(tmp_path / "b"), ISSUE, f, MODELS, F62)
+    rec = _logistic(res)
+    (flag,) = rec.details["fuera_de_rango"]
+    meta = json.loads((MODELS / "flow12004.json").read_text())
+    assert flag["feature"] == "swvl1_12004" and flag["value"] == 0.45
+    assert flag["label_es"] == "agua de suelo capa 1, cuenca 12004" and flag["unit"] == "m³/m³"
+    assert (flag["min"], flag["max"]) == tuple(meta["feature_range"]["swvl1_12004"])
+    feats = {f"{v}_{b}": state(0)[b][v] for b in data.BOXES for v in data.STATE_VARS}
+    expect = emit.logistic_probs(
+        meta, feats, pd.Timestamp(ISSUE), 1
+    )  # same probabilities as before
+    assert rec.details["p_terciles"]["superior"] == pytest.approx(expect[2])
+
+
+def test_out_of_range_labels_for_rain_and_snow():
+    meta = {"feature_range": {"rain30": [0.0, 100.0], "sd_12010": [0.0, 0.2]}}
+    got = emit.out_of_range(meta, {"rain30": 150.0, "sd_12010": 0.1}, 12010)
+    assert [g["label_es"] for g in got] == ["lluvia acumulada de 30 días, cuenca 12010"]
+    assert got[0]["unit"] == "mm"
+    assert (
+        emit.out_of_range(meta, {"rain30": 0.0, "sd_12010": 0.2}, 12010) == []
+    )  # edges are inside
+
+
+def test_old_model_without_range_leaves_key_absent(tmp_path):
+    old = tmp_path / "models"
+    old.mkdir()
+    for p in MODELS.glob("*.json"):
+        d = json.loads(p.read_text())
+        d.pop("feature_range", None)
+        (old / p.name).write_text(json.dumps(d))
+    res = emit.emit_seasonal(_reg(tmp_path), ISSUE, _fetchers(), old, F62)
+    assert "fuera_de_rango" not in _logistic(res).details
