@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
 test("flood stations: pick a station, see the return-period curve and the top floods", async ({ page }) => {
   const errors: string[] = [];

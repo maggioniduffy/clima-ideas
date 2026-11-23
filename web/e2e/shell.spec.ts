@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
 const regions = ["topbar", "layer-panel", "map-canvas", "inspector", "timeline"];
 

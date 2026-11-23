@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
 test("AR events: enable layer, choose an event, replay it and inspect a cell value", async ({ page }) => {
   const errors: string[] = [];

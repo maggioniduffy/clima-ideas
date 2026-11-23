@@ -1,7 +1,10 @@
 import DeckGL from "@deck.gl/react";
 import { FlyToInterpolator, MapView, WebMercatorViewport, type Layer, type MapViewState } from "@deck.gl/core";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { BASEMAP_ATTRIBUTION_URL, OSM_COPYRIGHT_URL } from "../layers/basemapLayer";
+import { es } from "../i18n/es";
 import { FIT_TRANSITION_MS, resolveFocus, type FocusRequest } from "./MapCanvasFit";
+import { clampView } from "./mapCamera";
 
 // Neuquén province; pitch leaves room for the 3D relief layer (F0.5).
 const INITIAL_VIEW_STATE: MapViewState = {
@@ -36,11 +39,14 @@ const MAP_VIEW = new MapView({ repeat: false });
  * reflow); the element size is also tracked here to place the HTML markers.
  */
 export function MapCanvas({
+  basemap = null,
   layers = [],
   markers = [],
   focus = null,
   children,
 }: {
+  /** Raster basemap, drawn under `layers`; not listed in `data-deck-layers` (that lists data layers only). */
+  basemap?: Layer | null;
   layers?: Layer[];
   markers?: MapMarker[];
   /** Frame a box: the map acts once per request object (see `FocusRequest`). Generic, usable by any layer. */
@@ -48,7 +54,7 @@ export function MapCanvas({
   children?: ReactNode;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const [view, setView] = useState<MapViewState>(INITIAL_VIEW_STATE);
+  const [rawView, setView] = useState<MapViewState>(INITIAL_VIEW_STATE);
   const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const el = ref.current;
@@ -59,6 +65,8 @@ export function MapCanvas({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // Camera limits (S11): whatever the state holds, the card shows the clamped view; changes are clamped as they arrive.
+  const view = useMemo(() => clampView(rawView, size), [rawView, size]);
   // Latest view and size are read inside the effect without making it re-run on every frame of a pan.
   const live = useRef({ view, size });
   useEffect(() => {
@@ -66,8 +74,9 @@ export function MapCanvas({
   });
   useEffect(() => {
     if (!focus) return;
-    const target = resolveFocus(live.current.view, focus, live.current.size);
-    if (!target) return;
+    const found = resolveFocus(live.current.view, focus, live.current.size);
+    if (!found) return;
+    const target = clampView(found, live.current.size);
     const reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
     setView(
       reduce
@@ -93,10 +102,10 @@ export function MapCanvas({
       <DeckGL
         views={MAP_VIEW}
         viewState={view}
-        onViewStateChange={({ viewState }) => setView(viewState as MapViewState)}
+        onViewStateChange={({ viewState }) => setView(clampView(viewState as MapViewState, live.current.size))}
         controller
-        layers={layers}
-        style={{ background: "transparent" }}
+        layers={basemap ? [basemap, ...layers] : layers}
+        style={{ position: "absolute", left: "0", top: "0", width: "100%", height: "100%", background: "transparent" }}
       />
       {placed.map(({ m, x, y }) => (
         <div
@@ -114,6 +123,12 @@ export function MapCanvas({
         </div>
       ))}
       {children}
+      <p className="map-attribution" data-testid="map-attribution" aria-label={es.map.attribution}>
+        {es.map.attributionPrefix}
+        <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noreferrer">{es.map.attributionOsm}</a>
+        {es.map.attributionSep}
+        <a href={BASEMAP_ATTRIBUTION_URL} target="_blank" rel="noreferrer">{es.map.attributionCarto}</a>
+      </p>
     </main>
   );
 }

@@ -9,6 +9,7 @@ import { useArResponses } from "../layers/useArResponses";
 import { DEFAULT_TOGGLES, TOP_N, responseRatios, revealEvent, type ArToggles, type SortKey, visibleEvents } from "../layers/arFilter";
 import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
+import { buildBasemapLayer } from "../layers/basemapLayer";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
 import { CONVECTION_LAYER_ID } from "../layers/convectionIdf";
@@ -27,6 +28,7 @@ import { DetailCard } from "./DetailCard";
 import { EventListCard } from "./EventListCard";
 import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
+import { MapBackground, RELIEF_OPACITY_BOTH, readBackground, writeBackground, type MapBackgroundMode } from "./MapBackground";
 import { MapCanvas } from "./MapCanvas";
 import { MapLegend } from "./MapLegend";
 import { RainClock, RainLegend } from "./RainLegend";
@@ -112,6 +114,12 @@ export function Shell() {
   const showEnso = ensoOpen && eventsActive && enso.status !== "none";
   const [ivtView, setIvtView] = useState<IvtView>("drape");
   const theme = useTheme();
+  const [background, setBackgroundState] = useState<MapBackgroundMode>(readBackground);
+  const setBackground = (m: MapBackgroundMode) => {
+    setBackgroundState(m);
+    writeBackground(m);
+  };
+  const basemap = useMemo(() => buildBasemapLayer(theme, background !== "relief"), [theme, background]);
   // AR event filter: year and month toggles, ranking key and the "top N" switch (state lives here, no store).
   // A selected event that the filter hides stays selected: the map and the replay keep working.
   const [arToggles, setArToggles] = useState<ArToggles>(DEFAULT_TOGGLES);
@@ -119,16 +127,19 @@ export function Shell() {
   const [arTopOn, setArTopOn] = useState(false);
   const ar = useArEvents(eventsLayer, eventsActive, { relief: s.activeRelief?.data ?? null, view: ivtView, toggles: arToggles });
   // In the drape view the relief itself carries the IVT: swap its slate colors for the frame's drape colors.
+  const reliefOpacity = background === "both" ? RELIEF_OPACITY_BOTH : 1;
   const baseLayers = useMemo(
     () =>
-      ar.drapeColors && s.activeRelief
-        ? s.deckLayers.map((l) =>
-            l.id === `relief-${s.activeRelief!.layerId}`
-              ? buildReliefLayer(s.activeRelief!.layerId, s.activeRelief!.data, theme, ar.drapeColors!)
-              : l,
-          )
-        : s.deckLayers,
-    [s.deckLayers, s.activeRelief, ar.drapeColors, theme],
+      s.deckLayers.map((l) => {
+        if (!l.id.startsWith("relief-")) return l;
+        if (background === "basemap") return l.clone({ visible: false });
+        return ar.drapeColors && s.activeRelief && l.id === `relief-${s.activeRelief.layerId}`
+          ? buildReliefLayer(s.activeRelief.layerId, s.activeRelief.data, theme, ar.drapeColors, reliefOpacity)
+          : reliefOpacity === 1
+            ? l
+            : l.clone({ opacity: reliefOpacity });
+      }),
+    [s.deckLayers, s.activeRelief, ar.drapeColors, theme, background, reliefOpacity],
   );
   // Flood stations replace the generic points layer: sized by value, hollow when regulated.
   const { select: selectLayer, selectPoint, selectedId, selectedPointId } = s;
@@ -207,6 +218,7 @@ export function Shell() {
       <TopBar drawer={drawer} onToggleDrawer={toggleDrawer} />
       <div className="shell-body" data-expanded={expanded ? "" : undefined}>
         <MapCanvas
+          basemap={basemap}
           markers={conv.markers}
           focus={debris.focus}
           layers={[
@@ -225,6 +237,7 @@ export function Shell() {
               <DebrisLegend domain={debris.domain} source={debrisLayer.source} />
             )}
           </div>
+          <MapBackground value={background} onChange={setBackground} />
           <div className="map-clocks" data-testid="map-clocks">
             {ar.selectedEvent && ar.cursorMs != null && (
               <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />

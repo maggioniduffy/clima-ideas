@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
 test("forecast outlook: prediction, state, history, notices and official links", async ({ page }) => {
   const errors: string[] = [];

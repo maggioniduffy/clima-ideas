@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/test";
 
 test("hindcast verification: choose model, event and lead; gate, analogs, notices and links", async ({ page }) => {
   const errors: string[] = [];

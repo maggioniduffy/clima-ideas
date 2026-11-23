@@ -262,7 +262,13 @@ export function drapeColors(
 }
 
 /** Relief point cloud; `colors` (RGBA per point, e.g. the IVT drape) replaces the slate colors. */
-export function buildReliefLayer(layerId: string, relief: ReliefData, theme: Theme = "light", colors?: Uint8Array) {
+export function buildReliefLayer(
+  layerId: string,
+  relief: ReliefData,
+  theme: Theme = "light",
+  colors?: Uint8Array,
+  opacity = 1,
+) {
   return new PointCloudLayer({
     id: `relief-${layerId}`,
     data: {
@@ -277,6 +283,7 @@ export function buildReliefLayer(layerId: string, relief: ReliefData, theme: The
       },
     },
     pickable: false,
+    opacity,
     pointSize: 2,
     sizeUnits: "pixels",
   });
