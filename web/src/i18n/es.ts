@@ -15,7 +15,18 @@ export const es = {
     catchments: "Cuencas en el mapa",
     sourcePeriod: (source: string, period: string) => `${source} · ${period}`,
   },
-  layers: { empty: "Sin capas", loading: "Cargando capas…", error: "No se pudieron cargar las capas", toggle: "Activar capa" },
+  layers: {
+    /** Short pill labels by layer id; the full title stays in the h1, the pill title and its aria-label. */
+    short: {
+      "ar-events": "Ríos atmosféricos",
+      "convection-idf": "Convección",
+      "debris-catchments": "Aluviones",
+      "flood-stations": "Crecidas",
+      "forecast-outlook": "Perspectiva",
+      "hindcast-analogs": "Análogos",
+      "hindcast-verification": "Verificación",
+    } as Record<string, string>,
+    empty: "Sin capas", loading: "Cargando capas…", error: "No se pudieron cargar las capas", toggle: "Activar capa" },
   inspector: {
     empty: "Nada seleccionado",
     source: "Fuente",

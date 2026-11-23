@@ -61,3 +61,39 @@ test("clampView preserves transition props", () => {
   const out = clampView({ ...view, zoom: 1, transitionDuration: 800 } as MapViewState, { width: 800, height: 600 });
   expect((out as { transitionDuration?: number }).transitionDuration).toBe(800);
 });
+
+/** Every corner of the card, unprojected on the ground, must lie inside the covered box. */
+function cardInsideBox(v: MapViewState, size: { width: number; height: number }) {
+  const vp = new WebMercatorViewport({ ...v, ...size });
+  const [w, s, e, n] = COVER_BOX;
+  const tol = 1e-6;
+  return ([[0, 0], [size.width, 0], [0, size.height], [size.width, size.height]] as const).every(([x, y]) => {
+    const [lon, lat] = vp.unproject([x, y]);
+    return lon >= w - tol && lon <= e + tol && lat >= s - tol && lat <= n + tol;
+  });
+}
+
+test("clampView at pitch 40 keeps the whole card (far edge included) inside the box", () => {
+  const sizes = [
+    { width: 800, height: 600 },
+    { width: 1000, height: 560 },
+    { width: 390, height: 360 },
+  ];
+  for (const size of sizes)
+    for (const zoom of [0, 6, 7, 9, 12])
+      for (const [longitude, latitude] of [[-80, -30], [-70, -34], [-70, -43], [-74, -38], [-66, -38], [-70, -38.5]] as const) {
+        const out = clampView({ ...view, pitch: 40, zoom, longitude, latitude }, size);
+        expect(cardInsideBox(out, size), JSON.stringify({ size, zoom, longitude, latitude })).toBe(true);
+        expect(out.pitch).toBe(40);
+        expect(out.zoom).toBeLessThanOrEqual(MAX_ZOOM);
+      }
+});
+
+test("clampView at pitch 40 moves a view whose far edge leaves the box at the north", () => {
+  const size = { width: 800, height: 600 };
+  const v = { ...view, pitch: 40, zoom: 7, latitude: -34.5 };
+  expect(cardInsideBox(v, size)).toBe(false);
+  const out = clampView(v, size);
+  expect(out.latitude).toBeLessThan(v.latitude);
+  expect(cardInsideBox(out, size)).toBe(true);
+});

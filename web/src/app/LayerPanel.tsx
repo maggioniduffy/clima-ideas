@@ -40,7 +40,7 @@ export function LayerPanel({ layers, status, activeIds, selectedId, onToggle, on
               data-testid={`layer-toggle-${l.id}`}
               onChange={() => (active && selectedId !== l.id ? onSelect(l.id) : onToggle(l.id))}
             />
-            <span className="layer-pill-title">{l.title}</span>
+            <span className="layer-pill-title">{es.layers.short[l.id] ?? l.title}</span>
           </label>
         );
       })}

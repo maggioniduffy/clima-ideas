@@ -47,7 +47,8 @@ test("camera never zooms out past the covered area and the canvas fills the card
   const h = (512 / (2 * Math.PI)) * (merc(-34) - merc(-43));
   const cover = Math.max(Math.log2(box.width / w), Math.log2(box.height / h));
   expect(zoom).toBeGreaterThanOrEqual(cover - 0.01);
-  expect(zoom).toBeLessThan(cover + 0.2);
+  // at pitch 40 the far edge of the card needs a little more zoom than the flat cover zoom to stay inside the box
+  expect(zoom).toBeLessThan(cover + 0.8);
   const canvas = await card.locator("canvas").first().boundingBox();
   expect(canvas!.width).toBeCloseTo(box.width, 0);
   expect(canvas!.height).toBeCloseTo(box.height, 0);

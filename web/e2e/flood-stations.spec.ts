@@ -6,7 +6,7 @@ test("flood stations: pick a station, see the return-period curve and the top fl
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await expect(page.getByTestId("layer-item-flood-stations")).toContainText("Crecidas: caudal y período de retorno");
+  await expect(page.getByTestId("layer-item-flood-stations")).toHaveAttribute("title", "Crecidas: caudal y período de retorno");
 
   await page.getByTestId("layer-toggle-flood-stations").check();
   await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /^points-flood-stations(,|$)/);

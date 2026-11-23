@@ -6,7 +6,7 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await expect(page.getByTestId("layer-item-ar-events")).toContainText("Ríos atmosféricos");
+  await expect(page.getByTestId("layer-item-ar-events")).toHaveAttribute("title", "Ríos atmosféricos");
   await expect(page.getByTestId("timeline")).toContainText("Sin serie temporal");
 
   await page.getByTestId("layer-toggle-ar-events").check();

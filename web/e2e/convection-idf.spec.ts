@@ -6,7 +6,7 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await expect(page.getByTestId("layer-item-convection-idf")).toContainText("Convección: curva IDF y temporal de abril de 2014");
+  await expect(page.getByTestId("layer-item-convection-idf")).toHaveAttribute("title", "Convección: curva IDF y temporal de abril de 2014");
   await page.getByTestId("layer-toggle-convection-idf").check();
   await expect(page.getByTestId("inspector-source")).toHaveText("IMERG falso de prueba");
   await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /rain-convection-idf/);

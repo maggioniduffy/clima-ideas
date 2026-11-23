@@ -33,7 +33,7 @@
 }
 .layer-pills::-webkit-scrollbar { display: none; }
 .layer-pill {
-  position: relative; display: inline-flex; align-items: center; height: 44px; box-sizing: border-box; padding: 0 18px;
+  position: relative; display: inline-flex; align-items: center; height: 44px; box-sizing: border-box; padding: 0 14px;
   flex: none; max-width: 260px; border-radius: var(--radius-pill); background: transparent; color: var(--text);
   border: 1px solid var(--border); cursor: pointer; white-space: nowrap;
 }
@@ -342,6 +342,10 @@
   .topbar-actions { order: 2; }
   .layer-pills {
     order: 3; flex: 1 0 100%; margin: -5px calc(-1 * var(--space-4)); padding: 5px var(--space-4);
+    scroll-padding-inline: var(--space-4);
+    /* soft edges: a pill cut by the scroller fades out instead of ending in a square edge */
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--space-4), #000 calc(100% - var(--space-4)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--space-4), #000 calc(100% - var(--space-4)), transparent 100%);
   }
   .hero { flex-direction: column; align-items: stretch; gap: var(--space-3); min-height: 0; }
   .hero h1 { align-self: stretch; }
@@ -353,15 +357,21 @@
   .shell-body, .shell-body:has(> .shell-panels[hidden]), .shell-body:has(> .timeline-slot[hidden]) {
     display: flex; flex-direction: column; gap: var(--space-2);
   }
-  .shell-canvas { flex: none; height: 60vh; min-height: 420px; }
+  .shell-canvas { flex: none; height: 60vh; min-height: 360px; }
   .shell-panels { overflow: visible; }
   .event-card { flex: none; max-height: none; }
   .event-list { overflow: visible; }
   .timeline-slot, .timeline-slot[data-tall] { height: auto; border-radius: var(--radius-card); padding: 16px; }
   .shell-timeline { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .replay-time { min-width: 0; font-size: 12px; }
-  .map-legends { width: 200px; left: var(--space-2); bottom: var(--space-2); }
-  .map-clocks { top: var(--space-2); right: var(--space-2); }
+  /* the legend sits above the attribution line and under the background control, never over them */
+  .map-legends { width: 190px; left: var(--space-2); bottom: 30px; max-height: calc(100% - 96px); }
+  .map-legend { font-size: 11px; padding: 6px 8px; }
+  .map-clock { padding: 6px 10px; }
+  .map-clock-time { font-size: 15px; }
+  .shell .map-bg-btn { padding: 0 10px; font-size: 12px; }
+  .map-attribution { right: var(--space-2); bottom: 4px; }
+  .map-clocks { top: 52px; right: var(--space-2); } /* under the background control, never beside it */
 }
 
 

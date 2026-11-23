@@ -6,7 +6,7 @@ test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await expect(page.getByTestId("layer-item-debris-catchments")).toContainText("Aluviones: cuencas chicas");
+  await expect(page.getByTestId("layer-item-debris-catchments")).toHaveAttribute("title", "Aluviones: cuencas chicas");
   await page.getByTestId("layer-toggle-debris-catchments").check();
   await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /polygons-debris-catchments/);
   await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /outlets-debris-catchments/);
