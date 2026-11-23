@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures/test";
+import { expect, test, setLayer, openLayerMenu, closeLayerMenu } from "./fixtures/test";
 
 test("convection: IDF chart, storm replay and station comparison", async ({ page }) => {
   const errors: string[] = [];
@@ -6,8 +6,10 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
+  await openLayerMenu(page);
   await expect(page.getByTestId("layer-item-convection-idf")).toHaveAttribute("title", "Convección: curva IDF y temporal de abril de 2014");
-  await page.getByTestId("layer-toggle-convection-idf").check();
+  await closeLayerMenu(page);
+  await setLayer(page, "convection-idf", true);
   await expect(page.getByTestId("inspector-source")).toHaveText("IMERG falso de prueba");
   await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /rain-convection-idf/);
 
@@ -83,7 +85,7 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
   expect(overflow).toBeLessThanOrEqual(0);
 
   // turning the layer off removes map layer and panel
-  await page.getByTestId("layer-toggle-convection-idf").uncheck();
+  await setLayer(page, "convection-idf", false);
   await expect(page.getByTestId("convection-panel")).toHaveCount(0);
   await expect(page.getByTestId("map-canvas")).not.toHaveAttribute("data-deck-layers", /rain-convection-idf/);
   expect(errors).toEqual([]);
@@ -92,7 +94,7 @@ test("convection: IDF chart, storm replay and station comparison", async ({ page
 test("convection: the right column scrolls and the IDF chart is reachable at 1440x900", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.getByTestId("layer-toggle-convection-idf").check();
+  await setLayer(page, "convection-idf", true);
   await expect(page.getByTestId("compare-chart")).toBeVisible();
   const col = page.getByTestId("panels-slot");
   expect(await col.evaluate((el) => getComputedStyle(el).overflowY)).toBe("auto");
@@ -121,7 +123,7 @@ test("convection: the right column scrolls and the IDF chart is reachable at 144
 test("convection: station marker and IMERG cell outline, with source tooltips", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("marker-convection-station")).toHaveCount(0);
-  await page.getByTestId("layer-toggle-convection-idf").check();
+  await setLayer(page, "convection-idf", true);
   const station = page.getByTestId("marker-convection-station");
   const cell = page.getByTestId("marker-convection-cell");
   await expect(station).toBeVisible();
@@ -138,7 +140,7 @@ test("convection: station marker and IMERG cell outline, with source tooltips", 
     expect(b.x + b.width).toBeLessThanOrEqual(map.x + map.width);
     expect(b.y).toBeGreaterThanOrEqual(map.y);
   }
-  await page.getByTestId("layer-toggle-convection-idf").uncheck();
+  await setLayer(page, "convection-idf", false);
   await expect(station).toHaveCount(0);
   await expect(page.getByTestId("map-canvas")).not.toHaveAttribute("data-deck-layers", /convection-cell/);
 });
@@ -146,8 +148,8 @@ test("convection: station marker and IMERG cell outline, with source tooltips", 
 test("map legends stack without overlapping when the IVT and rain layers are both on", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.getByTestId("layer-toggle-ar-events").check();
-  await page.getByTestId("layer-toggle-convection-idf").check();
+  await setLayer(page, "ar-events", true);
+  await setLayer(page, "convection-idf", true);
   const ivt = page.getByTestId("map-legend");
   const rain = page.getByTestId("rain-legend");
   await expect(ivt).toBeVisible();

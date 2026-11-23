@@ -14,7 +14,7 @@ test("basemap tiles come from the routed fixture and the attribution is always v
   await expect(page.getByTestId("map-canvas")).not.toHaveAttribute("data-deck-layers", /basemap/);
 });
 
-test("background control: default Ambos, persists the choice and ignores invalid stored values", async ({ page }) => {
+test("background control: default Relieve, persists the choice and ignores invalid stored values", async ({ page }) => {
   await page.addInitScript(() => {
     if (!sessionStorage.getItem("seeded")) {
       sessionStorage.setItem("seeded", "1");
@@ -22,10 +22,10 @@ test("background control: default Ambos, persists the choice and ignores invalid
     }
   });
   await page.goto("/");
-  await expect(page.getByTestId("map-bg-both")).toHaveAttribute("aria-pressed", "true");
-  await page.getByTestId("map-bg-relief").click();
   await expect(page.getByTestId("map-bg-relief")).toHaveAttribute("aria-pressed", "true");
-  expect(await page.evaluate(() => localStorage.getItem("map-background"))).toBe("relief");
+  await page.getByTestId("map-bg-both").click();
+  await expect(page.getByTestId("map-bg-both")).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => localStorage.getItem("map-background"))).toBe("both");
   await page.getByTestId("map-bg-basemap").click();
   expect(await page.evaluate(() => localStorage.getItem("map-background"))).toBe("basemap");
   await page.reload();

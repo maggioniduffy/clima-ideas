@@ -1,5 +1,5 @@
 import { WebMercatorViewport } from "@deck.gl/core";
-import { expect, test } from "./fixtures/test";
+import { expect, test, setLayer } from "./fixtures/test";
 
 // Initial view of MapCanvas (INITIAL_VIEW_STATE) and the city position of referenceLayers (NEUQUEN_CITY). The camera
 // limits (cover zoom, clamped center) can move the initial zoom and center, so both are read from the map card.
@@ -29,7 +29,7 @@ function cityLabelBox(zoom: number, map: Box): Box {
 test("convection markers do not cover the city label nor each other", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.getByTestId("layer-toggle-convection-idf").check();
+  await setLayer(page, "convection-idf", true);
   const station = page.getByTestId("marker-convection-station");
   const cell = page.getByTestId("marker-convection-cell");
   await expect(station).toBeVisible();

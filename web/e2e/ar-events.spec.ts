@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures/test";
+import { expect, test, setLayer, openLayerMenu, closeLayerMenu } from "./fixtures/test";
 
 test("AR events: enable layer, choose an event, replay it and inspect a cell value", async ({ page }) => {
   const errors: string[] = [];
@@ -6,10 +6,12 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
+  await openLayerMenu(page);
   await expect(page.getByTestId("layer-item-ar-events")).toHaveAttribute("title", "Ríos atmosféricos");
+  await closeLayerMenu(page);
   await expect(page.getByTestId("timeline")).toContainText("Sin serie temporal");
 
-  await page.getByTestId("layer-toggle-ar-events").check();
+  await setLayer(page, "ar-events", true);
   await expect(page.getByTestId("inspector-source")).toHaveText("Eventos falsos de prueba");
   await expect(page.getByTestId("inspector-period")).toHaveText("2000-01-01/2000-12-31");
 
@@ -26,7 +28,7 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   // choose the first event from its timeline mark
   await page.getByTestId("timeline-event-AR-2000-001").click();
   const canvas = page.getByTestId("map-canvas");
-  await expect(canvas).toHaveAttribute("data-deck-layers", /^ivt-ar-events,/);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /^(relief-relief,)?ivt-ar-events,/);
   // outlines draw above the raster: province (loaded from the static GeoJSON), city and labels
   for (const id of ["ref-province", "ref-city", "ref-labels"])
     await expect(canvas).toHaveAttribute("data-deck-layers", new RegExp(`ivt-ar-events,.*${id}`));
@@ -79,8 +81,8 @@ test("AR events: enable layer, choose an event, replay it and inspect a cell val
   await expect(page.getByTestId("replay-controls")).toHaveAttribute("data-frame", "0");
 
   // turning the layer off removes marks, raster and replay
-  await page.getByTestId("layer-toggle-ar-events").uncheck();
-  await expect(canvas).toHaveAttribute("data-deck-layers", /^(ref-[a-z-]+(,|$))+$/);
+  await setLayer(page, "ar-events", false);
+  await expect(canvas).toHaveAttribute("data-deck-layers", /^(relief-relief,)?(ref-[a-z-]+(,|$))+$/);
   await expect(page.getByTestId("map-legend")).toHaveCount(0);
   await expect(page.getByTestId("map-clock")).toHaveCount(0);
   await expect(page.getByTestId("event-card")).toHaveCount(0);
@@ -95,7 +97,7 @@ test("AR filter: year and month toggles, expanding a year and the top N switch",
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await page.getByTestId("layer-toggle-ar-events").check();
+  await setLayer(page, "ar-events", true);
   await expect(page.getByTestId("event-count")).toHaveText("2");
   await expect(page.getByTestId("year-toggle-2000")).toBeChecked();
   await expect(page.getByTestId("year-expand-2000")).toHaveAttribute("aria-expanded", "false");
@@ -136,9 +138,8 @@ test("IVT view toggle: drape over the relief by default, isolines add contour la
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await page.getByTestId("layer-toggle-relief").check();
   await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /^relief-relief(,|$)/);
-  await page.getByTestId("layer-toggle-ar-events").check();
+  await setLayer(page, "ar-events", true);
   await page.getByTestId("timeline-event-AR-2000-001").click();
   const canvas = page.getByTestId("map-canvas");
   const drape = page.getByTestId("ivt-view-drape");
@@ -181,7 +182,7 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
   await page.setViewportSize({ width: 1400, height: 820 });
   await page.goto("/");
   await expect(page.getByTestId("enso-open")).toHaveCount(0);
-  await page.getByTestId("layer-toggle-ar-events").check();
+  await setLayer(page, "ar-events", true);
   await page.getByTestId("enso-open").click();
 
   const panel = page.getByTestId("enso-panel");
@@ -216,10 +217,11 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
   const inspector = page.getByTestId("inspector");
   expect(await inspector.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
   await expect(page.getByTestId("panels-slot").getByTestId("detail-card")).toContainText("¿Cambia ENSO los ríos atmosféricos en Neuquén?");
-  const map = (await page.getByTestId("map-canvas").boundingBox())!;
-  const box = (await page.getByTestId("detail-card").boundingBox())!; // in the right column, beside the map
-  expect(box.x).toBeGreaterThanOrEqual(map.x + map.width);
-  expect(box.x + box.width).toBeLessThanOrEqual(1400);
+  const column = (await page.getByTestId("panels-slot").boundingBox())!;
+  const box = (await page.getByTestId("detail-card").boundingBox())!; // in the right column, floating over the map
+  expect(box.x).toBeGreaterThanOrEqual(column.x);
+  expect(box.x + box.width).toBeLessThanOrEqual(column.x + column.width);
+  expect(column.x + column.width).toBeLessThanOrEqual(1400);
 
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);
@@ -229,7 +231,7 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
   await page.getByTestId("enso-open").click();
   const narrowMap = (await page.getByTestId("map-canvas").boundingBox())!;
   const narrow = (await page.getByTestId("detail-card").boundingBox())!;
-  expect(narrow.width).toBeGreaterThan(narrowMap.width - 24);
+  expect(narrow.width).toBeGreaterThan(narrowMap.width - 56); // 12 px page margin + the column padding
 
   expect(errors).toEqual([]);
 });
@@ -238,7 +240,7 @@ test("AR events: count map and legend with no event, footprint and peak marker o
   page,
 }) => {
   await page.goto("/");
-  await page.getByTestId("layer-toggle-ar-events").check();
+  await setLayer(page, "ar-events", true);
   const canvas = page.getByTestId("map-canvas");
   // no event picked: the count map of the events that are toggled on, and its legend
   await expect(canvas).toHaveAttribute("data-deck-layers", /ar-count-ar-events/);
@@ -271,7 +273,7 @@ test("AR events: event AR-2000-002 shows the caudal chart per station, regulated
   page,
 }) => {
   await page.goto("/");
-  await page.getByTestId("layer-toggle-ar-events").check();
+  await setLayer(page, "ar-events", true);
   await page.getByTestId("timeline-event-AR-2000-002").click();
   const section = page.getByTestId("ar-response");
   await expect(section).toContainText("Caudal en las estaciones");

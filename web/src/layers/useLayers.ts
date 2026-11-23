@@ -20,6 +20,9 @@ async function fetchReliefStep(id: string, layer: LayerManifest): Promise<number
 /** Binary point-cloud layers: kind "points" whose manifest lists a .bin file. */
 const binaryFile = (l: LayerManifest) => (l.kind === "points" ? l.files.find((f) => f.endsWith(".bin")) : undefined);
 
+/** Relief layers (a points layer that ships a .bin): not in the layer menu; the map background control owns them. */
+export const isReliefLayer = (l: LayerManifest): boolean => !!binaryFile(l);
+
 /** Layer catalogue + activation + selection state for the viewer shell. */
 export function useLayers() {
   const [layers, setLayers] = useState<LayerManifest[]>([]);
@@ -37,6 +40,7 @@ export function useLayers() {
       .then((l) => {
         if (cancelled) return;
         setLayers(l);
+        setActiveIds((prev) => new Set([...prev, ...l.filter(isReliefLayer).map((r) => r.id)])); // relief starts on
         setStatus("ready");
       })
       .catch(() => !cancelled && setStatus("error"));
@@ -44,6 +48,21 @@ export function useLayers() {
       cancelled = true;
     };
   }, []);
+
+  // Relief layers turn on by themselves once the catalogue is in (the background control hides them again).
+  useEffect(() => {
+    const found = layers.filter(isReliefLayer);
+    if (found.length === 0) return;
+    let cancelled = false;
+    for (const l of found) {
+      Promise.all([fetchLayerBinary(l.id, binaryFile(l)!), fetchReliefStep(l.id, l)])
+        .then(([b, step]) => !cancelled && setReliefs((prev) => ({ ...prev, [l.id]: parseRelief(b, step) })))
+        .catch(() => !cancelled && setActiveIds((prev) => new Set([...prev].filter((x) => x !== l.id))));
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [layers]);
 
   const toggle = useCallback(
     (id: string) => {

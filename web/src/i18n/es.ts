@@ -7,6 +7,12 @@ export const es = {
   panel: { expand: "Expandir panel", collapse: "Contraer panel" },
   resize: { panels: "Ancho de los paneles", timeline: "Alto de la línea de tiempo" },
   drawers: { layers: "Capas" },
+  menu: {
+    open: "Abrir el menú de capas",
+    close: "Cerrar el menú de capas",
+    activeLayer: "Capa activa",
+    retro: "Visor retrospectivo; no es un sistema de alerta oficial.",
+  },
   hero: {
     eventsShown: "Eventos mostrados",
     eventsTotal: "Eventos en la capa",
@@ -394,6 +400,7 @@ export const es = {
     bgRelief: "Relieve",
     bgBasemap: "Mapa",
     bgBoth: "Ambos",
+    bgNone: "Sin relieve",
     attribution: "Atribución del mapa base",
     attributionPrefix: "© ",
     attributionOsm: "OpenStreetMap contributors",

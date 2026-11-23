@@ -21,6 +21,7 @@ Repo listo para que cada etapa solo sume capas: pipeline, API y visor andando co
 | F0.9 | Instalar TECA y correr BARD sobre un año de ERA5 | Haiku (largo) | Log y máscara de salida, o el error exacto |
 | F0.10 | Índice ENSO compartido: ONI mensual (NOAA CPC) 1950–hoy y fase por mes (Niño ≥ +0,5, Niña ≤ −0,5, Neutro) en `backend/` como única fuente para todas las fases | Sonnet | Parquet + unit: umbrales y fase sobre una serie sintética |
 | F0.11 ✅ | Publicar en línea: `clima-nqn publish` sube `data/processed/` y un índice `layers.json` a Cloudflare R2; la web se despliega estática y los lee por `VITE_DATA_URL` (decisión del usuario, 2026-11-05). El usuario crea el bucket y las claves | Sonnet | Una capa de la fase 1 carga en la web publicada + unit del índice |
+| F0.12 ✅ | Visor sin barra (pedido del usuario, 2026-11-23): mapa a pantalla completa; menú desplegable de capas arriba a la izquierda; el relieve sale del menú, se enciende por defecto y se maneja con «Fondo» en el mapa; paneles de vidrio translúcido; tablas con más contraste; la tarjeta inversa ya no es oscura en tema claro. Boceto: https://claude.ai/artifact/UBXgw8acbvENaxrcK1u7Qm | Sonnet | vitest 375/375, Playwright 35/35, capturas en ambos temas |
 
 ## F0.8: qué investigar
 

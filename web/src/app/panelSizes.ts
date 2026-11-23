@@ -17,13 +17,13 @@ export const DEFAULT_SIZES: PanelSizes = {
   panels: PANEL_LIMITS.panels.def,
   timeline: PANEL_LIMITS.timeline.def,
 };
-/** The map card never gets smaller than this (below it the page scrolls). */
+/** Room the map keeps free (the panels float over it, but the map stays usable; below this the page scrolls). */
 export const MIN_MAP_W = 320;
 export const MIN_MAP_H = 420;
-/** Vertical chrome above and below the body: page and frame padding (2 x 24 + 2 x 24), header 44, hero 92 and two 16 px gaps. */
-export const CHROME_Y = 264;
-/** Horizontal chrome: page padding (2 x 24) and frame padding (2 x 28). */
-export const CHROME_X = 104;
+/** Vertical chrome: the 16 px inset of the floating timeline from the window edge, top and bottom. */
+export const CHROME_Y = 32;
+/** Horizontal chrome: 16 px left of the timeline, 16 px between timeline and panel column, 16 px right of the column. */
+export const CHROME_X = 48;
 /**
  * Smallest timeline height that shows its replay rows without clipping: the storm replay row is 120 px, the AR replay row
  * (controls, event track, detail track) about 110 px, plus padding and gaps. Stacked rows never overlap, so a taller strip is needed.

@@ -26,12 +26,12 @@ test("accent is the same in both themes", () => {
 test("Arena neutrals, frame gradient and control tokens", () => {
   expect(tokens.light).toMatchObject({
     bg: "#E4E2DC", "frame-0": "#F3F2EE", "frame-1": "#F1EEE4", "frame-2": "#F6E9B5", surface: "#FBFAF7", raised: "#EFECE4",
-    border: "#D8D4C8", text: "#1C1C1C", "text-muted": "#5E5E5E", ctrl: "#1C1C1C", "on-ctrl": "#F3F2EE",
+    border: "#D8D4C8", text: "#1C1C1C", "text-muted": "#4D4C48", ctrl: "#1C1C1C", "on-ctrl": "#F3F2EE",
     inverse: "#1C1C1C", "on-inverse": "#F3F2EE", casing: "#1C1C1C", water: "#3A6E8F",
   });
   expect(tokens.dark).toMatchObject({
     bg: "#101114", "frame-0": "#1B1C20", "frame-1": "#1D1D1F", "frame-2": "#2E2814", surface: "#26272C", raised: "#2A2B30",
-    border: "#3C3D43", text: "#F1EFE8", "text-muted": "#A9A9A4", ctrl: "#F1EFE8", "on-ctrl": "#1B1C20",
+    border: "#3C3D43", text: "#F1EFE8", "text-muted": "#BEBCB5", ctrl: "#F1EFE8", "on-ctrl": "#1B1C20",
     inverse: "#34353B", "on-inverse": "#F1EFE8", casing: "#101114", water: "#7FA9C6", "chart-surface": "#1B1C20",
   });
 });
@@ -122,4 +122,27 @@ test("no pure white or black anywhere, except the light chart surface", () => {
   const all = [...Object.values(tokens.brand), ...strip(tokens.light), ...strip(tokens.dark),
     ...tokens.ivtRamp.light, ...tokens.ivtRamp.dark, ...tokens.reliefRamp.light, ...tokens.reliefRamp.dark];
   for (const v of all) expect(v.toLowerCase()).not.toMatch(/^#(fff|ffffff|000|000000)$/);
+});
+
+const rgba = (v: string) => (v.match(/[\d.]+/g) ?? []).map(Number) as [number, number, number, number];
+const over = (glass: string, backdrop: string) => {
+  const [r, g, b, a] = rgba(glass);
+  const bd = [1, 3, 5].map((i) => parseInt(backdrop.slice(i, i + 2), 16));
+  return "#" + [r, g, b].map((c, i) => Math.round(c * a + bd[i]! * (1 - a)).toString(16).padStart(2, "0")).join("");
+};
+
+test.each(["light", "dark"] as const)("%s glass tokens exist and muted text keeps 4.5:1 on the glass over the map", (theme) => {
+  const t = tokens[theme];
+  for (const k of ["glass", "glass-line", "rule", "glass-hi", "glass-shadow", "well", "row-sel", "table-bg"] as const) expect(t[k]).toMatch(/^rgba\(/);
+  // worst case: the glass over the lightest (light) / darkest (dark) map color we draw
+  const backdrops = theme === "light" ? ["#F5F5F3", "#FFFFFF"] : ["#1A1A1A", "#000000"];
+  for (const bd of backdrops) {
+    const g = over(t.glass, bd);
+    expect(contrast(t["text-muted"], g)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(t.text, g)).toBeGreaterThanOrEqual(7);
+  }
+});
+
+test("the glass class carries the blur, the line and the shadow", () => {
+  expect(css).toMatch(/\.glass\s*{[^}]*backdrop-filter: blur\(22px\) saturate\(150%\)[^}]*box-shadow: inset 0 1px 0 var\(--glass-hi\), 0 12px 40px var\(--glass-shadow\)/s);
 });

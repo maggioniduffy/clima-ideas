@@ -20,7 +20,7 @@ import { ANALOGS_LAYER_ID, HINDCAST_LAYER_ID } from "../layers/hindcast";
 import { FORECAST_LAYER_ID } from "../layers/forecast";
 import { useForecastOutlook } from "../layers/useForecastOutlook";
 import { useHindcast } from "../layers/useHindcast";
-import { useLayers } from "../layers/useLayers";
+import { isReliefLayer, useLayers } from "../layers/useLayers";
 import { useTheme } from "../theme/themeStore";
 import { ClockBox } from "./ClockBox";
 import { DebrisLegend } from "./DebrisLegend";
@@ -28,7 +28,7 @@ import { DetailCard } from "./DetailCard";
 import { EventListCard } from "./EventListCard";
 import { Inspector } from "./Inspector";
 import { LayerPanel } from "./LayerPanel";
-import { MapBackground, RELIEF_OPACITY_BOTH, readBackground, writeBackground, type MapBackgroundMode } from "./MapBackground";
+import { MapBackground, RELIEF_OPACITY_BOTH, effectiveBackground, readBackground, reliefVisible, writeBackground, type MapBackgroundMode } from "./MapBackground";
 import { MapCanvas } from "./MapCanvas";
 import { MapLegend } from "./MapLegend";
 import { RainClock, RainLegend } from "./RainLegend";
@@ -111,9 +111,9 @@ export function Shell() {
   const [ivtView, setIvtView] = useState<IvtView>("drape");
   const theme = useTheme();
   const [storedBackground, setBackgroundState] = useState<MapBackgroundMode>(readBackground);
-  // Without a CARTO key there is no basemap: relief only, and no background control.
+  // Without a CARTO key there is no basemap: the control only switches the relief on and off.
   const hasBasemap = basemapAvailable();
-  const background: MapBackgroundMode = hasBasemap ? storedBackground : "relief";
+  const background: MapBackgroundMode = effectiveBackground(storedBackground, hasBasemap);
   const setBackground = (m: MapBackgroundMode) => {
     setBackgroundState(m);
     writeBackground(m);
@@ -134,7 +134,7 @@ export function Shell() {
     () =>
       s.deckLayers.map((l) => {
         if (!l.id.startsWith("relief-")) return l;
-        if (background === "basemap") return l.clone({ visible: false });
+        if (!reliefVisible(background)) return l.clone({ visible: false });
         return ar.drapeColors && s.activeRelief && l.id === `relief-${s.activeRelief.layerId}`
           ? buildReliefLayer(s.activeRelief.layerId, s.activeRelief.data, theme, ar.drapeColors, reliefOpacity)
           : reliefOpacity === 1
@@ -194,6 +194,7 @@ export function Shell() {
     if (sel.id === debrisLayer?.id && debris.status === "ready") heroInput.catchments = debris.shownCount;
   }
   const hero = heroStats(heroInput);
+  const activeName = sel && s.activeIds.has(sel.id) && !isReliefLayer(sel) ? (es.layers.short[sel.id] ?? sel.title) : null;
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);
@@ -225,11 +226,15 @@ export function Shell() {
         {
           "--panels-w": `${sizes.panels}px`,
           "--timeline-h": `${timelineH}px`,
+          // free edges of the map area: the floating panels sit 16 px from the window and 16 px apart
+          "--right-inset": collapsed("panels") ? "16px" : `${sizes.panels + 32}px`,
+          "--bottom-inset": collapsed("timeline") ? "16px" : `${timelineH + 32}px`,
+          "--panels-handle-r": collapsed("panels") ? "0px" : `${sizes.panels + 16}px`,
+          "--timeline-handle-b": collapsed("timeline") ? "0px" : `${timelineH + 10}px`,
         } as CSSProperties
       }
     >
-      <div className="frame" data-testid="frame">
-      <TopBar>
+      <TopBar activeName={activeName}>
         <LayerPanel
           layers={s.layers}
           status={s.status}
@@ -239,7 +244,6 @@ export function Shell() {
           onSelect={s.select}
         />
       </TopBar>
-      <Hero title={s.selectedLayer?.title ?? es.appTitle} stats={hero} source={hero.length > 0 && s.selectedLayer ? s.selectedLayer : null} />
       <div className="shell-body" data-expanded={expanded ? "" : undefined}>
         <MapCanvas
           basemap={basemap}
@@ -261,7 +265,7 @@ export function Shell() {
               <DebrisLegend domain={debris.domain} source={debrisLayer.source} />
             )}
           </div>
-          {hasBasemap && <MapBackground value={background} onChange={setBackground} />}
+          <MapBackground value={background} onChange={setBackground} hasBasemap={hasBasemap} />
           <div className="map-clocks" data-testid="map-clocks">
             {ar.selectedEvent && ar.cursorMs != null && (
               <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />
@@ -271,8 +275,9 @@ export function Shell() {
         </MapCanvas>
         <PanelResizer className="panel-resizer panel-resizer-panels" orientation="vertical" dir={-1} {...resizer("panels")} />
         {/* Right column: layer list, inspector, detail card and event list stacked; it scrolls only as a fallback. */}
-        <div className="shell-panels" data-testid="panels-slot" hidden={collapsed("panels")}>
+        <div className="shell-panels glass" data-testid="panels-slot" hidden={collapsed("panels")}>
         <div className="panels-head">
+          <Hero title={s.selectedLayer?.title ?? es.appTitle} stats={hero} source={hero.length > 0 && s.selectedLayer ? s.selectedLayer : null} />
           <button
             type="button"
             className="panel-expand"
@@ -356,7 +361,7 @@ export function Shell() {
           )}
         </div>
         <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
-        <div className="timeline-slot" data-testid="timeline-slot" data-tall={timelineH > TALL_TIMELINE ? "" : undefined} hidden={collapsed("timeline")}>
+        <div className="timeline-slot glass" data-testid="timeline-slot" data-tall={timelineH > TALL_TIMELINE ? "" : undefined} hidden={collapsed("timeline")}>
           <Timeline
             events={eventsActive ? arVisible.filtered : []}
             peakIds={arVisible.peakIds}
@@ -367,7 +372,6 @@ export function Shell() {
             convection={convActive ? conv : null}
           />
         </div>
-      </div>
       </div>
     </div>
   );

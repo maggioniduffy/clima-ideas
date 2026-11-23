@@ -44,10 +44,11 @@ test("shows empty, loading and error states", () => {
   expect(screen.getByText(es.layers.error)).toBeInTheDocument();
 });
 
-test("each layer is a pill: a label around the hidden checkbox", () => {
+test("each layer is a row: a label around a visible checkbox", () => {
   render(<LayerPanel {...base} activeIds={new Set(["a"])} onToggle={vi.fn()} onSelect={vi.fn()} />);
   const pill = screen.getByTestId("layer-item-a");
   expect(pill.tagName).toBe("LABEL");
+  expect(screen.getByTestId("layer-toggle-a")).not.toHaveStyle({ opacity: "0" });
   expect(pill).toContainElement(screen.getByTestId("layer-toggle-a"));
   expect(screen.getByTestId("layer-toggle-a")).toHaveAccessibleName(`${es.layers.toggle} Capa A`);
 });
@@ -64,8 +65,22 @@ test("choosing a layer that is on but not selected selects it; the selected one 
   expect(onToggle).toHaveBeenCalledWith("a");
 });
 
-test("the pills are a navigation landmark named Capas, with no aside", () => {
+test("the rows are a navigation landmark named Capas, with no aside", () => {
   render(<LayerPanel {...base} onToggle={vi.fn()} onSelect={vi.fn()} />);
   expect(screen.getByRole("navigation", { name: es.drawers.layers })).toBe(screen.getByTestId("layer-panel"));
   expect(document.querySelector("aside")).toBeNull();
+});
+
+test("relief layers (a points layer with a .bin) are not listed in the menu", () => {
+  const relief: LayerManifest = { ...layer, id: "relief", title: "Relieve", files: ["relief.bin", "relief.meta.json"] };
+  render(<LayerPanel {...base} layers={[relief, layer]} activeIds={new Set(["relief"])} onToggle={vi.fn()} onSelect={vi.fn()} />);
+  expect(screen.queryByTestId("layer-item-relief")).toBeNull();
+  expect(screen.queryByText("Relieve")).toBeNull();
+  expect(screen.getByTestId("layer-item-a")).toBeInTheDocument();
+});
+
+test("a menu with only a relief layer shows the empty state", () => {
+  const relief: LayerManifest = { ...layer, id: "relief", title: "Relieve", files: ["relief.bin"] };
+  render(<LayerPanel {...base} layers={[relief]} onToggle={vi.fn()} onSelect={vi.fn()} />);
+  expect(screen.getByText(es.layers.empty)).toBeInTheDocument();
 });

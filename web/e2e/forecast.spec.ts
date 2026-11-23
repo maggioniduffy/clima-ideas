@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures/test";
+import { expect, test, setLayer } from "./fixtures/test";
 
 test("forecast outlook: prediction, state, history, notices and official links", async ({ page }) => {
   const errors: string[] = [];
@@ -6,7 +6,7 @@ test("forecast outlook: prediction, state, history, notices and official links",
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await page.getByTestId("layer-toggle-forecast-outlook").check();
+  await setLayer(page, "forecast-outlook", true);
   const panel = page.getByTestId("forecast-panel");
   await expect(panel).toBeVisible();
 
@@ -66,7 +66,7 @@ for (const [name, size] of [["desktop", { width: 1280, height: 800 }], ["phone",
   test(`right panel expands and collapses (${name})`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/");
-    await page.getByTestId("layer-toggle-forecast-outlook").check();
+    await setLayer(page, "forecast-outlook", true);
     await expect(page.getByTestId("forecast-panel")).toBeVisible();
     const btn = page.getByTestId("panel-expand");
     await expect(btn).toHaveAttribute("aria-label", "Expandir panel");
@@ -77,7 +77,7 @@ for (const [name, size] of [["desktop", { width: 1280, height: 800 }], ["phone",
     await expect(btn).toHaveAttribute("aria-expanded", "true");
     const body = (await page.locator(".shell-body").boundingBox())!;
     const panels = (await page.getByTestId("panels-slot").boundingBox())!;
-    expect(panels.width).toBeGreaterThanOrEqual(body.width - 20);
+    expect(panels.width).toBeGreaterThanOrEqual(body.width - 36); // 16 px window inset each side (the narrow page stacks with 12 px margins)
     await expect(page.getByRole("columnheader", { name: "Estado" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(btn).toHaveAttribute("aria-expanded", "false");
@@ -95,7 +95,7 @@ test("forecast views: switch to seasonal and high flow, keyboard, no horizontal 
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await page.getByTestId("layer-toggle-forecast-outlook").check();
+  await setLayer(page, "forecast-outlook", true);
   await expect(page.getByTestId("forecast-view-riskday")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("forecast-table")).toBeVisible();
 
