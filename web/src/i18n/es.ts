@@ -1,6 +1,10 @@
+/** Drops trailing sentence punctuation so a caller can append its own "." without ever doubling it. */
+export const noEndDot = (t: string): string => t.trim().replace(/[.\s]+$/, "");
+
 export const es = {
   appTitle: "Neuquén: lluvias extremas",
   theme: { toggle: "Cambiar tema" },
+  panel: { expand: "Expandir panel", collapse: "Contraer panel" },
   resize: { panels: "Ancho de los paneles", timeline: "Alto de la línea de tiempo" },
   drawers: { layers: "Capas", close: "Cerrar panel" },
   layers: { empty: "Sin capas", loading: "Cargando capas…", error: "No se pudieron cargar las capas", toggle: "Activar capa" },
@@ -106,9 +110,9 @@ export const es = {
     baseline: "Baseline",
     inputs: "Entradas",
     latency: (h: number) => (h < 1 ? "< 1 h" : h >= 48 ? `≈ ${Math.round(h / 24)} días` : `≈ ${Math.round(h)} h`),
-    sourceLine: (source: string, period: string, license: string) => `${source}. Período ${period}. Licencia ${license}.`,
+    sourceLine: (source: string, period: string, license: string) => `${noEndDot(source)}. Período ${noEndDot(period)}. Licencia ${noEndDot(license)}.`,
     regionLabel: "Región",
-    threshold: (mm: number) => `Umbral ${mm} mm`,
+    threshold: (mm: string) => `Umbral ${mm} mm`,
     tableLabel: (region: string) => `Perspectiva a 1–10 días, ${region}`,
     head: {
       lead: "Anticipación",
@@ -155,7 +159,7 @@ export const es = {
     eventsCount: (n: number) => `(${n} ${n === 1 ? "evento" : "eventos"})`,
     stop: ".",
     diffCell: (d: string, lo: string, hi: string) => `${d} (${lo} a ${hi})`,
-    licenseLine: (license: string, obs: string) => `Licencias: ${license}. Observado: ${obs}.`,
+    licenseLine: (license: string, obs: string) => `Licencias: ${noEndDot(license)}. Observado: ${noEndDot(obs)}.`,
     forecastTitle: "Pronóstico y observado",
     forecastChart: "Lluvia pronosticada por anticipación y lluvia observada en el evento elegido",
     axisLead: "Anticipación (días)",

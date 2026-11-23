@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { es } from "../i18n/es";
 import type { Outlook, OutlookLead, OutlookRegion } from "../layers/forecast";
-import { fmt0, fmt2, NO_DATA } from "../layers/hindcast";
+import { fmt0, fmt1, fmt2, NO_DATA } from "../layers/hindcast";
 import type { ForecastState } from "../layers/useForecastOutlook";
 import { formatDateEs } from "./floodCharts";
 
@@ -181,7 +181,7 @@ function Loaded({ o, source, period, license, outlookStatus }: { o: Outlook; sou
         <section className="hind-section" aria-labelledby="forecast-region-title">
           <h4 id="forecast-region-title">
             {r.label}
-            {r.threshold_mm != null && <span className="fc-sub"> {es.forecast.threshold(r.threshold_mm)}</span>}
+            {r.threshold_mm != null && <span className="fc-sub"> {es.forecast.threshold(fmt1(r.threshold_mm))}</span>}
           </h4>
           <RegionTable r={r} level={level} />
         </section>
