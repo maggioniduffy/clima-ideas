@@ -159,7 +159,7 @@ def inputs(tmp_path_factory):
         "n_events_test": {"r1": 7},
         "regions": {
             "r1": {
-                "1": row(1, "pasa hindcast (espera prospectiva F6.8)"),
+                "1": row(1, "pasa hindcast (espera la temporada prospectiva)"),
                 "2": row(2, "Experimental"),
             }
         },
@@ -254,7 +254,7 @@ def test_gate_table_status_and_nan_as_null(inputs):
     rows = g["regions"]["r1"]
     assert [r["lead"] for r in rows] == [1, 2]
     assert (
-        rows[0]["status"] == "pasa hindcast (espera prospectiva F6.8)"
+        rows[0]["status"] == "pasa hindcast (espera la temporada prospectiva)"
         and rows[1]["status"] == "Experimental"
     )
     assert rows[0]["bss_log_clim"] == {"value": 0.3, "lo": 0.1, "hi": 0.5}

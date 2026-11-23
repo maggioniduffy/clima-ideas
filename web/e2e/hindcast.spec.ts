@@ -43,7 +43,7 @@ test("hindcast verification: choose model, event and lead; gate, analogs, notice
   await expect(page.getByTestId("hindcast-gate-status-cordillera_norte")).toHaveText("Experimental");
   await expect(page.getByTestId("hindcast-gate-status-confluencia")).toHaveText("Experimental");
   await page.getByTestId("hindcast-lead-2").click();
-  await expect(page.getByTestId("hindcast-gate-status-cordillera_norte")).toHaveText("pasa hindcast (espera prospectiva F6.8)");
+  await expect(page.getByTestId("hindcast-gate-status-cordillera_norte")).toHaveText("pasa hindcast (espera la temporada prospectiva)");
   await expect(page.getByTestId("hindcast-gate-status-confluencia")).toHaveText("Experimental");
   await expect(page.getByTestId("hindcast-gate-bssClim-cordillera_norte")).toContainText("(");
   await expect(page.getByTestId("hindcast-gate-note")).toContainText("percentil 95");

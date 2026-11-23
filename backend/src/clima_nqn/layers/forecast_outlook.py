@@ -9,6 +9,8 @@ Output in ``<out>/`` (default ``data/processed/forecast-outlook``), kind ``serie
   probability, the cap in force, the state from the status log (default "Experimental"), the retrospective
   hindcast (F5.8.json) and the prospective history (scores/latest.json). Nothing is invented: a missing source
   gives ``null`` (history: ``n`` 0 and ``insufficient`` true). No colors or levels in the data.
+  With ``extras`` (the CLI) it also carries ``seasonal`` (latest F6.2 emission, "Experimental") and ``highflow``
+  (retrospective F6.7/F6.9 evidence); see ``forecast_outlook_extras``. The risk-day fields do not change.
 
 Not an official warning (plan/06 "Avisos obligatorios"): the notices and official links travel in the JSON.
 
@@ -19,13 +21,14 @@ from __future__ import annotations
 
 import json
 import math
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 from clima_nqn.forecast import status as st
 from clima_nqn.forecast.registry import PredictionRecord, PredictionRegistry
 from clima_nqn.forecast.riskday_model import CAP_RULE, VAR_RISK
+from clima_nqn.layers import forecast_outlook_extras as extras
 from clima_nqn.layers.manifest import LayerManifest
 from clima_nqn.stages.hindcast.riskday import REGION_LABELS, REGIONS
 
@@ -232,12 +235,28 @@ def outlook_status(outlook: dict) -> str:
     return st.EXPERIMENTAL
 
 
+def _read_json(path: Path | str | None) -> dict | None:
+    """A JSON report, or None if the path is unset, missing or not strict JSON."""
+    if not path or not Path(path).is_file():
+        return None
+    try:
+        d = json.loads(Path(path).read_text(encoding="utf-8"))
+    except ValueError:
+        return None
+    return d if isinstance(d, dict) else None
+
+
 def build(
     registry: Path | str,
     out_dir: Path | str,
     scores: Path | str | None = None,
     status: Path | str | None = None,
     gate: Path | str | None = None,
+    f62: Path | str | None = None,
+    f67: Path | str | None = None,
+    f69: Path | str | None = None,
+    extras_blocks: bool = False,
+    today: date | None = None,
 ) -> Path:
     reg = PredictionRegistry(Path(registry))
     reg.verify()
@@ -248,7 +267,14 @@ def build(
     if log is not None:
         log.verify()
     gate_d = json.loads(Path(gate).read_text(encoding="utf-8")) if gate else None
-    outlook = build_outlook(reg.read(), scores_d, log, gate_d)
+    records = reg.read()
+    outlook = build_outlook(records, scores_d, log, gate_d)
+    if extras_blocks:
+        outlook["seasonal"] = extras.build_seasonal(
+            records, _read_json(f62), today or datetime.now(UTC).date()
+        )
+        outlook["highflow"] = extras.build_highflow(_read_json(f67), _read_json(f69))
+    outlook = extras.plain_tree(outlook)
     valid = [c["valid_date"] for r in outlook["regions"] for c in r["leads"]]
     manifest = LayerManifest(
         id=LAYER_ID,

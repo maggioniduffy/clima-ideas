@@ -61,6 +61,17 @@ export function Shell() {
   const sizes = useMemo(() => clampAll(pref, vp), [pref, vp]);
   // A size of 0 is a collapsed (hidden) panel; narrow screens ignore it because they have no handles to bring it back.
   const narrow = vp.width <= NARROW_MAX_W;
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded]);
+  // the map keeps its size under the expanded panel; nudge listeners (deck.gl) after it is uncovered again
+  useEffect(() => {
+    if (!expanded) window.dispatchEvent(new Event("resize"));
+  }, [expanded]);
   const collapsed = (panel: PanelId) => !narrow && sizes[panel] === 0;
   const resize = (panel: PanelId) => (value: number) =>
     setPref((cur) => {
@@ -194,7 +205,7 @@ export function Shell() {
       }
     >
       <TopBar drawer={drawer} onToggleDrawer={toggleDrawer} />
-      <div className="shell-body">
+      <div className="shell-body" data-expanded={expanded ? "" : undefined}>
         <MapCanvas
           markers={conv.markers}
           focus={debris.focus}
@@ -224,6 +235,24 @@ export function Shell() {
         <PanelResizer className="panel-resizer panel-resizer-panels" orientation="vertical" dir={-1} {...resizer("panels")} />
         {/* Right column: layer list, inspector, detail card and event list stacked; it scrolls only as a fallback. */}
         <div className="shell-panels" data-testid="panels-slot" hidden={collapsed("panels")}>
+        <div className="panels-head">
+          <button
+            type="button"
+            className="panel-expand"
+            data-testid="panel-expand"
+            aria-label={expanded ? es.panel.collapse : es.panel.expand}
+            aria-expanded={expanded}
+            onClick={() => setExpanded((e) => !e)}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              {expanded ? (
+                <path d="M7 2v5H2M11 16v-5h5M7 7 2 2M11 11l5 5" />
+              ) : (
+                <path d="M2 7V2h5M16 11v5h-5M2 2l5 5M16 16l-5-5" />
+              )}
+            </svg>
+          </button>
+        </div>
         <div className="layers-slot card tx" data-testid="layers-slot">
           <LayerPanel
             layers={s.layers}

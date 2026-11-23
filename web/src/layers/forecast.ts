@@ -60,4 +60,132 @@ export interface Outlook {
   official_links: { label: string; url: string }[];
   regions: OutlookRegion[];
   history_note: string;
+  /** Absent in older layers. */
+  seasonal?: Seasonal;
+  highflow?: Highflow;
+}
+
+export type Pair = [number | null, number | null];
+
+/** An input of the frozen logistic outside the range seen in training (information only). */
+export interface OutOfRangeInput {
+  feature: string;
+  label: string | null;
+  value: number | null;
+  min: number | null;
+  max: number | null;
+  unit: string | null;
+}
+
+export interface SeasonalModel {
+  name: string;
+  label: string;
+  emitted: boolean;
+  reason?: string;
+  p_terciles?: { inferior: number | null; medio: number | null; superior: number | null };
+  p_superior_interval?: Pair | null;
+  interval_level?: number;
+  model_version?: string;
+  training_period?: string;
+  /** Logistic only. `null` or absent = unknown (older emission); `[]` = every input inside the trained range. */
+  out_of_range?: OutOfRangeInput[] | null;
+}
+
+export interface SeasonalLead {
+  lead_months: number;
+  /** `YYYY-MM`. */
+  target_month: string;
+  edges: { lower_up_to: number | null; upper_from: number | null; unit: string } | null;
+  models: SeasonalModel[];
+  skill: { metric: string; rpss_vs_clim: number | null; ci95: Pair | null; beats_climatology: boolean; source?: string } | null;
+}
+
+export interface SeasonalTarget {
+  id: string;
+  label: string;
+  unit: string;
+  region?: string;
+  note: string | null;
+  leads: SeasonalLead[];
+}
+
+/** `outlook.seasonal` (F6.2): either `{available:false, note}` or the newest emission. */
+export interface Seasonal {
+  available: boolean;
+  note?: string;
+  estado?: string;
+  variable_label?: string;
+  issue_date?: string;
+  source?: string;
+  period?: string;
+  model_version?: string;
+  notices?: string[];
+  targets?: SeasonalTarget[];
+}
+
+export interface F67Lead {
+  n_floods: number | null;
+  rises: number | null;
+  rises_frac: number | null;
+  rises_ci95: Pair | null;
+  coverage: number | null;
+  coverage_ci95: Pair | null;
+  coverage_nominal: number;
+  bss_clim: number | null;
+  bss_clim_ci95: Pair | null;
+  verdict: string;
+}
+
+export interface F67Variant {
+  threshold_rule: string;
+  models: Record<string, Record<string, F67Lead>>;
+}
+
+export interface F67 {
+  available: boolean;
+  source?: string;
+  period?: string | null;
+  independent_years?: { n: number; required: number; years: number[] };
+  n_floods?: number;
+  variants?: Record<string, F67Variant>;
+  report_note?: string | null;
+}
+
+export interface Bss {
+  n: number | null;
+  n_exceed: number | null;
+  bss: number | null;
+  ci95: Pair;
+  ci_excludes_0: boolean | null;
+  status: string | null;
+}
+
+export interface BssVs {
+  vs_climatology: { pooled: Bss | null; stations: Record<string, Bss | null> };
+  vs_persistence: { pooled: Bss | null; stations: Record<string, Bss | null> };
+}
+
+export interface F69Threshold {
+  threshold_rule: string;
+  threshold_m3s: Record<string, number | null>;
+  era5: BssVs;
+  gefs_by_lead: Record<string, BssVs & { n_events: number | null }>;
+}
+
+export interface F69 {
+  available: boolean;
+  source?: string;
+  period?: string | null;
+  gefs_period?: string | null;
+  n_events?: number | null;
+  stations?: Record<string, { name: string | null; period: string | null }>;
+  thresholds?: Record<string, F69Threshold>;
+}
+
+/** `outlook.highflow` (F6.7 / F6.9): retrospective evidence only. */
+export interface Highflow {
+  estado?: string;
+  note?: string;
+  f67?: F67;
+  f69?: F69;
 }

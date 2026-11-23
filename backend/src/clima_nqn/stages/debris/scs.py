@@ -26,7 +26,7 @@ IA_RATIO = 0.2
 PEAK_RATE_CONSTANT = 0.208  # SI: A km2, Q mm, Tp h -> m3/s
 LAG_TO_TC = 0.6  # Tl = 0.6 Tc
 M_TO_FT = 3.280839895
-SOURCE = "SCS-CN (NRCS NEH-4 ch.10 and 15; TR-55) sobre lluvias de diseño IDF solo con IMERG (F3.3)"
+SOURCE = "SCS-CN (NRCS NEH-4 ch.10 and 15; TR-55) sobre lluvias de diseño IDF solo con IMERG"
 
 
 def retention_mm(cn: float) -> float:

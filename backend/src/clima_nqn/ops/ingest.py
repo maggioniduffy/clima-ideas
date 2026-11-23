@@ -117,7 +117,7 @@ INFO = {
         fc.LICENSE_GEFS,
         "tp_mm: mm per 24 h lead window (sum of four 6 h APCP buckets), cos(lat)-weighted region mean",
         "valid_date",
-        f"{fc.LEAD_CONVENTION}. Cropped to the F5.3 wide grid ({fc.WIDE_GRID.description}); regions "
+        f"{fc.LEAD_CONVENTION}. Cropped to the wide grid ({fc.WIDE_GRID.description}); regions "
         "from riskday.regions. A member/lead with any missing 6 h step is dropped, not zero-filled.",
     ),
     "era5t_regions": SourceInfo(
@@ -125,7 +125,7 @@ INFO = {
         era5.LICENSE,
         "tp_mm: mm/day (UTC day, hours D 01:00..D+1 00:00), cos(lat)-weighted region mean",
         "date",
-        "Same daily window and wide grid as the F5.3 observations (observe.py); preliminary ERA5T "
+        "Same daily window and wide grid as the hindcast observations (observe.py); preliminary ERA5T "
         "where past the final-data stop. Days with no data (all-NaN) are dropped.",
     ),
 }

@@ -134,3 +134,14 @@ test("latency hours render as hours below two days, as days from two days", () =
   expect(screen.getByTestId("forecast-inputs")).toHaveTextContent("A ≈ 6 h");
   expect(screen.getByTestId("forecast-inputs")).toHaveTextContent("B ≈ 7 días");
 });
+
+test("threshold and the source line are formatted: es-AR decimals, no unrounded float, no doubled period", () => {
+  const o = synthetic([lead(1)]);
+  o.regions[0]!.threshold_mm = 15.069199999999979;
+  render(<ForecastPanel state={{ status: "ready", outlook: o } as ForecastState} source="Fuente X" period="P" license="CC0. No es una alerta oficial." />);
+  expect(screen.getByText(/Umbral/)).toHaveTextContent("Umbral 15,1 mm");
+  const src = screen.getByTestId("forecast-source");
+  expect(src).toHaveTextContent("Licencia CC0. No es una alerta oficial.");
+  expect(src.textContent).not.toMatch(/\.\./);
+  expect(screen.getByTestId("forecast-panel").textContent).not.toMatch(/\d\.\d{4,}/);
+});

@@ -147,7 +147,7 @@ export interface AnalogsData {
   events: AnalogEvent[];
 }
 
-export const GATE_STATUS_PASS = "pasa hindcast (espera prospectiva F6.8)";
+export const GATE_STATUS_PASS = "pasa hindcast (espera la temporada prospectiva)";
 
 const nf = (min: number, max: number) => new Intl.NumberFormat("es-AR", { minimumFractionDigits: min, maximumFractionDigits: max });
 const f1 = nf(1, 1);

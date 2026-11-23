@@ -622,7 +622,7 @@
       "lo": 0.38,
       "hi": 0.58
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.9,
      "pod_far": {
       "p>=0.5": {
@@ -656,7 +656,7 @@
       "lo": 0.33,
       "hi": 0.53
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.8,
      "pod_far": {
       "p>=0.5": {
@@ -690,7 +690,7 @@
       "lo": 0.28,
       "hi": 0.48
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.7,
      "pod_far": {
       "p>=0.5": {
@@ -724,7 +724,7 @@
       "lo": 0.23,
       "hi": 0.43
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.6,
      "pod_far": {
       "p>=0.5": {
@@ -758,7 +758,7 @@
       "lo": 0.18,
       "hi": 0.38
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.5,
      "pod_far": {
       "p>=0.5": {
@@ -792,7 +792,7 @@
       "lo": 0.13,
       "hi": 0.33
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.4,
      "pod_far": {
       "p>=0.5": {
@@ -964,7 +964,7 @@
       "lo": 0.39,
       "hi": 0.59
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.9,
      "pod_far": {
       "p>=0.5": {
@@ -998,7 +998,7 @@
       "lo": 0.34,
       "hi": 0.54
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.8,
      "pod_far": {
       "p>=0.5": {
@@ -1032,7 +1032,7 @@
       "lo": 0.29,
       "hi": 0.49
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.7,
      "pod_far": {
       "p>=0.5": {
@@ -1066,7 +1066,7 @@
       "lo": 0.24,
       "hi": 0.44
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.6,
      "pod_far": {
       "p>=0.5": {
@@ -1100,7 +1100,7 @@
       "lo": 0.19,
       "hi": 0.39
      },
-     "status": "pasa hindcast (espera prospectiva F6.8)",
+     "status": "pasa hindcast (espera la temporada prospectiva)",
      "prob_cap": 0.5,
      "pod_far": {
       "p>=0.5": {

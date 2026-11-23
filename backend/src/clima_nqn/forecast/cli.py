@@ -116,7 +116,7 @@ def score_cmd(
     pending = int((scores["status"] == "pending").sum())
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "source": "Registro de predicciones F6.4 + " + SOURCE + " + ERA5T regional (p_dia_riesgo)",
+        "source": "Registro de predicciones + " + SOURCE + " + ERA5T regional (p_dia_riesgo)",
         "records": len(records),
         "pending": pending,
         "n_boot": n_boot,
@@ -204,6 +204,35 @@ def emit_riskday_cmd(
     typer.echo(f"Cabeza del registro: {reg.verify()}")
 
 
+@forecast_app.command("emit-seasonal")
+def emit_seasonal_cmd(
+    registry: Path = typer.Option(..., help="Archivo JSONL del registro."),
+    oni: Path = typer.Option(
+        ..., help="Carpeta con <fecha>.parquet de ONI (ops ingest) o un Parquet date/oni."
+    ),
+    issue_date: str = typer.Option(None, help="AAAA-MM-01; por defecto hoy (UTC). Solo día 1."),
+    models_dir: Path = typer.Option(Path("models/seasonal-v1"), help="Modelos y referencia."),
+    f62: Path = typer.Option(Path("../reports/06/F6.2.json"), help="Veredicto del hindcast F6.2."),
+) -> None:
+    """Emite la perspectiva estacional mensual «Experimental» (terciles, anticipaciones 1-6 meses)."""
+    from clima_nqn.stages.seasonal import emit as se
+
+    day = date.fromisoformat(issue_date) if issue_date else datetime.now(UTC).date()
+    path = max(oni.glob("*.parquet")) if oni.is_dir() else oni
+    fetchers = se.arco_fetchers(lambda: pd.read_parquet(path))
+    reg = PredictionRegistry(registry)
+    try:
+        res = se.emit_seasonal(reg, day, fetchers, models_dir, f62)
+    except (se.SeasonalEmitError, RegistryError, OSError, ValueError) as e:
+        typer.echo(f"estacional: {e}", err=True)
+        raise typer.Exit(1) from e
+    for what, why in res.skipped.items():
+        typer.echo(f"omitido {what}: {why}")
+    typer.echo(f"ARCO-ERA5T, última hora disponible: {res.arco_latest}")
+    typer.echo(f"estacional: {len(res.records)} predicciones nuevas")
+    typer.echo(f"Cabeza del registro: {reg.verify()}")
+
+
 @forecast_app.command("promote")
 def promote_cmd(
     status: Path = typer.Option(..., help="Registro de estados JSONL (status/outlook.jsonl)."),
@@ -282,8 +311,19 @@ def outlook_layer_cmd(
     gate: Path = typer.Option(
         Path("../reports/05/F5.8.json"), help="Veredicto del hindcast (F5.8)."
     ),
+    f62: Path = typer.Option(
+        Path("../reports/06/F6.2.json"), help="Hindcast estacional (F6.2); si falta, sin skill."
+    ),
+    f67: Path = typer.Option(
+        Path("../reports/06/F6.7.json"),
+        help="Prueba de caudal alto (F6.7); si falta, no disponible.",
+    ),
+    f69: Path = typer.Option(
+        Path("../reports/06/F6.9.json"),
+        help="Climatología condicional (F6.9); si falta, no disponible.",
+    ),
 ) -> None:
-    """Escribe la capa del visor con la última predicción de día de riesgo (F6.6)."""
+    """Escribe la capa del visor: día de riesgo (F6.6), perspectiva estacional y evidencia de caudal alto."""
     from clima_nqn.forecast.registry import RegistryTamperError
     from clima_nqn.layers import forecast_outlook as fo
 
@@ -291,7 +331,7 @@ def outlook_layer_cmd(
         typer.echo(f"No existe el veredicto del hindcast: {gate}", err=True)
         raise typer.Exit(1)
     try:
-        fo.build(registry, out, scores, status, gate)
+        fo.build(registry, out, scores, status, gate, f62, f67, f69, extras_blocks=True)
     except (fo.OutlookError, RegistryTamperError) as e:
         typer.echo(f"forecast-outlook: {e}", err=True)
         raise typer.Exit(1) from e

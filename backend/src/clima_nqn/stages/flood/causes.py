@@ -172,10 +172,10 @@ def collect_floods(
 def _gev_fit(sid: int, df: pd.DataFrame, meta: dict, gev_dir: Path) -> tuple[dict, str]:
     path = gev_dir / f"{sid}.json"
     if path.is_file():
-        return json.loads(path.read_text(encoding="utf-8"))["gev"], f"F2.2 ({path.name})"
+        return json.loads(path.read_text(encoding="utf-8"))["gev"], f"ajuste GEV ({path.name})"
     maxima, _ = extremes.annual_maxima(df, meta.get("hydro_year_start_month", 4))
     series = pd.Series(maxima["q_m3s"].to_numpy(), index=maxima["date"])
-    return extremes.fit_gev(series, n_samples=10), "reajustada aquí (sin JSON de F2.2)"
+    return extremes.fit_gev(series, n_samples=10), "reajustada aquí (sin JSON del ajuste GEV)"
 
 
 # --- sensitivity and chance baseline ---------------------------------------------------------------
