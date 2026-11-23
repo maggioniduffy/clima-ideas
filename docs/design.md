@@ -2,77 +2,92 @@
 
 ## Referencia
 
-Mockup del usuario: https://claude.ai/artifact/LPUfQ1KS8iZA9rkipwoi3Y (`project/Mockup.dc.html`). El objetivo son los artboards de "Mockup con datos de ejemplo"; los wireframes no son el objetivo. Tema claro con acento azul, tema oscuro con acento amarillo. El relieve usa su rampa monocromática pizarra (tokens `--relief-0..3`, con sombreado), no una hipsométrica verde/marrón. Inspiración: `inspiration/README.md`.
+Dirección "B · Arena" del lienzo de diseño del usuario: https://claude.ai/artifact/D1rzvKD5vcN8ddDPvZstjN. Artboards: `Arena.dc.html` (claro), `Arena-Oscuro.dc.html` (oscuro), `Arena-Crecidas.dc.html` (estado de detalle de una capa) y `Arena-Movil.dc.html` (390 px de ancho). Los datos de los gráficos, `[fecha]`, `[Q]` y las cifras grandes de los artboards son marcadores: la app muestra solo valores reales. Reemplaza al mockup anterior (`Mockup.dc.html`). Inspiración: `inspiration/README.md`.
 
 ## Reglas de UI
 
-- Sin etiquetas, badges ni descripciones secundarias: jerarquía, color y forma explican.
-- Nunca blanco ni negro puros: claros con tono crema, oscuros con tono azul. Única excepción: `--chart-surface` (blanco puro en claro).
+- Una leyenda corta de una línea bajo cada cifra grande y la etiqueta "Experimental" están permitidas; ninguna otra etiqueta, badge ni descripción secundaria: jerarquía, color y forma explican.
+- Nunca blanco ni negro puros: claros con tono crema, oscuros con tono carbón. Única excepción: `--chart-surface` (blanco puro en claro).
 - Mismo layout en ambos temas: mismas regiones y mismas cajas; solo cambian los tokens.
-- Acento reservado para lo que importa (evento, anomalía, selección).
+- El acento es el mismo en ambos temas y se reserva para lo que importa (evento, selección, cabezal, barra destacada); siempre con `--casing` o texto oscuro.
 - Solo lo que funciona: no se muestran navegación de secciones, filtros ni botones sin acción.
+- Perspectiva de riesgo (reglas de `CLAUDE.md`): nunca niveles, colores, umbrales destacados ni consejos de acción. Siempre con incertidumbre, baseline, historial de aciertos y enlace a los avisos oficiales (SMN, AIC, Defensa Civil). Solo en el visor y solo si pasa la compuerta de `plan/06-forecast.md`; lo que no pasa se marca "Experimental". No es un sistema de alerta oficial.
 
 ## Tokens
 
-Los valores viven en `web/src/theme/tokens.css` y `tokens.ts`; `tokens.test.ts` verifica que coincidan. El acento es por tema.
+Los valores viven en `web/src/theme/tokens.css` y `tokens.ts`; `tokens.test.ts` verifica que coincidan y el contraste WCAG AA de los pares de texto.
 
-| Token | Claro (crema) | Oscuro (azul) | Uso |
+| Token | Claro | Oscuro | Uso |
 |---|---|---|---|
-| `--bg` | `#F1EEE6` | `#16212A` | Fondo de página |
-| `--surface` | `#F9F7F2` | `#1F2D37` | Tarjetas y barra superior |
-| `--raised` | `#EFECE4` | `#2A3A46` | Botones neutros, fila seleccionada |
-| `--border` | `#DDD8CD` | `#3E505B` | Trazos finos dentro de gráficos |
-| `--text` | `#2A343B` | `#ECE7DC` | Texto |
-| `--text-muted` | `#5F6468` | `#A3AEB4` | Texto secundario |
-| `--ctrl` | `#3E505B` | `#4D6372` | Control primario (reproducir) |
-| `--on-ctrl` | `#F5F2EA` | `#ECE7DC` | Texto sobre `--ctrl` |
-| `--accent` | `#8EB8E5` | `#FDDA0D` | Eventos, anomalías, selección, foco |
+| `--bg` | `#E4E2DC` | `#101114` | Página detrás del marco |
+| `--frame-0` / `--frame-1` / `--frame-2` | `#F3F2EE` / `#F1EEE4` / `#F6E9B5` | `#1B1C20` / `#1D1D1F` / `#2E2814` | Degradado del marco, 160°, paradas 0 / 55 / 100 % |
+| `--surface` | `#FBFAF7` | `#26272C` | Tarjetas |
+| `--raised` | `#EFECE4` | `#2A2B30` | Botones neutros, pista del control segmentado, fila seleccionada |
+| `--border` | `#D8D4C8` | `#3C3D43` | Trazos finos en gráficos y listas |
+| `--text` | `#1C1C1C` | `#F1EFE8` | Texto |
+| `--text-muted` | `#5E5E5E` | `#A9A9A4` | Leyendas |
+| `--ctrl` | `#1C1C1C` | `#F1EFE8` | Píldora activa, botón primario |
+| `--on-ctrl` | `#F3F2EE` | `#1B1C20` | Texto sobre `--ctrl` |
+| `--inverse` / `--on-inverse` | `#1C1C1C` / `#F3F2EE` | `#F1EFE8` / `#1B1C20` | La única tarjeta invertida (perspectiva / modelo) |
+| `--accent` | `#F5CF4B` | `#F5CF4B` | Selección, evento, cabezal, barra destacada |
+| `--casing` | `#1C1C1C` | `#101114` | Contorno de las marcas de acento |
+| `--chart-surface` | `#FFFFFF` | `#1B1C20` | Fondo de los gráficos: plano, sin textura |
 | `--water` | `#3A6E8F` | `#7FA9C6` | Ríos en el mapa |
-| `--casing` | `#2A343B` | `#16212A` | Contorno de las marcas de acento |
-| `--chart-surface` | `#FFFFFF` | `#121C24` | Fondo de todos los gráficos: plano, sin textura; único blanco puro de la paleta |
-| `--relief-0` | `#A7AEAF` | `#4E5F6A` | Relieve, bajo |
-| `--relief-1` | `#77848A` | `#7D8D96` | Relieve, medio |
-| `--relief-2` | `#4A5A64` | `#B3BEC4` | Relieve, alto |
-| `--relief-3` | `#2A343B` | `#ECE7DC` | Relieve, cumbres |
+| `--relief-0..3` | `#A7AEAF` `#77848A` `#4A5A64` `#2A343B` | `#4E5F6A` `#7D8D96` `#B3BEC4` `#ECE7DC` | Relieve, de bajo a cumbres |
 
-Comunes a ambos temas: `--main #3E505B` (primario, texto fuerte en claro), `--secondary #A4AF69` (banda "normal", climatología), espaciado `--space-1..6` (4, 8, 12, 16, 24, 32 px), radios `--radius-sm/md/lg` (4, 8, 12 px) y la rampa IVT (más abajo). Contraste mínimo WCAG AA.
+Comunes a ambos temas: `--main #3E505B`, `--secondary #A4AF69` (banda "normal", climatología), espaciado `--space-1..6` (4, 8, 12, 16, 24, 32 px), radios `--radius-sm/md/lg` (4, 8, 12 px), `--radius-card` (28 px), `--radius-frame` (36 px), `--radius-pill` (999 px) y las rampas IVT, de conteo, de lluvia y de escombros (sin cambios). En oscuro `--ctrl` es claro: el glifo de acento del botón de reproducir lleva contorno `--casing` en ese tema.
 
 ## Tipografía
 
-IBM Plex Sans para el cuerpo y los títulos; IBM Plex Mono con numerales tabulares solo para números, fechas y unidades (clase `.num`). Cuerpo 14 px / 1,4. Títulos de tarjeta 14 px / 600; título de página y del inspector 16 px / 600. Se cargan desde Google Fonts en `index.html` (sin CSP que lo bloquee); tokens `--font-sans` y `--font-mono`.
+Outfit (Google Fonts, 300/400/500/600) para todo el texto de la interfaz; token `--font-sans`. IBM Plex Mono con numerales tabulares solo para números dentro de gráficos, tablas y la línea de tiempo (clase `.num`); token `--font-mono`. Ambas se cargan en `index.html`.
+
+- Cuerpo 15 px / 1,4.
+- Título de tarjeta 22 px / 400.
+- `h1` de página 44 px / 400 (30 px hasta 800 px de ancho).
+- Cifras grandes 64–72 px / 300 con numerales tabulares y una leyenda de 13 px en `--text-muted` debajo.
 
 ## Superficies
 
-- Sin bordes entre regiones. Fondo de página `--bg`, con 8 px de relleno y 8 px entre regiones.
-- Cada panel es una tarjeta `--surface` con radio 8 px y relleno 16 px.
-- Textura (clase `.tx`, también en la barra superior): en claro, puntos `radial-gradient(rgba(42,52,59,0.09) 0.9px, transparent 1.3px)` a 5 × 5 px más un brillo diagonal `linear-gradient(135deg, rgba(255,255,255,0.45) 0%, transparent 55%)`; en oscuro, ninguno de los dos. Los dos valores salen de las variables `--tex` y `--shine` de cada tema.
+- Fondo de página `--bg` con 24 px de relleno. Un solo marco (radio 36 px, relleno 24/28 px, degradado `--frame-0/1/2` a 160°) contiene todo.
+- Tarjetas: `--surface`, radio 28 px, relleno 20 px, sin bordes y sin textura (se eliminaron los puntos y el brillo `.tx`).
+- Píldoras y controles segmentados: radio 999 px.
 
 ## Controles
 
-- Objetivos de 44 px, radio 8 px, sin borde. Botones neutros sobre `--raised`; el primario (reproducir) sobre `--ctrl` con texto `--on-ctrl`.
-- Casillas de 18 px con `accent-color: var(--ctrl)`; filas de 40 px. Fila de lista seleccionada: fondo `--raised` y un punto de 8 px en `--accent`.
+- Objetivos de 44 px. Botones neutros sobre `--raised`; el primario (reproducir) redondo de 44 px sobre `--ctrl` con glifo de acento.
+- Píldoras de capa: un `<label>` que envuelve la casilla oculta visualmente (`layer-toggle-<id>`); activa = relleno `--ctrl`. Pueden estar varias activas. Logo: píldora con contorno de 1 px `--text` ("Clima Ideas"); botón de tema redondo de 44 px.
+- Controles segmentados: pista `--raised`, opción activa `--ctrl` con texto `--on-ctrl`.
+- Fila de lista seleccionada: fondo `--raised` y un punto de 8 px en `--accent`.
 - Foco visible: anillo de 2 px en `--accent` con 2 px de separación (enlaces, botones, campos y separadores).
 - Las marcas de acento en el mapa y los gráficos llevan un contorno `--casing`.
 
 ## Layout
 
-- Barra superior (mínimo 56 px, `--surface`, con textura): marca del logo, "Clima Ideas", `h1` de la página y botón de tema de 44 px.
-- Cuerpo en CSS grid (escritorio): mapa a la izquierda (ocupa el ancho restante), columna de paneles a la derecha (440 px por defecto, 320–640) y la línea de tiempo abajo a todo el ancho. La columna de paneles apila el panel de capas, el inspector, la tarjeta de detalle (`1 0 auto`) y la lista de eventos; usa todo el alto y solo se desplaza como último recurso. Con la capa de convección activa a 1440x900 la columna no se desplaza: tarjetas compactas (relleno 10/12 px, filas de 22 a 28 px), solo el gráfico IDF queda en la tarjeta de detalle y las notas largas (leyenda, extrapolación †, sesgo, celda, sensibilidad, replay) van en un `<details>` "Ver notas" cerrado; fuente, período, licencia, la etiqueta de una línea "IDF solo con IMERG, sin corrección de sesgo" y la marca † de T 100 siempre visibles. El replay del temporal (controles y lectura a la izquierda, acumulado estación frente a IMERG ocupando el resto, sobre `--chart-surface`) vive en la línea de tiempo (alto por defecto 148 px) y sigue el mismo cursor que los cuadros de lluvia del mapa.
-- El inspector muestra filas etiqueta a la izquierda y valor mono a la derecha (mínimo 28 px); la fuente y el período se conservan. Sin evento elegido, la ayuda del mapa queda en un desplegable (`details`) para que el inspector no desborde su tarjeta. La tarjeta de detalle aloja los gráficos de la estación y la tabla ENSO cuando corresponden; sin contenido no se muestra. La lista de eventos tiene filas de 48 px (punto, nombre, valor y fecha en mono) y el conteo en el título.
-- Línea de tiempo: botones anterior / reproducir / siguiente de 44 px; pista con línea base de 2 px, marcas en acento y cabezal de 5 px en acento; hora de la reproducción en mono.
-- Mapa en una tarjeta redondeada; las leyendas van en un solo contenedor abajo a la izquierda (`.map-legends`, pila vertical sin superposición cuando hay dos capas) sin borde, con el selector de vista como control segmentado (contenedor `--raised`, botón activo `--ctrl`); mientras hay una reproducción activa, los relojes (`.map-clocks`, también apilados) arriba a la derecha muestran su fecha y hora. Con la capa de convección: marca de Neuquén Aero (estación) y contorno de la celda IMERG (±0,05°) con etiqueta y fuente en el tooltip.
-- Gráficos: todos los SVG (`.flood-chart`, `.enso-chart`) sobre `--chart-surface`, con 8 px de relleno y borde de 1 px `--border`. Contraste de tinta verificado en `tokens.test.ts`; los escenarios de sensibilidad usan `--water`.
+- Cabecera: píldora del logo, píldoras de capas y botón de tema. En escritorio no hay `aside` de capas; hasta 800 px las píldoras se desplazan en horizontal en una sola fila (sin cajón). El botón ENSO vive en la cabecera de la tarjeta de eventos.
+- Fila principal: `h1` con el título de la capa elegida; a la derecha hasta 3 cifras grandes que el panel de la capa ya calcula (eventos mostrados, estaciones, cuencas), cada una con su leyenda y la fuente y el período de la capa en una línea apagada. Sin nada que mostrar, solo el `h1`. Nunca resultados de estudio escritos a mano.
+- Cuerpo: grilla de tarjetas. La tarjeta del mapa ocupa 2 columnas (mínimo 420 px de alto); luego inspector, detalle y lista de eventos. La tarjeta de perspectiva / modelo usa `--inverse`. Hasta 800 px todo se apila en orden: cabecera, `h1`, cifras, mapa, tarjetas. Los tiradores siguen entre el mapa y la columna de tarjetas y sobre la línea de tiempo.
+- El inspector muestra filas etiqueta a la izquierda y valor a la derecha; la fuente y el período se conservan. Sin evento elegido, la ayuda del mapa queda en un desplegable (`details`). La tarjeta de detalle aloja los gráficos de la estación y la tabla ENSO cuando corresponden; sin contenido no se muestra. La lista de eventos tiene filas de 48 px (punto, nombre, valor y fecha en mono) y el conteo en el título.
+- Línea de tiempo: una píldora `--surface` (radio 999 px) con etiqueta, pista de 6 px sobre `--raised` con progreso en `--accent`, hora en `.num` y botón de reproducir redondo de 44 px sobre `--ctrl` con glifo de acento. Anterior / siguiente: redondos de 44 px sobre `--raised`. Las marcas conservan su posición porcentual y su color.
+- Gráficos: barras y puntos en `--text`, el destacado en `--accent` con `--casing`, fondos en `--chart-surface`; números mono solo dentro de los gráficos. Contraste de tinta verificado en `tokens.test.ts`; los escenarios de sensibilidad usan `--water`.
+- Con la capa de convección activa a 1440x900 la columna no se desplaza: tarjetas compactas, solo el gráfico IDF en la tarjeta de detalle y las notas largas (leyenda, extrapolación †, sesgo, celda, sensibilidad, replay) en un `<details>` "Ver notas" cerrado; fuente, período, licencia, la etiqueta "IDF solo con IMERG, sin corrección de sesgo" y la marca † de T 100 siempre visibles. El replay del temporal vive en la línea de tiempo y sigue el mismo cursor que los cuadros de lluvia del mapa.
+- Leyendas del mapa en un solo contenedor abajo a la izquierda (`.map-legends`, pila vertical sin superposición), con el selector de vista como control segmentado; los relojes (`.map-clocks`) arriba a la derecha durante una reproducción.
+
+## Mapa base y cámara
+
+- Mapa base ráster con datos de OpenStreetMap dibujado por deck.gl (`TileLayer` + `BitmapLayer`) como capa inferior: CARTO `light_all` en claro y `dark_all` en oscuro (`https://{a-d}.basemaps.cartocdn.com/{style}/{z}/{x}/{y}@2x.png`). Atribución siempre visible en la tarjeta del mapa: "© OpenStreetMap contributors © CARTO". Los términos de CARTO para este uso están sin verificar. Las capas de referencia y de datos van encima.
+- Control segmentado abajo a la derecha del mapa: "Relieve", "Mapa", "Ambos" (por defecto "Ambos", relieve con opacidad reducida, 0,55 de partida). Se guarda en `localStorage` (`map-background`); un valor inválido vuelve al defecto.
+- Cámara limitada al área cubierta (caja ERA5, 34–43 °S, 74–66 °O, ver `docs/architecture.md`, "Área del visor"): el zoom mínimo es aquel en que la caja cubre la tarjeta, el centro se acota para que a inclinación 0 ningún borde de la caja entre en la tarjeta, zoom máximo 12. El lienzo llena la tarjeta en todo tamaño y bajo él el color de la tarjeta es el del mapa base, nunca el de la página.
 
 ## Tiradores de arrastre
 
-- Hay tiradores para el ancho de la columna de paneles y el alto de la línea de tiempo, ubicados en los huecos de 8 px entre regiones.
+- Hay tiradores para el ancho de la columna de tarjetas y el alto de la línea de tiempo, ubicados en los huecos entre regiones.
 - Arrastrar por debajo del mínimo del panel lo colapsa a 0: el panel queda oculto (`hidden`, fuera del orden de tabulación) y el mapa ocupa el espacio. El tirador permanece en el borde para poder arrastrarlo de vuelta.
 - Teclado: las flechas redimensionan (16 px), Inicio colapsa, Fin maximiza, Enter o doble clic restablece el tamaño por defecto. `aria-valuemin` es 0 y `aria-valuenow` es 0 cuando está colapsado. El mapa conserva al menos 320 × 200 px.
 - Tamaños y estado colapsado se guardan en `localStorage` (`panel-sizes`); las claves inválidas o ausentes vuelven al defecto.
 
 ## Pantallas angostas
 
-En pantallas de hasta 800 px el panel de capas es un cajón. Se apilan mapa, paneles y línea de tiempo y la página se desplaza; no hay tiradores.
+En pantallas de hasta 800 px las píldoras de capas se desplazan en una fila (sin cajón). Se apilan cabecera, `h1`, cifras, mapa, tarjetas y línea de tiempo y la página se desplaza; no hay tiradores.
 
 ## Rampa IVT (secuencial)
 
@@ -99,4 +114,4 @@ Gráficos SVG propios, solo con tokens: curva GEV y serie diaria en `--text`, ba
 
 ## Capa de convección (F3.5)
 
-Panel en la tarjeta de detalle: curvas IDF (eje x logarítmico de duración, eje y logarítmico; una curva continua por período de retorno, Gumbel a trazos, banda IC 90 % del T elegido, escenarios de sensibilidad ÷ 0,92 y ÷ 0,67 en puntos, T = 100 marcado "†" y atenuado como extrapolación) y replay del temporal de abril de 2014 con el acumulado de IMERG contra el total de la estación (punto en `--accent`). El mapa pinta la lluvia semihoraria con la rampa azul monocromática `--rain-0..4` (umbrales 0, 1, 3, 8 y ≥20 mm/h, parejos en la leyenda; transparente bajo 0,1 mm/h): sin colores de advertencia. Pie con fuente, período, el aviso de sesgo y "No es un sistema de alerta oficial".
+Panel en la tarjeta de detalle: curvas IDF (eje x logarítmico de duración, eje y logarítmico; una curva continua por período de retorno, Gumbel a trazos, banda IC 90 % del T elegido, escenarios de sensibilidad ÷ 0,92 y ÷ 0,67 en puntos, T = 100 marcado "†" y atenuado como extrapolación) y replay del temporal de abril de 2014 con el acumulado de IMERG contra el total de la estación (punto en `--accent` con `--casing`). El mapa pinta la lluvia semihoraria con la rampa azul monocromática `--rain-0..4` (umbrales 0, 1, 3, 8 y ≥20 mm/h, parejos en la leyenda; transparente bajo 0,1 mm/h): sin colores de advertencia. Pie con fuente, período, el aviso de sesgo y "No es un sistema de alerta oficial".
