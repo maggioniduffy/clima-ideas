@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import type { LayerManifest } from "../api/client";
 import { es } from "../i18n/es";
 
@@ -9,65 +8,42 @@ interface Props {
   selectedId: string | null;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
-  /** ENSO button of the active `events` layer (the event list itself lives in its own card). */
-  events?: {
-    layerId: string;
-    /** ENSO-phase statistics (F1.8): the button shows unless the layer publishes no report ("none"/absent). */
-    ensoStatus?: "none" | "loading" | "ready" | "error";
-    ensoOpen?: boolean;
-    onToggleEnso?: () => void;
-  };
 }
 
-export function LayerPanel({ layers, status, activeIds, selectedId, onToggle, onSelect, events }: Props) {
+/**
+ * Layer pills of the header. Each pill is a label around the visually hidden checkbox; several layers can be on.
+ * Choosing a layer that is on but not selected selects it (its title and numbers show in the hero); choosing the
+ * selected one, or one that is off, toggles it (turning a layer on also selects it).
+ */
+export function LayerPanel({ layers, status, activeIds, selectedId, onToggle, onSelect }: Props) {
   return (
-    <aside className="shell-layers" id="layer-panel" data-testid="layer-panel">
-      <h2 className="panel-title">{es.drawers.layers}</h2>
+    <nav className="layer-pills" id="layer-panel" data-testid="layer-panel" aria-label={es.drawers.layers}>
       {status === "loading" && <p className="empty">{es.layers.loading}</p>}
       {status === "error" && <p className="empty">{es.layers.error}</p>}
       {status === "ready" && layers.length === 0 && <p className="empty">{es.layers.empty}</p>}
-      <ul className="layer-list">
-        {layers.map((l) => {
-          const active = activeIds.has(l.id);
-          return (
-            <Fragment key={l.id}>
-              <li
-                className="layer-item"
-                data-testid={`layer-item-${l.id}`}
-                data-active={active}
-                data-selected={selectedId === l.id}
-              >
-                <input
-                  type="checkbox"
-                  checked={active}
-                  aria-label={[es.layers.toggle, l.title].join(" ")}
-                  data-testid={`layer-toggle-${l.id}`}
-                  onChange={() => onToggle(l.id)}
-                />
-                <button type="button" className="layer-title" onClick={() => onSelect(l.id)}>
-                  {l.title}
-                </button>
-              </li>
-              {active && events?.layerId === l.id && (
-                <li className="enso-item">
-                  {events.ensoStatus && events.ensoStatus !== "none" && (
-                    <button
-                      type="button"
-                      className="enso-open"
-                      data-testid="enso-open"
-                      aria-pressed={!!events.ensoOpen}
-                      aria-controls="enso-panel"
-                      onClick={events.onToggleEnso}
-                    >
-                      {es.enso.open}
-                    </button>
-                  )}
-                </li>
-              )}
-            </Fragment>
-          );
-        })}
-      </ul>
-    </aside>
+      {layers.map((l) => {
+        const active = activeIds.has(l.id);
+        return (
+          <label
+            key={l.id}
+            className="layer-pill"
+            title={l.title}
+            data-testid={`layer-item-${l.id}`}
+            data-active={active}
+            data-selected={selectedId === l.id}
+          >
+            <input
+              type="checkbox"
+              className="layer-pill-input"
+              checked={active}
+              aria-label={[es.layers.toggle, l.title].join(" ")}
+              data-testid={`layer-toggle-${l.id}`}
+              onChange={() => (active && selectedId !== l.id ? onSelect(l.id) : onToggle(l.id))}
+            />
+            <span className="layer-pill-title">{l.title}</span>
+          </label>
+        );
+      })}
+    </nav>
   );
 }

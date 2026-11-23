@@ -6,7 +6,15 @@ export const es = {
   theme: { toggle: "Cambiar tema" },
   panel: { expand: "Expandir panel", collapse: "Contraer panel" },
   resize: { panels: "Ancho de los paneles", timeline: "Alto de la línea de tiempo" },
-  drawers: { layers: "Capas", close: "Cerrar panel" },
+  drawers: { layers: "Capas" },
+  hero: {
+    eventsShown: "Eventos mostrados",
+    eventsTotal: "Eventos en la capa",
+    stations: "Estaciones",
+    points: "Puntos",
+    catchments: "Cuencas en el mapa",
+    sourcePeriod: (source: string, period: string) => `${source} · ${period}`,
+  },
   layers: { empty: "Sin capas", loading: "Cargando capas…", error: "No se pudieron cargar las capas", toggle: "Activar capa" },
   inspector: {
     empty: "Nada seleccionado",

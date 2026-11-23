@@ -10,7 +10,7 @@ import {
   stepSize,
 } from "./panelSizes";
 
-const big = { width: 1920, height: 1080 };
+const big = { width: 1920, height: 1200 };
 
 beforeEach(() => localStorage.clear());
 
@@ -23,22 +23,22 @@ test("clamps each panel to its limits", () => {
   expect(clampSize("panels", 0, DEFAULT_SIZES, big)).toBe(0);
 });
 
-test("the map keeps at least 320 px wide and 400 px tall", () => {
-  expect(limitsFor("panels", DEFAULT_SIZES, { width: 1000, height: 900 }).max).toBe(640);
-  expect(limitsFor("panels", DEFAULT_SIZES, { width: 800, height: 900 }).max).toBe(800 - 16 - 8 - 320);
-  // 700 - 56 header - 16 padding - 8 handle - 400 map
-  expect(limitsFor("timeline", DEFAULT_SIZES, { width: 1000, height: 700 }).max).toBe(220);
+test("the map keeps at least 320 px wide and 420 px tall", () => {
+  expect(limitsFor("panels", DEFAULT_SIZES, { width: 1100, height: 900 }).max).toBe(640);
+  expect(limitsFor("panels", DEFAULT_SIZES, { width: 800, height: 900 }).max).toBe(800 - 104 - 8 - 320);
+  // 900 - 264 chrome - 8 handle - 420 map
+  expect(limitsFor("timeline", DEFAULT_SIZES, { width: 1000, height: 900 }).max).toBe(208);
 });
 
 test("min wins when the window is too small", () => {
   expect(limitsFor("panels", DEFAULT_SIZES, { width: 400, height: 300 })).toEqual({ min: 320, max: 320 });
-  expect(limitsFor("timeline", DEFAULT_SIZES, { width: 400, height: 300 })).toEqual({ min: 80, max: 80 });
+  expect(limitsFor("timeline", DEFAULT_SIZES, { width: 400, height: 300 })).toEqual({ min: 80, max: 148 });
 });
 
 test("clampAll re-clamps after the window shrinks and keeps collapsed panels at 0", () => {
   const out = clampAll({ panels: 640, timeline: 480 }, { width: 900, height: 700 });
-  expect(out.panels).toBeLessThanOrEqual(900 - 16 - 8 - 320);
-  expect(out.timeline).toBeLessThanOrEqual(700 - 56 - 16 - 8 - 400);
+  expect(out.panels).toBeLessThanOrEqual(900 - 104 - 8 - 320);
+  expect(out.timeline).toBeLessThanOrEqual(148); // a 700 px window fits only the default timeline; the page scrolls
   expect(clampAll({ panels: 0, timeline: 0 }, { width: 1100, height: 900 })).toEqual({ panels: 0, timeline: 0 });
 });
 

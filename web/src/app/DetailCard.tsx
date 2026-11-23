@@ -28,7 +28,7 @@ interface Props {
 export function DetailCard({ flood = null, enso = null, convection = null, debris = null, hindcast = null, forecast = null, onOpenArEvent }: Props) {
   if (!enso && !flood && !convection && !debris && !hindcast && !forecast) return null;
   return (
-    <section className="detail-card card tx" data-testid="detail-card">
+    <section className="detail-card card" data-testid="detail-card">
       {enso ? (
         <EnsoPanel {...enso} />
       ) : flood ? (

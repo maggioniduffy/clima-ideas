@@ -66,9 +66,7 @@ for (const [name, size] of [["desktop", { width: 1280, height: 800 }], ["phone",
   test(`right panel expands and collapses (${name})`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/");
-    if (size.width <= 800) await page.locator(".drawer-toggle").click();
     await page.getByTestId("layer-toggle-forecast-outlook").check();
-    if (size.width <= 800) await page.locator(".drawer-toggle").click();
     await expect(page.getByTestId("forecast-panel")).toBeVisible();
     const btn = page.getByTestId("panel-expand");
     await expect(btn).toHaveAttribute("aria-label", "Expandir panel");

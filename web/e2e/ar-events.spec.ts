@@ -226,9 +226,7 @@ test("ENSO panel: opens in the detail card with the F1.8 table, source and cavea
 
   // narrow screen: the detail card takes the map width
   await page.setViewportSize({ width: 600, height: 820 });
-  await page.getByTestId("drawer-toggle-layers").click();
   await page.getByTestId("enso-open").click();
-  await page.getByTestId("drawer-scrim").click({ position: { x: 560, y: 100 } }); // right of the drawer
   const narrowMap = (await page.getByTestId("map-canvas").boundingBox())!;
   const narrow = (await page.getByTestId("detail-card").boundingBox())!;
   expect(narrow.width).toBeGreaterThan(narrowMap.width - 24);

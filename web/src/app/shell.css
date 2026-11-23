@@ -1,36 +1,62 @@
-/* Regions are borderless --surface cards on a --bg page with 8 px padding and gaps; identical in both themes. */
+/* Arena (docs/design.md): the page is --bg with 24 px padding; one frame (radius 36, gradient) holds the header, the hero row,
+   the card grid and the timeline. Cards are borderless --surface at radius 28; identical in both themes. */
 .shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh; /* fills the window; the right column scrolls only as a fallback */
-  min-height: calc(var(--timeline-h, 148px) + 480px); /* same budget as limitsFor: 56 top bar + 16 padding + 8 handle + 400 map */
+  box-sizing: border-box;
+  display: flex; flex-direction: column;
+  height: 100vh; /* the frame fills the window; the card column scrolls only as a fallback */
+  min-height: calc(var(--timeline-h, 148px) + 692px); /* same budget as limitsFor: chrome 264 + handle 8 + 420 map */
+  padding: 24px;
   position: relative;
   background: var(--bg);
   color: var(--text);
 }
 .shell [hidden] { display: none !important; }
 
+.frame {
+  box-sizing: border-box; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-4);
+  padding: 24px 28px; border-radius: var(--radius-frame);
+  background: linear-gradient(160deg, var(--frame-0) 0%, var(--frame-1) 55%, var(--frame-2) 100%);
+}
+
 .card { box-sizing: border-box; background-color: var(--surface); border-radius: var(--radius-card); padding: 20px; }
 
-.shell-topbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-5);
-  min-height: 56px;
-  box-sizing: border-box;
-  padding: 6px var(--space-4);
-  background-color: var(--surface);
+/* Header: logo pill, layer pills, round theme button */
+.shell-topbar { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; flex: none; }
+.topbar-brand {
+  flex: none; display: inline-flex; align-items: center; height: 44px; box-sizing: border-box; padding: 0 20px;
+  border: 1px solid var(--text); border-radius: var(--radius-pill); font-weight: 600; white-space: nowrap;
 }
-.topbar-brand { display: flex; align-items: center; gap: 10px; }
-.topbar-wordmark { font-weight: 600; }
-.topbar-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
-.shell-topbar h1 { margin: 0; font-size: 16px; font-weight: 600; }
+.topbar-actions { display: flex; align-items: center; margin-left: auto; flex: none; }
+.layer-pills {
+  flex: 1; display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-2); min-width: 0;
+  overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 5px; margin: -5px;
+}
+.layer-pills::-webkit-scrollbar { display: none; }
+.layer-pill {
+  position: relative; display: inline-flex; align-items: center; height: 44px; box-sizing: border-box; padding: 0 18px;
+  flex: none; max-width: 260px; border-radius: var(--radius-pill); background: transparent; color: var(--text);
+  border: 1px solid var(--border); cursor: pointer; white-space: nowrap;
+}
+/* The checkbox is visually hidden but covers the pill, so it is its own click target */
+.layer-pill-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.layer-pill-title { overflow: hidden; text-overflow: ellipsis; }
+.layer-pill[data-active="true"] { background: var(--ctrl); color: var(--on-ctrl); border-color: var(--ctrl); }
+.layer-pill[data-active="true"][data-selected="true"] { font-weight: 500; }
+.layer-pill:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.layer-pills .empty { padding: 0 var(--space-2); }
 
-/* Desktop layout (CSS grid): map on the left, panels on the right, timeline across the bottom.
+/* Hero row: h1 of the selected layer on the left, up to 3 big numbers and one muted source line on the right */
+.hero { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); min-height: 92px; flex: none; }
+.hero h1 { margin: 0; min-width: 0; flex: 1 1 0; align-self: center; overflow-wrap: anywhere; }
+.hero-stats { flex: 0 1 auto; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); min-width: 0; }
+.hero-numbers { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2) var(--space-6); }
+.hero-numbers li { display: flex; flex-direction: column; gap: 6px; }
+.hero-source { margin: 0; font-size: 13px; color: var(--text-muted); text-align: right; }
+
+/* Desktop layout (CSS grid): map card on the left, card column on the right, timeline across the bottom.
    The 8 px tracks between regions hold the drag handles. */
 .shell-body {
-  flex: 1; min-height: 0; padding: var(--space-2);
+  flex: 1; min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--space-2) var(--panels-w, 440px);
   grid-template-rows: minmax(0, 1fr) var(--space-2) auto;
@@ -49,16 +75,14 @@
 .shell-body:has(> .timeline-slot[hidden]) { grid-template-rows: minmax(0, 1fr) var(--space-2) 0; }
 
 .shell-canvas {
-  position: relative; min-height: 0; min-width: 0;
-  overflow: hidden; background: var(--surface); border-radius: var(--radius-md);
+  position: relative; min-height: 420px; min-width: 0;
+  overflow: hidden; background: var(--surface); border-radius: var(--radius-card);
 }
-/* Right column: the cards stack and use its full height; it scrolls only when they cannot fit */
+/* Card column: the cards stack and use its full height; it scrolls only when they cannot fit */
 .shell-panels { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--space-2); overflow-y: auto; overflow-x: hidden; }
 .shell-panels > * { flex: none; }
-.layers-slot { display: flex; flex-direction: column; }
 .timeline-slot { height: var(--timeline-h, 148px); display: flex; flex-direction: column; }
-.shell-layers, .shell-timeline { flex: 1; min-height: 0; overflow: auto; }
-.shell-layers { display: flex; flex-direction: column; }
+.shell-timeline { flex: 1; min-height: 0; overflow: auto; }
 .shell-inspector { min-width: 0; }
 .detail-card { min-width: 0; flex: 1 0 auto; }
 .event-card { min-width: 0; display: flex; flex-direction: column; flex: 1 0 280px; max-height: 420px; }
@@ -72,13 +96,6 @@
 .panel-resizer-panels::after { top: 0; bottom: 0; left: 3px; width: 2px; }
 .panel-resizer-timeline { cursor: row-resize; }
 .panel-resizer-timeline::after { left: 0; right: 0; top: 3px; height: 2px; }
-
-.drawer-toggle, .drawer-scrim { display: none; }
-.drawer-toggle {
-  height: 44px; padding: 0 var(--space-3); border-radius: var(--radius-md); border: 0;
-  background: var(--raised); color: var(--text); cursor: pointer; font: inherit; font-size: 12px;
-}
-.drawer-toggle[aria-expanded="true"] { font-weight: 600; }
 
 .events-help { display: flex; flex-direction: column; gap: var(--space-1); font-size: 13px; }
 .events-help p { margin: 0; line-height: 1.4; color: var(--text-muted); }
@@ -95,22 +112,19 @@
 .theme-toggle {
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-md);
+  border-radius: 50%;
   border: 0;
   background: var(--raised);
   color: var(--text);
   cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 
-.panel-title, .card-title { margin: 0 0 var(--space-2); font-size: 14px; font-weight: 600; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+.card-title { margin: 0; font-size: 14px; font-weight: 600; }
 .card-count { font-weight: 400; color: var(--text-muted); }
 .layer-list,
 .feature-list { list-style: none; margin: 0; padding: 0; }
-.layer-item { display: flex; align-items: center; gap: var(--space-3); min-height: 36px; }
-.layer-item input[type="checkbox"] { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--ctrl); cursor: pointer; }
-.layer-item[data-selected="true"] .layer-title { font-weight: 600; }
-.layer-title { background: none; border: 0; color: inherit; cursor: pointer; padding: 0; font: inherit; text-align: left; min-height: 36px; flex: 1; }
-.enso-item { padding-top: var(--space-2); }
 .feature-list button {
   min-height: 40px; width: 100%; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-md); text-align: left;
   background: transparent; color: inherit; cursor: pointer; font: inherit;
@@ -270,8 +284,8 @@
 
 /* ENSO panel (F1.8): content of the detail card */
 .enso-open {
-  display: block; width: 100%; min-height: 44px; padding: 0 var(--space-3); font: inherit; cursor: pointer;
-  background: var(--raised); color: var(--text); border: 0; border-radius: var(--radius-md);
+  flex: none; min-height: 44px; padding: 0 var(--space-4); font: inherit; font-size: 13px; cursor: pointer;
+  background: var(--raised); color: var(--text); border: 0; border-radius: var(--radius-pill);
 }
 .enso-open[aria-pressed="true"] { background: var(--ctrl); color: var(--on-ctrl); }
 .enso-panel { font-size: 13px; line-height: 1.35; color: var(--text); }
@@ -294,40 +308,35 @@
 .enso-foot p { margin: 0 0 var(--space-2); }
 .enso-caveats { margin: 0; padding-left: var(--space-4); }
 
-/* Narrow screens (<= 800 px): map, then the panels, then the timeline, stacked; the layers panel becomes a drawer over the map and the page scrolls. */
+/* Narrow screens (<= 800 px): header, h1, numbers, map, cards and timeline stack and the page scrolls; the pills scroll in one row. */
 @media (max-width: 800px) {
-  .shell { height: auto; min-height: 100vh; }
-  .shell-topbar { gap: var(--space-2); padding: 6px var(--space-3); flex-wrap: nowrap; }
-  .shell-topbar h1 { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .topbar-actions { margin-left: 0; }
-  .drawer-toggle { display: inline-block; }
+  .shell { height: auto; min-height: 100vh; padding: var(--space-3); }
+  .frame { flex: none; padding: var(--space-4); border-radius: 28px; gap: var(--space-3); }
+  .shell-topbar { flex-wrap: wrap; gap: var(--space-2); }
+  .topbar-actions { order: 2; }
+  .layer-pills {
+    order: 3; flex: 1 0 100%; margin: -5px calc(-1 * var(--space-4)); padding: 5px var(--space-4);
+  }
+  .hero { flex-direction: column; align-items: stretch; gap: var(--space-3); min-height: 0; }
+  .hero h1 { align-self: stretch; }
+  .hero-stats { align-items: flex-start; }
+  .hero-numbers { justify-content: flex-start; gap: var(--space-2) var(--space-5); }
+  .hero-source { text-align: left; }
+  .big-num { font-size: 52px; }
   .panel-resizer { display: none; }
   .shell-body, .shell-body:has(> .shell-panels[hidden]), .shell-body:has(> .timeline-slot[hidden]) {
     display: flex; flex-direction: column; gap: var(--space-2);
   }
-  .shell-canvas { flex: none; height: 60vh; min-height: 400px; }
+  .shell-canvas { flex: none; height: 60vh; min-height: 420px; }
   .shell-panels { overflow: visible; }
   .event-card { flex: none; max-height: none; }
   .event-list { overflow: visible; }
   .timeline-slot { height: auto; }
-  .shell .layers-slot {
-    position: fixed; top: 56px; bottom: 0; left: 0; z-index: 5; width: min(320px, 86vw);
-    border-radius: 0 var(--radius-md) var(--radius-md) 0;
-    visibility: hidden; transform: translateX(-100%); transition: transform 0.18s ease, visibility 0.18s;
-  }
-  .shell[data-drawer="layers"] .layers-slot { visibility: visible; transform: none; }
-  .shell[data-drawer] .drawer-scrim {
-    display: block; position: fixed; inset: 56px 0 0; z-index: 4; border: 0; padding: 0;
-    background: var(--bg); opacity: 0.55; cursor: default;
-  }
   .replay-time { min-width: 0; font-size: 12px; }
   .map-legends { width: 200px; left: var(--space-2); bottom: var(--space-2); }
   .map-clocks { top: var(--space-2); right: var(--space-2); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .shell .layers-slot { transition: none; }
-}
 
 /* Flood station panel (docs/design.md): tokens only, readable in both themes */
 .flood-panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }

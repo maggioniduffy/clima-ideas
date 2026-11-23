@@ -44,33 +44,28 @@ test("shows empty, loading and error states", () => {
   expect(screen.getByText(es.layers.error)).toBeInTheDocument();
 });
 
-test("active events layer does not list its events here (they live in the event-list card)", () => {
-  const evLayer: LayerManifest = { ...layer, id: "ar-events", kind: "events", title: "Ríos" };
-  const events = { layerId: "ar-events" };
-  render(<LayerPanel {...base} layers={[evLayer]} activeIds={new Set(["ar-events"])} onToggle={vi.fn()} onSelect={vi.fn()} events={events} />);
-  expect(screen.getByTestId("layer-item-ar-events")).toBeInTheDocument();
-  expect(screen.queryByTestId("event-list")).toBeNull();
+test("each layer is a pill: a label around the hidden checkbox", () => {
+  render(<LayerPanel {...base} activeIds={new Set(["a"])} onToggle={vi.fn()} onSelect={vi.fn()} />);
+  const pill = screen.getByTestId("layer-item-a");
+  expect(pill.tagName).toBe("LABEL");
+  expect(pill).toContainElement(screen.getByTestId("layer-toggle-a"));
+  expect(screen.getByTestId("layer-toggle-a")).toHaveAccessibleName(`${es.layers.toggle} Capa A`);
 });
 
-test("the panel has a Capas title", () => {
+test("choosing a layer that is on but not selected selects it; the selected one toggles off", () => {
+  const onToggle = vi.fn();
+  const onSelect = vi.fn();
+  const { rerender } = render(<LayerPanel {...base} activeIds={new Set(["a"])} selectedId="b" onToggle={onToggle} onSelect={onSelect} />);
+  fireEvent.click(screen.getByTestId("layer-toggle-a"));
+  expect(onSelect).toHaveBeenCalledWith("a");
+  expect(onToggle).not.toHaveBeenCalled();
+  rerender(<LayerPanel {...base} activeIds={new Set(["a"])} selectedId="a" onToggle={onToggle} onSelect={onSelect} />);
+  fireEvent.click(screen.getByTestId("layer-toggle-a"));
+  expect(onToggle).toHaveBeenCalledWith("a");
+});
+
+test("the pills are a navigation landmark named Capas, with no aside", () => {
   render(<LayerPanel {...base} onToggle={vi.fn()} onSelect={vi.fn()} />);
-  expect(screen.getByRole("heading", { name: es.drawers.layers })).toBeInTheDocument();
-});
-
-test("ENSO button shows only when the layer publishes a report and toggles the panel", () => {
-  const evLayer: LayerManifest = { ...layer, id: "ar-events", kind: "events", title: "Ríos" };
-  const onToggleEnso = vi.fn();
-  const events = {
-    layerId: "ar-events",
-    ensoStatus: "none" as const,
-    onToggleEnso,
-  };
-  const props = { ...base, layers: [evLayer], activeIds: new Set(["ar-events"]), onToggle: vi.fn(), onSelect: vi.fn() };
-  const { rerender } = render(<LayerPanel {...props} events={events} />);
-  expect(screen.queryByTestId("enso-open")).toBeNull();
-  rerender(<LayerPanel {...props} events={{ ...events, ensoStatus: "ready", ensoOpen: true }} />);
-  expect(screen.getByTestId("enso-open")).toHaveTextContent(es.enso.open);
-  expect(screen.getByTestId("enso-open")).toHaveAttribute("aria-pressed", "true");
-  fireEvent.click(screen.getByTestId("enso-open"));
-  expect(onToggleEnso).toHaveBeenCalled();
+  expect(screen.getByRole("navigation", { name: es.drawers.layers })).toBe(screen.getByTestId("layer-panel"));
+  expect(document.querySelector("aside")).toBeNull();
 });

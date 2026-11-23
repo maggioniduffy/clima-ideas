@@ -43,12 +43,14 @@ import {
   type PanelId,
   type PanelSizes,
 } from "./panelSizes";
+import { Hero } from "./Hero";
+import { heroStats, type HeroInput } from "./heroStats";
 import { Timeline } from "./Timeline";
-import { TopBar, type Drawer } from "./TopBar";
+import { TopBar } from "./TopBar";
 import "./shell.css";
 
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
-/** Same breakpoint as the narrow-screen rules in shell.css: layers is a drawer and there are no handles. */
+/** Same breakpoint as the narrow-screen rules in shell.css: everything stacks and there are no handles. */
 const NARROW_MAX_W = 800;
 
 export function Shell() {
@@ -94,15 +96,6 @@ export function Shell() {
     };
   };
 
-  // narrow screens: the side panels are drawers, one open at a time (CSS decides whether it applies)
-  const [drawer, setDrawer] = useState<Drawer | null>(null);
-  const toggleDrawer = (d: Drawer) => setDrawer((cur) => (cur === d ? null : d));
-  useEffect(() => {
-    if (!drawer) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawer(null);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [drawer]);
   const s = useLayers();
   const eventsLayer = s.layers.find((l) => l.kind === "events");
   const eventsActive = !!eventsLayer && s.activeIds.has(eventsLayer.id);
@@ -183,6 +176,15 @@ export function Shell() {
     () => visibleEvents(ar.events, arToggles, arSortKey, arTopOn, TOP_N, ratios),
     [ar.events, arToggles, arSortKey, arTopOn, ratios],
   );
+  // Hero numbers: only what the selected layer's own panel already computes.
+  const sel = s.selectedLayer;
+  const heroInput: HeroInput = {};
+  if (sel && s.activeIds.has(sel.id)) {
+    if (sel.id === eventsLayer?.id && ar.status === "ready") heroInput.events = { shown: arVisible.events.length, total: ar.events.length };
+    if (s.selectedFeatures.length > 0) heroInput.points = { count: s.selectedFeatures.length, station: sel.id === FLOOD_LAYER_ID };
+    if (sel.id === debrisLayer?.id && debris.status === "ready") heroInput.catchments = debris.shownCount;
+  }
+  const hero = heroStats(heroInput);
   const selectEvent = (id: string) => {
     if (eventsLayer) s.select(eventsLayer.id);
     ar.select(id);
@@ -207,7 +209,6 @@ export function Shell() {
     <div
       className="shell"
       data-testid="shell"
-      data-drawer={drawer ?? undefined}
       style={
         {
           "--panels-w": `${sizes.panels}px`,
@@ -215,7 +216,18 @@ export function Shell() {
         } as CSSProperties
       }
     >
-      <TopBar drawer={drawer} onToggleDrawer={toggleDrawer} />
+      <div className="frame" data-testid="frame">
+      <TopBar>
+        <LayerPanel
+          layers={s.layers}
+          status={s.status}
+          activeIds={s.activeIds}
+          selectedId={s.selectedId}
+          onToggle={s.toggle}
+          onSelect={s.select}
+        />
+      </TopBar>
+      <Hero title={s.selectedLayer?.title ?? es.appTitle} stats={hero} source={hero.length > 0 && s.selectedLayer ? s.selectedLayer : null} />
       <div className="shell-body" data-expanded={expanded ? "" : undefined}>
         <MapCanvas
           basemap={basemap}
@@ -265,24 +277,6 @@ export function Shell() {
               )}
             </svg>
           </button>
-        </div>
-        <div className="layers-slot card tx" data-testid="layers-slot">
-          <LayerPanel
-            layers={s.layers}
-            status={s.status}
-            activeIds={s.activeIds}
-            selectedId={s.selectedId}
-            onToggle={s.toggle}
-            onSelect={s.select}
-            events={
-              eventsLayer && {
-                layerId: eventsLayer.id,
-                ensoStatus: enso.status,
-                ensoOpen: showEnso,
-                onToggleEnso: () => setEnsoOpen((o) => !o),
-              }
-            }
-          />
         </div>
 
           <Inspector
@@ -343,11 +337,14 @@ export function Shell() {
               hasResponses={!!responses}
               selectedEventId={ar.selectedEventId}
               onSelectEvent={selectEvent}
+              ensoStatus={enso.status}
+              ensoOpen={showEnso}
+              onToggleEnso={() => setEnsoOpen((o) => !o)}
             />
           )}
         </div>
         <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
-        <div className="timeline-slot card tx" data-testid="timeline-slot" hidden={collapsed("timeline")}>
+        <div className="timeline-slot" data-testid="timeline-slot" hidden={collapsed("timeline")}>
           <Timeline
             events={eventsActive ? arVisible.filtered : []}
             peakIds={arVisible.peakIds}
@@ -359,14 +356,7 @@ export function Shell() {
           />
         </div>
       </div>
-      <button
-        type="button"
-        className="drawer-scrim"
-        data-testid="drawer-scrim"
-        aria-label={es.drawers.close}
-        tabIndex={-1}
-        onClick={() => setDrawer(null)}
-      />
+      </div>
     </div>
   );
 }
