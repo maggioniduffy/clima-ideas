@@ -144,7 +144,7 @@ from clima_nqn.stages.flood import conditional_clim_cli
 
 flow_app.command("conditional-clim")(conditional_clim_cli.conditional_clim)
 
-from clima_nqn.stages.flood import highflow_cli  # noqa: E402
+from clima_nqn.stages.flood import highflow_cli
 
 flow_app.command("highflow-fetch-ops")(highflow_cli.fetch_ops)
 flow_app.command("highflow")(highflow_cli.highflow)
