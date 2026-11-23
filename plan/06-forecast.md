@@ -1,6 +1,6 @@
 # Fase 6 — Predicción a futuro (experimental)
 
-Estado: en curso (F6.1, F6.3 de día de riesgo, F6.4, F6.6 y F6.8 hechos, F6.5 en código; registro diario con día de riesgo «Experimental» y climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
+Estado: en curso (F6.1, F6.2, F6.3 de día de riesgo, F6.4, F6.6, F6.8 y F6.9 hechos, F6.5 en código; registro diario con día de riesgo «Experimental» y climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
 
 Mide si los modelos predicen mejor que la climatología algo que todavía no pasó. Desde el 2026-11-12 (`plan.md`,
 Rumbo 7) una variable y anticipación que pasa la compuerta de evidencia se muestra como "Perspectiva de riesgo"
@@ -35,14 +35,14 @@ encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en b
 | ID | Tarea | Agente | Hecho cuando |
 |---|---|---|---|
 | F6.1 ✅ | Ingesta operativa idempotente de entradas actuales (ERA5T, ERA5-Land, ECMWF open data, GEFS, ONI, caudal); verificar antes la latencia real del caudal en tiempo real (SNIH dice no ser red de alerta; AIC restringida) | Sonnet escribe, Haiku corre | Latencia de caudal medida y anotada en `docs/research/data-access.md` + una corrida trae el último día disponible + unit de idempotencia |
-| F6.2 | Modelo estacional (regresión logística y LightGBM) + baselines, validado según "Validación (F6.2)" | Sonnet implementa, Haiku entrena | RPS y Brier por año de test vs. cada baseline + unit de particiones sin fuga |
+| F6.2 ✅ (caudal 1–3 meses supera la climatología; lluvia y ríos atmosféricos no) | Modelo estacional (regresión logística y LightGBM) + baselines, validado según "Validación (F6.2)" | Sonnet implementa, Haiku entrena | RPS y Brier por año de test vs. cada baseline + unit de particiones sin fuga |
 | F6.3 ✅ (día de riesgo; caudal bloqueado) | Corrida de corto plazo: F5.3 y LSTM F2.5 alimentados con pronósticos operativos | Sonnet | Predicción emitida para hoy con incertidumbre |
 | F6.4 ✅ | Registro de predicciones congeladas: append-only con fecha de emisión, versión de modelo y hash de entradas | Sonnet | Unit: no se puede editar ni emitir con fecha pasada |
 | F6.5 (código ✅) | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, Haiku corre | Tabla de skill por horizonte + unit de métricas |
 | F6.6 ✅ (código; en línea al mergear a `main`) | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
 | F6.7 | Prueba de caudal alto: dejando afuera cada crecida grande (junio de 2023 incluida), con entradas de pronóstico y la latencia de caudal de F6.1, ¿la probabilidad de superar el umbral sube sobre la climatología antes de cada pico y los intervalos cubren los picos cerca de lo nominal? | Haiku corre, Sonnet codifica | Tabla por crecida y anticipación con veredicto + unit de partición sin fuga |
 | F6.8 ✅ (código; sin promociones hasta la temporada 2027) | Promoción y descenso: aplica la compuerta por variable, anticipación y región, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión; el descenso de una anticipación arrastra a las más largas |
-| F6.9 | Propuesta (2026-11-13), depende de F5.9 y F5.10: climatología condicional de caudal alto a partir de la tabla evento × estación (`responses.json`, V8 de la fase 1): frecuencia de superar el umbral según IVT máximo, isoterma de 0 °C y mes. Es un modelo simple más para el criterio 3 de la compuerta, no un atajo: pasa por los mismos criterios | Sonnet codifica, Haiku corre | BSS vs. climatología y persistencia con IC bootstrap por evento + unit de partición sin fuga |
+| F6.9 ✅ (BSS 0,09 conjunto con ERA5; con IVT GEFS ninguna anticipación pasa) | Propuesta (2026-11-13), depende de F5.9 y F5.10: climatología condicional de caudal alto a partir de la tabla evento × estación (`responses.json`, V8 de la fase 1): frecuencia de superar el umbral según IVT máximo, isoterma de 0 °C y mes. Es un modelo simple más para el criterio 3 de la compuerta, no un atajo: pasa por los mismos criterios | Sonnet codifica, Haiku corre | BSS vs. climatología y persistencia con IC bootstrap por evento + unit de partición sin fuga |
 
 ## Validación (F6.2)
 
@@ -183,6 +183,25 @@ lo que ya se observó.
   si no lo puede leer). El job diario construye y publica la capa al bucket `nqn`. e2e `web/e2e/forecast.spec.ts`.
   Enlace a Defensa Civil igual al del panel de F5.6, sin verificar (no se pudo abrir desde el entorno).
 
+- F6.9 (2026-11-23): `stages/flood/conditional_clim.py`, `clima-nqn flow conditional-clim`. Tabla evento × estación
+  con la regla V8 (433 eventos, 1137 pares); superar el p95 del caudal diario según terciles de IVT máximo, terciles de
+  isoterma de 0 °C y temporada (mayo–sep), contraído hacia la frecuencia de la estación (Beta, 2 pseudo-eventos);
+  dejando afuera grupos de eventos con separación de 10 días. Entradas ERA5: BSS 0,09 [0,04; 0,14] frente a la
+  climatología y 0,10 [0,02; 0,19] frente a la persistencia (no operativa), conjunto; por estación solo 12012 excluye 0.
+  Sensibilidad: con la mediana de los máximos anuales como umbral, 0,05 [−0,01; 0,10]. Con IVT GEFS c00 (F5.10):
+  0,06 a 1 día y < 0 desde 7, ningún IC excluye 0 (el IVT GEFS es media diaria y el de ERA5 máximo horario: sin
+  corregir). Informe `reports/06/F6.9.md`. En la tabla de F6.7 no entra por día de emisión (pide rasgos de evento).
+- F6.2 (2026-11-23): paquete `stages/seasonal`, `clima-nqn seasonal fetch-state|validate|report|reference`. Sin ENSO
+  como entrada: nieve y agua de suelo ARCO-ERA5 a la emisión − 5 días, lluvia de 30 y 90 días, mes y anticipación.
+  Validación de "Validación (F6.2)": 44 años de test, separación de 6 meses, selección anidada; control de origen móvil.
+  RPSS frente a la climatología: caudal medio 12004 +0,16 [0,10; 0,22] a 1 mes y +0,09 a 3; 12010 +0,10 a 1 mes y
+  +0,07 a 3; desde 4 meses el IC incluye 0. Lluvia en cordillera −0,01; ríos atmosféricos sin skill frente a la
+  climatología empírica. El caudal pierde contra la persistencia del caudal del mes anterior, que no existe al emitir.
+  Modelos congelados `backend/models/seasonal-v1/` (logística). Emisión mensual «Experimental» (`forecast
+  emit-seasonal`, día 1 en `forecast-daily.yml`): baselines para las cuatro variables y la logística solo para caudal a
+  1–3 meses; variable `seas_p_tercil_alto`, `lead_days` hasta el primer día del mes objetivo. Informe
+  `reports/06/F6.2.md`.
+
 ## Abierto
 
 - Pronóstico ENSO: IRI ya no ofrece descarga de datos; queda C3S por CDS. Archivo histórico de pronósticos emitidos:
@@ -192,6 +211,9 @@ lo que ya se observó.
   Pasan el hindcast: día de riesgo con la logística hasta 9 (cordillera norte), 10 (sur) y 7 días (Confluencia).
 - Caudal en tiempo real: SNIH no lo tiene; pedir a la AIC acceso operativo (restringido). Sin eso, F6.3 y F6.7 de caudal no son verificables en el día.
 - `registry.append` relee la cadena entera en cada llamada; la emisión usa `append_many` (una verificación por lote).
+- ARCO-ERA5 iba 6,2 días atrasado el 2026-11-23 (F6.2 supuso 5): si falta la hora de emisión − 5 días, la emisión
+  estacional sale solo con baselines (`model_skipped`). En la prueba del 2026-11-01 el agua de suelo estaba +2 a +4 σ:
+  extrapolación; falta marcar entradas fuera del rango entrenado.
 - La verificación estacional tarda meses en juntar muestras; el hindcast de F6.2 da la primera estimación.
 
 ## Plan de cierre de la fase (2026-11-22)
