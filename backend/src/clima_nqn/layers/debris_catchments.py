@@ -81,7 +81,9 @@ _IDF_DEPTH_MM = {
 IDF_PARQUET = (
     idf_mod.OUT_PATH
 )  # optional: read instead of the constant when present (method gev_lmom)
-IDF_SOURCE = "GPM IMERG Final V07 (NASA GES DISC), IDF propia (GEV por L-momentos), celda de Neuquén capital"
+IDF_SOURCE = (
+    "GPM IMERG Final V07 (NASA GES DISC), IDF propia (GEV por L-momentos), celda de Neuquén capital"
+)
 IDF_NOTE = (
     "IDF solo con IMERG, sin corrección de sesgo: es un piso de la lluvia de diseño. Está ajustada en la celda de "
     "la capital; aplicarla a las cuencas de las Rutas 5 y 7 (cerca de Añelo) es sin verificar."

@@ -43,7 +43,10 @@ MONTHS_ES = [
 # plain Spanish instead. Ordered: specific phrases first, then a generic cleanup of parenthesised ids.
 _PLAIN = (
     (re.compile(r"espera prospectiva F6\.8"), "espera la temporada prospectiva"),
-    (re.compile(r"catálogo de ríos atmosféricos \(F1\.3\)"), "catálogo de ríos atmosféricos (ERA5)"),
+    (
+        re.compile(r"catálogo de ríos atmosféricos \(F1\.3\)"),
+        "catálogo de ríos atmosféricos (ERA5)",
+    ),
     (re.compile(r"catálogo F1\.3"), "catálogo de ríos atmosféricos (ERA5)"),
     (re.compile(r"\(F6\.1\)"), "(medido el 2026-11-22)"),
     (re.compile(r"[Hh]indcast (?:de )?F6\.2"), "hindcast estacional"),
