@@ -28,7 +28,7 @@ Los valores viven en `web/src/theme/tokens.css` y `tokens.ts`; `tokens.test.ts` 
 | `--text-muted` | `#5E5E5E` | `#A9A9A4` | Leyendas |
 | `--ctrl` | `#1C1C1C` | `#F1EFE8` | Píldora activa, botón primario |
 | `--on-ctrl` | `#F3F2EE` | `#1B1C20` | Texto sobre `--ctrl` |
-| `--inverse` / `--on-inverse` | `#1C1C1C` / `#F3F2EE` | `#F1EFE8` / `#1B1C20` | La única tarjeta invertida (perspectiva / modelo) |
+| `--inverse` / `--on-inverse` | `#1C1C1C` / `#F3F2EE` | `#34353B` / `#F1EFE8` | Tarjeta destacada (perspectiva / modelo): negra en claro, gris elevado en oscuro (no un bloque claro sobre fondo oscuro) |
 | `--accent` | `#F5CF4B` | `#F5CF4B` | Selección, evento, cabezal, barra destacada |
 | `--casing` | `#1C1C1C` | `#101114` | Contorno de las marcas de acento |
 | `--chart-surface` | `#FFFFFF` | `#1B1C20` | Fondo de los gráficos: plano, sin textura |

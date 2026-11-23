@@ -9,7 +9,7 @@ import { useArResponses } from "../layers/useArResponses";
 import { DEFAULT_TOGGLES, TOP_N, responseRatios, revealEvent, type ArToggles, type SortKey, visibleEvents } from "../layers/arFilter";
 import { useEnsoExtremes } from "../layers/useEnsoExtremes";
 import { useEnsoStats } from "../layers/useEnsoStats";
-import { buildBasemapLayer } from "../layers/basemapLayer";
+import { basemapAvailable, buildBasemapLayer } from "../layers/basemapLayer";
 import { buildReliefLayer } from "../layers/reliefLayer";
 import { useReferenceLayers } from "../layers/referenceLayers";
 import { CONVECTION_LAYER_ID } from "../layers/convectionIdf";
@@ -110,12 +110,18 @@ export function Shell() {
   const showEnso = ensoOpen && eventsActive && enso.status !== "none";
   const [ivtView, setIvtView] = useState<IvtView>("drape");
   const theme = useTheme();
-  const [background, setBackgroundState] = useState<MapBackgroundMode>(readBackground);
+  const [storedBackground, setBackgroundState] = useState<MapBackgroundMode>(readBackground);
+  // Without a CARTO key there is no basemap: relief only, and no background control.
+  const hasBasemap = basemapAvailable();
+  const background: MapBackgroundMode = hasBasemap ? storedBackground : "relief";
   const setBackground = (m: MapBackgroundMode) => {
     setBackgroundState(m);
     writeBackground(m);
   };
-  const basemap = useMemo(() => buildBasemapLayer(theme, background !== "relief"), [theme, background]);
+  const basemap = useMemo(
+    () => (hasBasemap ? buildBasemapLayer(theme, background !== "relief") : null),
+    [hasBasemap, theme, background],
+  );
   // AR event filter: year and month toggles, ranking key and the "top N" switch (state lives here, no store).
   // A selected event that the filter hides stays selected: the map and the replay keep working.
   const [arToggles, setArToggles] = useState<ArToggles>(DEFAULT_TOGGLES);
@@ -255,7 +261,7 @@ export function Shell() {
               <DebrisLegend domain={debris.domain} source={debrisLayer.source} />
             )}
           </div>
-          <MapBackground value={background} onChange={setBackground} />
+          {hasBasemap && <MapBackground value={background} onChange={setBackground} />}
           <div className="map-clocks" data-testid="map-clocks">
             {ar.selectedEvent && ar.cursorMs != null && (
               <ClockBox cursorMs={ar.cursorMs} frame={ar.frame} nFrames={ar.nFrames} />

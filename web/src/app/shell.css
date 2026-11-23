@@ -646,4 +646,3 @@ h4 .fc-sub { display: inline; }
   --on-ctrl: var(--inverse);
   background-color: var(--inverse); color: var(--on-inverse);
 }
-:root[data-theme="dark"] .detail-card[data-tone="inverse"] :focus-visible { outline-color: var(--casing); }
