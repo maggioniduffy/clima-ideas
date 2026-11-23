@@ -89,3 +89,11 @@ test("storage that throws does not break load or save", () => {
   expect(() => saveSizes(DEFAULT_SIZES)).not.toThrow();
   vi.restoreAllMocks();
 });
+
+test("timelineMinFor grows with the stacked replay rows", async () => {
+  const { timelineMinFor, PANEL_LIMITS } = await import("./panelSizes");
+  expect(timelineMinFor({ convection: false, ar: true })).toBe(0);
+  expect(timelineMinFor({ convection: true, ar: false })).toBeGreaterThan(PANEL_LIMITS.timeline.def);
+  expect(timelineMinFor({ convection: true, ar: true })).toBeGreaterThan(timelineMinFor({ convection: true, ar: false }));
+  expect(timelineMinFor({ convection: true, ar: true })).toBeLessThanOrEqual(PANEL_LIMITS.timeline.max);
+});

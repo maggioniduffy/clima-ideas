@@ -223,11 +223,11 @@ export function EnsoPanel({ status, stats, extremes = null, source, period, onCl
                     <tr key={r.metric} data-testid={`enso-row-${r.metric}`}>
                       <th scope="row">{es.enso.metrics[r.metric as EnsoMetric] ?? r.metric}</th>
                       {PHASES.map((p) => (
-                        <td key={p}>{formatEnsoGroup(r.groups[p], r.metric)}</td>
+                        <td key={p} className="num">{formatEnsoGroup(r.groups[p], r.metric)}</td>
                       ))}
-                      <td>{formatEnsoValue(r.diff_nino_nina, r.metric)}</td>
-                      <td>{formatPValue(r.p)}</td>
-                      <td>{formatPValue(r.p_bh)}</td>
+                      <td className="num">{formatEnsoValue(r.diff_nino_nina, r.metric)}</td>
+                      <td className="num">{formatPValue(r.p)}</td>
+                      <td className="num">{formatPValue(r.p_bh)}</td>
                       <td>{r.sustained_bh ? es.enso.yes : es.enso.no}</td>
                     </tr>
                   ))}

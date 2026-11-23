@@ -40,6 +40,7 @@ import {
   loadSizes,
   PANEL_LIMITS,
   saveSizes,
+  timelineMinFor,
   type PanelId,
   type PanelSizes,
 } from "./panelSizes";
@@ -207,6 +208,9 @@ export function Shell() {
     setArToggles((t) => revealEvent(t, pendingEvent));
     ar.select(pendingEvent.event_id);
   }
+  // Replay rows stack (storm replay, AR replay): the strip grows to hold them unless it is collapsed (0) or the window is narrow.
+  const timelineRows = { convection: convActive && conv.status === "ready", ar: !!ar.selectedEvent };
+  const timelineH = sizes.timeline === 0 ? 0 : Math.max(sizes.timeline, timelineMinFor(timelineRows));
   return (
     <div
       className="shell"
@@ -214,7 +218,7 @@ export function Shell() {
       style={
         {
           "--panels-w": `${sizes.panels}px`,
-          "--timeline-h": `${sizes.timeline}px`,
+          "--timeline-h": `${timelineH}px`,
         } as CSSProperties
       }
     >
@@ -346,7 +350,7 @@ export function Shell() {
           )}
         </div>
         <PanelResizer className="panel-resizer panel-resizer-timeline" orientation="horizontal" dir={-1} {...resizer("timeline")} />
-        <div className="timeline-slot" data-testid="timeline-slot" data-tall={sizes.timeline > TALL_TIMELINE ? "" : undefined} hidden={collapsed("timeline")}>
+        <div className="timeline-slot" data-testid="timeline-slot" data-tall={timelineH > TALL_TIMELINE ? "" : undefined} hidden={collapsed("timeline")}>
           <Timeline
             events={eventsActive ? arVisible.filtered : []}
             peakIds={arVisible.peakIds}

@@ -61,6 +61,7 @@ export function Timeline({ events = [], peakIds, period, selectedEventId = null,
       <span className="timeline-label">{es.timeline.label}</span>
       <div className="timeline-body">
       {conv}
+      <div className="timeline-row" data-testid="timeline-row-ar">
       {replay && selected && (
         <div className="replay-controls" data-testid="replay-controls" data-frame={replay.frame} data-playing={replay.playing}>
           <button
@@ -142,6 +143,7 @@ export function Timeline({ events = [], peakIds, period, selectedEventId = null,
           />
         </div>
       )}
+      </div>
       </div>
     </footer>
   );

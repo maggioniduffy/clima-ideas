@@ -24,6 +24,15 @@ export const MIN_MAP_H = 420;
 export const CHROME_Y = 264;
 /** Horizontal chrome: page padding (2 x 24) and frame padding (2 x 28). */
 export const CHROME_X = 104;
+/**
+ * Smallest timeline height that shows its replay rows without clipping: the storm replay row is 120 px, the AR replay row
+ * (controls, event track, detail track) about 110 px, plus padding and gaps. Stacked rows never overlap, so a taller strip is needed.
+ */
+export const TIMELINE_ROWS_MIN = { none: 0, convection: 184, both: 304 } as const;
+export function timelineMinFor(rows: { convection: boolean; ar: boolean }): number {
+  if (rows.convection && rows.ar) return TIMELINE_ROWS_MIN.both;
+  return rows.convection ? TIMELINE_ROWS_MIN.convection : TIMELINE_ROWS_MIN.none;
+}
 /** The gap that holds each drag handle. */
 export const HANDLE = 8;
 export const KEY_STEP = 16;
