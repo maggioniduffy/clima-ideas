@@ -558,9 +558,17 @@ _PRE_KEYS = (
 
 
 def pretrain_once(
-    camels: list[lstm.Basin], rc: RunConfig, out_dir: Path | str, progress=print
+    camels: list[lstm.Basin],
+    rc: RunConfig,
+    out_dir: Path | str,
+    progress=print,
+    seed_list: tuple[int, ...] | list[int] | None = None,
 ) -> Pretrained:
-    """Pretrain on CAMELS-CL once per seed (cached; no Neuquén data touched)."""
+    """Pretrain on CAMELS-CL once per seed (cached; no Neuquén data touched).
+
+    ``seed_list`` restricts the seeds trained in this call (sharding over machines); ``norm.json`` and
+    ``pretrain.json`` are deterministic, so shards write identical copies.
+    """
     torch = lstm.import_torch()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -575,7 +583,7 @@ def pretrain_once(
     ds = None
     for seed in cfg.seeds:
         path = out / f"model_seed{seed}.pt"
-        if path.is_file():
+        if path.is_file() or (seed_list is not None and seed not in seed_list):
             continue
         if ds is None:
             ds = lstm.Dataset.from_basins(camels, cfg.split, norm)
@@ -588,27 +596,91 @@ def pretrain_once(
     return Pretrained(norm, cfg, out)
 
 
+def load_pretrained(rc: RunConfig, pre_dir: Path | str) -> Pretrained:
+    """The saved pretraining (``norm.json``, ``pretrain.json``, weights) without CAMELS-CL data."""
+    pre_dir = Path(pre_dir)
+    cfg = rc.train_config(True)
+    key = {k: getattr(cfg, k) for k in _PRE_KEYS}
+    cfg_path = pre_dir / "pretrain.json"
+    if not cfg_path.is_file() or not (pre_dir / "norm.json").is_file():
+        raise FileNotFoundError(f"no pretraining in {pre_dir} (run --pretrain-only first)")
+    if json.loads(cfg_path.read_text()) != key:
+        raise ValueError(f"{cfg_path} was made with another configuration; use another --work-dir")
+    norm = lstm.Norm.from_dict(json.loads((pre_dir / "norm.json").read_text()))
+    return Pretrained(norm, cfg, pre_dir)
+
+
+_FOLD_KEYS = (*_PRE_KEYS, "finetune_lr", "epochs")
+
+
+def _fold_key(cfg: lstm.TrainConfig, pre: Pretrained | None) -> dict:
+    return {"pretrained": pre is not None, **{k: getattr(cfg, k) for k in _FOLD_KEYS}}
+
+
 def train_lstm_fold(
-    stations: dict[int, Station], fold_year: int, rc: RunConfig, pre: Pretrained | None, progress
-) -> tuple[lstm.Run, dict[int, np.ndarray], dict]:
-    """Fine-tune (or train) the LSTM ensemble without the fold; returns run, residual grids, info."""
+    stations: dict[int, Station],
+    fold_year: int,
+    rc: RunConfig,
+    pre: Pretrained | None,
+    progress,
+    out_dir: Path | str | None = None,
+    seed_list: tuple[int, ...] | list[int] | None = None,
+    train_only: bool = False,
+    allow_train: bool = True,
+) -> tuple[lstm.Run, dict[int, np.ndarray], dict] | None:
+    """Fine-tune (or train) the LSTM ensemble without the fold; returns run, residual grids, info.
+
+    With ``out_dir`` (the fold directory) each seed's weights and history are saved there
+    (``lstm_seed{k}.pt``, ``lstm_history_seed{k}.json``) and reused when present, so seeds can be trained
+    on different machines (``seed_list``, ``train_only``) and assembled later. A saved configuration
+    (``lstm_config.json``) that differs from the current one is refused. Without ``allow_train`` a
+    missing seed is an error instead of being trained.
+    """
+    torch = lstm.import_torch()
     basins = [stations[s].basin for s in sorted(stations)]
     cfg = rc.train_config(pre is not None)
     norm = pre.norm if pre else fold_norm(basins, fold_year)
     ds = fold_dataset(basins, norm, fold_year)
+    out = Path(out_dir) if out_dir is not None else None
+    if out is not None:
+        out.mkdir(parents=True, exist_ok=True)
+        key = _fold_key(cfg, pre)
+        kp = out / "lstm_config.json"
+        if kp.is_file() and json.loads(kp.read_text()) != key:
+            raise ValueError(f"{kp} was made with another configuration; use another --work-dir")
+        kp.write_text(json.dumps(key, indent=1))
     models, history = [], []
     for seed in cfg.seeds:
-        model = None
-        if pre:
+        if seed_list is not None and seed not in seed_list:
+            continue
+        wp = out / f"lstm_seed{seed}.pt" if out else None
+        hp = out / f"lstm_history_seed{seed}.json" if out else None
+        if wp is not None and wp.is_file() and hp.is_file():
             model = lstm.new_model(cfg)
-            model.load_state_dict(pre.state(seed))
-        progress(f"fine-tuning seed {seed} (fold {fold_year})")
-        model, h = lstm.fit_model(
-            ds, cfg, seed, cfg.epochs, cfg.finetune_lr if pre else cfg.lr, ("neuquen",), model,
-            progress,
-        )  # fmt: skip
+            model.load_state_dict(torch.load(wp, weights_only=True, map_location="cpu"))
+            model.eval()
+            h = json.loads(hp.read_text())
+            progress(f"fold {fold_year}: seed {seed} loaded from {wp}")
+        else:
+            if not allow_train:
+                raise FileNotFoundError(f"fold {fold_year}: no saved weights for seed {seed} ({wp})")
+            model = None
+            if pre:
+                model = lstm.new_model(cfg)
+                model.load_state_dict(pre.state(seed))
+            progress(f"fine-tuning seed {seed} (fold {fold_year})")
+            model, h = lstm.fit_model(
+                ds, cfg, seed, cfg.epochs, cfg.finetune_lr if pre else cfg.lr, ("neuquen",), model,
+                progress,
+            )  # fmt: skip
+            h = {"seed": seed, **h}
+            if wp is not None:
+                torch.save(model.state_dict(), wp)
+                hp.write_text(json.dumps(h))
         models.append(model)
-        history.append({"seed": seed, **h})
+        history.append(h)
+    if train_only:
+        return None
     run = lstm.Run(config=cfg, norm=norm, models=models, history=history)
     val = lstm.predict_frame(run, ds, "val", groups=("neuquen",))
     grids = {}
@@ -640,6 +712,7 @@ def run_fold(
     rc: RunConfig,
     pre: Pretrained | None,
     progress: Callable[[str], None] = print,
+    allow_train: bool = True,
 ) -> Path:
     """Fit everything without the fold, forecast every issue day of its floods, save sims + meta."""
     out = Path(out_dir) / f"fold-{fold_year}"
@@ -667,7 +740,9 @@ def run_fold(
     run = None
     lstm_grids: dict[int, np.ndarray] = {}
     if rc.use_lstm:
-        run, lstm_grids, info = train_lstm_fold(stations, fold_year, rc, pre, progress)
+        run, lstm_grids, info = train_lstm_fold(
+            stations, fold_year, rc, pre, progress, out_dir=out, allow_train=allow_train
+        )
         meta["lstm"] = info
     rows, inputs = [], []
     for fl in floods.itertuples():

@@ -424,3 +424,89 @@ def test_flood_lead_table_verdicts():
     assert (t["verdict_gr4j"] == hf.V_RISES).all() and t["inside_gr4j"].all()
     t2 = hf.flood_lead_table(_pairs(2, False))
     assert (t2["verdict_gr4j"] == hf.V_NOT).all()
+
+
+# --- sharded LSTM training (pretrain / fine-tune per seed, assemble from saved weights) ----------
+
+
+def _tiny(group: str, seed: int = 0) -> lstm.Basin:
+    d = pd.date_range("2003-01-01", "2016-12-31")
+    rng = np.random.default_rng(seed)
+    doy = d.day_of_year.to_numpy()
+    p = rng.gamma(0.5, 6, len(d))
+    x = np.column_stack(
+        [p, 8 + 8 * np.cos(2 * np.pi * (doy - 15) / 365), 3 + np.zeros(len(d)), 14 + np.zeros(len(d)),
+         2 + np.zeros(len(d))]
+    )  # fmt: skip
+    q = 0.5 + 0.1 * np.convolve(p, np.ones(5) / 5, "same") + rng.normal(0, 0.02, len(d)).clip(0)
+    return lstm.Basin(
+        id="1" if group == "neuquen" else "c1", dates=d, x=x, q=q,
+        static=np.array([5.0, 7.0, 0.3]), group=group,
+    )  # fmt: skip
+
+
+def _tiny_stations() -> dict[int, hf.Station]:
+    b = _tiny("neuquen")
+    flow_df = pd.DataFrame({"date": b.dates, "q_m3s": b.q * 100.0})
+    return {1: hf.Station(sid=1, basin=b, area_km2=100.0, lat=-37.0, flow=flow_df)}
+
+
+def _same_state(a, b) -> bool:
+    return all(np.array_equal(a[k].numpy(), b[k].numpy()) for k in a)
+
+
+def test_sharded_pretrain_and_fold_training_match_unsharded(tmp_path):
+    pytest.importorskip("torch")
+    rc = hf.RunConfig(seeds=2, epochs=1, pretrain_epochs=1, samples_per_epoch=64)
+    camels = [_tiny("camels", 5)]
+    stations = _tiny_stations()
+    fold = 2010
+    quiet = lambda *_: None  # noqa: E731
+
+    # unsharded: everything in one process
+    pre_a = hf.pretrain_once(camels, rc, tmp_path / "a" / "pretrain", quiet)
+    run_a, grids_a, info_a = hf.train_lstm_fold(
+        stations, fold, rc, pre_a, quiet, out_dir=tmp_path / "a" / f"fold-{fold}"
+    )
+
+    # sharded: one seed per call, the fine-tuning from the saved pretraining only
+    for k in (0, 1):
+        hf.pretrain_once(camels, rc, tmp_path / "b" / "pretrain", quiet, seed_list=[k])
+    pre_b = hf.load_pretrained(rc, tmp_path / "b" / "pretrain")
+    assert (tmp_path / "b" / "pretrain" / "norm.json").read_text() == (
+        tmp_path / "a" / "pretrain" / "norm.json"
+    ).read_text()
+    for k in (0, 1):
+        assert hf.train_lstm_fold(
+            stations, fold, rc, pre_b, quiet, out_dir=tmp_path / "b" / f"fold-{fold}",
+            seed_list=[k], train_only=True,
+        ) is None  # fmt: skip
+    # assemble: loads the saved weights and refuses to train anything
+    calls = []
+    run_b, grids_b, info_b = hf.train_lstm_fold(
+        stations, fold, rc, pre_b, calls.append, out_dir=tmp_path / "b" / f"fold-{fold}",
+        allow_train=False,
+    )  # fmt: skip
+    assert not any("fine-tuning" in c for c in calls) and sum("loaded" in c for c in calls) == 2
+    for ma, mb in zip(run_a.models, run_b.models, strict=True):
+        assert _same_state(ma.state_dict(), mb.state_dict())
+    np.testing.assert_array_equal(grids_a[1], grids_b[1])
+    assert info_a["best_epochs"] == info_b["best_epochs"]
+
+
+def test_saved_weights_are_required_and_config_is_checked(tmp_path):
+    pytest.importorskip("torch")
+    rc = hf.RunConfig(seeds=1, epochs=1, pretrain_epochs=1, samples_per_epoch=64)
+    stations = _tiny_stations()
+    out = tmp_path / "fold-2010"
+    with pytest.raises(FileNotFoundError, match="no saved weights"):
+        hf.train_lstm_fold(stations, 2010, rc, None, print, out_dir=out, allow_train=False)
+    hf.train_lstm_fold(stations, 2010, rc, None, print, out_dir=out, train_only=True, seed_list=[0])
+    other = hf.RunConfig(seeds=1, epochs=2, pretrain_epochs=1, samples_per_epoch=64)
+    with pytest.raises(ValueError, match="another configuration"):
+        hf.train_lstm_fold(stations, 2010, other, None, print, out_dir=out)
+    with pytest.raises(FileNotFoundError, match="pretraining"):
+        hf.load_pretrained(rc, tmp_path / "nothing")
+    hf.pretrain_once([_tiny("camels")], rc, tmp_path / "pre", lambda *_: None)
+    with pytest.raises(ValueError, match="another configuration"):
+        hf.load_pretrained(other.__class__(seeds=1, epochs=1, pretrain_epochs=3), tmp_path / "pre")

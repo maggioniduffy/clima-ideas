@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 from typing import Annotated
@@ -121,19 +122,65 @@ def highflow(
         Path, typer.Option(help="Tidy CAMELS-CL Parquet.")
     ] = camels_cl.DEFAULT_OUT,
     no_report: Annotated[bool, typer.Option(help="Skip writing the report.")] = False,
+    pretrain_only: Annotated[
+        bool, typer.Option(help="Only pretrain the --seed-list seeds (shard of the pretraining).")
+    ] = False,
+    train_only: Annotated[
+        bool,
+        typer.Option(help="Only fine-tune --fold Y for --seed-list and save the weights; no scoring."),
+    ] = False,
+    seed_list: Annotated[
+        list[int] | None, typer.Option(help="LSTM seed (repeatable) for --pretrain-only/--train-only.")
+    ] = None,
+    no_retrain: Annotated[
+        bool, typer.Option(help="Fail if a fold lacks saved LSTM weights instead of training them.")
+    ] = False,
+    list_folds: Annotated[
+        bool, typer.Option(help="Print the fold years (JSON) and exit.")
+    ] = False,
 ) -> None:
-    """Leave-one-flood-out high-flow test (F6.7): folds, scores and reports/06/F6.7.{md,json}."""
+    """Leave-one-flood-out high-flow test (F6.7): folds, scores and reports/06/F6.7.{md,json}.
+
+    Sharding: ``--pretrain-only --seed-list k`` (once per seed), ``--train-only --fold Y --seed-list k``
+    (per fold and seed), then a plain ``flow highflow`` (``--no-retrain``) reuses the saved weights.
+    """
     rc = hf.RunConfig(
         seeds=seeds, epochs=epochs, pretrain_epochs=pretrain_epochs,
         samples_per_epoch=samples_per_epoch, gr4j_seeds=tuple(range(gr4j_seeds)),
         maxiter=maxiter, use_lstm=lstm,
     )  # fmt: skip
-    if lstm:
+    if (pretrain_only or train_only) and not (lstm and seed_list):
+        raise typer.BadParameter("--pretrain-only/--train-only need the LSTM and --seed-list")
+    if pretrain_only and train_only:
+        raise typer.BadParameter("--pretrain-only and --train-only are exclusive")
+    if seed_list and not set(seed_list) <= set(range(seeds)):
+        raise typer.BadParameter(f"--seed-list must be within 0..{seeds - 1}")
+    if train_only and (not fold or len(fold) != 1):
+        raise typer.BadParameter("--train-only needs exactly one --fold")
+    if lstm and not list_folds:
         try:
             flood_lstm.import_torch()
         except flood_lstm.TorchMissing as e:
             typer.echo(str(e), err=True)
             raise typer.Exit(1) from e
+    if pretrain_only:
+        table, attrs = camels_cl.load_camels(camels_dir, camels_cache)
+        camels = flood_lstm.camels_basins(table, attrs, camels_cl.select_basins(table))
+        hf.pretrain_once(camels, rc, work_dir / "pretrain", progress=typer.echo, seed_list=seed_list)
+        return
+    if train_only:
+        try:
+            stations, _ = hf.load_stations(forcing_path, flow_dir, work_dir)
+            pre = hf.load_pretrained(rc, work_dir / "pretrain") if pretrain else None
+        except (FileNotFoundError, ValueError, KeyError) as e:
+            raise typer.BadParameter(str(e)) from e
+        t0 = time.time()
+        hf.train_lstm_fold(
+            stations, fold[0], rc, pre, typer.echo, out_dir=work_dir / f"fold-{fold[0]}",
+            seed_list=seed_list, train_only=True,
+        )  # fmt: skip
+        typer.echo(f"fold {fold[0]} seeds {seed_list}: {time.time() - t0:.0f} s")
+        return
     try:
         stations, info = hf.load_stations(forcing_path, flow_dir, work_dir)
         floods, tables = hf.plan_floods(stations, reforecast, ops_dir)
@@ -143,6 +190,9 @@ def highflow(
     years = sorted(int(y) for y in inc["hydro_year"].unique())
     if fold:
         years = [y for y in years if y in set(fold)]
+    if list_folds:
+        typer.echo(json.dumps(years))
+        return
     typer.echo(
         f"floods: {int(floods['large'].sum())} large, {len(inc)} with forecasts; folds {years}"
     )
@@ -181,6 +231,7 @@ def highflow(
                 rc,
                 pre,
                 typer.echo,
+                allow_train=not no_retrain,
             )
             typer.echo(f"fold {year}: {time.time() - t0:.0f} s -> {out}")
     done = [
