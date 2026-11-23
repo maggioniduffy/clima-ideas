@@ -1,6 +1,6 @@
 # Fase 6 — Predicción a futuro (experimental)
 
-Estado: en curso (F6.1, F6.2, F6.3 de día de riesgo, F6.4, F6.6, F6.8 y F6.9 hechos, F6.5 en código; registro diario con día de riesgo «Experimental» y climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
+Estado: en curso (F6.1, F6.2, F6.3 de día de riesgo, F6.4, F6.6, F6.7, F6.8 y F6.9 hechos, F6.5 en código; registro diario con día de riesgo «Experimental» y climatología de caudal) · Depende de: 0 (F0.10), 2 (F2.5), 5 (F5.3) · Refs: `docs/architecture.md`
 
 Mide si los modelos predicen mejor que la climatología algo que todavía no pasó. Desde el 2026-11-12 (`plan.md`,
 Rumbo 7) una variable y anticipación que pasa la compuerta de evidencia se muestra como "Perspectiva de riesgo"
@@ -40,7 +40,7 @@ encuentra señal de ENSO en el caudal; si no, el horizonte estacional queda en b
 | F6.4 ✅ | Registro de predicciones congeladas: append-only con fecha de emisión, versión de modelo y hash de entradas | Sonnet | Unit: no se puede editar ni emitir con fecha pasada |
 | F6.5 (código ✅) | Verificación prospectiva: puntuar cada predicción cuando llega lo observado; skill acumulado vs. baselines con IC bootstrap | Sonnet codifica, Haiku corre | Tabla de skill por horizonte + unit de métricas |
 | F6.6 ✅ (código; en línea al mergear a `main`) | Capa de predicciones en el visor con dos estados por variable y anticipación ("Experimental" / "Perspectiva de riesgo"): probabilidad vs. climatología, incertidumbre, baseline, historial de aciertos con n prospectivo, POD y FAR; avisos fijos de "Avisos obligatorios"; campo opcional `outlook_status` en el manifiesto | Sonnet | e2e: ver predicción, su estado, su historial, los avisos y los enlaces oficiales |
-| F6.7 | Prueba de caudal alto: dejando afuera cada crecida grande (junio de 2023 incluida), con entradas de pronóstico y la latencia de caudal de F6.1, ¿la probabilidad de superar el umbral sube sobre la climatología antes de cada pico y los intervalos cubren los picos cerca de lo nominal? | Haiku corre, Sonnet codifica | Tabla por crecida y anticipación con veredicto + unit de partición sin fuga |
+| F6.7 ✅ (no pasa: 13 años independientes de 20 y intervalos angostos; el LSTM supera a GR4J a 2–8 días) | Prueba de caudal alto: dejando afuera cada crecida grande (junio de 2023 incluida), con entradas de pronóstico y la latencia de caudal de F6.1, ¿la probabilidad de superar el umbral sube sobre la climatología antes de cada pico y los intervalos cubren los picos cerca de lo nominal? | Haiku corre, Sonnet codifica | Tabla por crecida y anticipación con veredicto + unit de partición sin fuga |
 | F6.8 ✅ (código; sin promociones hasta la temporada 2027) | Promoción y descenso: aplica la compuerta por variable, anticipación y región, registra cada cambio de estado con fecha, evidencia y aprobación del usuario; desciende sola según la regla de descenso | Sonnet | Unit: no promueve sin aprobación ni con anticipaciones salteadas; desciende con BSS < 0 en la temporada o con cambio de versión; el descenso de una anticipación arrastra a las más largas |
 | F6.9 ✅ (BSS 0,09 conjunto con ERA5; con IVT GEFS ninguna anticipación pasa) | Propuesta (2026-11-13), depende de F5.9 y F5.10: climatología condicional de caudal alto a partir de la tabla evento × estación (`responses.json`, V8 de la fase 1): frecuencia de superar el umbral según IVT máximo, isoterma de 0 °C y mes. Es un modelo simple más para el criterio 3 de la compuerta, no un atajo: pasa por los mismos criterios | Sonnet codifica, Haiku corre | BSS vs. climatología y persistencia con IC bootstrap por evento + unit de partición sin fuga |
 
@@ -202,6 +202,17 @@ lo que ya se observó.
   1–3 meses; variable `seas_p_tercil_alto`, `lead_days` hasta el primer día del mes objetivo. Informe
   `reports/06/F6.2.md`.
 
+- F6.7 (2026-11-23): `stages/flood/highflow*.py`, `clima-nqn flow highflow`. 30 crecidas grandes (máximo anual ≥
+  mediana) con pronóstico en 13 años hidrológicos (2000–2019 reforecast GEFSv12; junio de 2023 con el archivo operativo
+  `pgrb2sp25`, que existe desde 2020-09-23). Un fold por año hidrológico ±30 días; GR4J+CemaNeige recalibrado y LSTM
+  (preentrenado en CAMELS-CL, ajustado sin el fold), estado con ERA5, sin caudal observado, 5 miembros, temperatura de
+  los días pronosticados = climatología. Umbral: mediana de los máximos anuales de entrenamiento. Ninguna anticipación
+  pasa: cobertura del intervalo 90 % ≤ 0,60 y 13 de 20 años independientes. BSS vs. climatología excluye 0 hasta 8
+  días (GR4J) y 10 (LSTM); el LSTM supera a GR4J con IC a 2–8 días. Con temperatura observada (optimista) la cobertura
+  de GR4J sube a 0,67–0,77 hasta 6 días y la diferencia LSTM–GR4J desaparece. El LSTM corre en GitHub Actions
+  (`highflow-lstm.yml`: preentrenamiento por semilla, ajuste por fold × semilla, ensamblado; resultados en la rama
+  `data/f67-highflow`). Informe `reports/06/F6.7.md`. En el visor, pestaña "Caudal alto (prueba retrospectiva)".
+
 ## Abierto
 
 - Pronóstico ENSO: IRI ya no ofrece descarga de datos; queda C3S por CDS. Archivo histórico de pronósticos emitidos:
@@ -214,6 +225,8 @@ lo que ya se observó.
 - ARCO-ERA5 iba 6,2 días atrasado el 2026-11-23 (F6.2 supuso 5): si falta la hora de emisión − 5 días, la emisión
   estacional sale solo con baselines (`model_skipped`). En la prueba del 2026-11-01 el agua de suelo estaba +2 a +4 σ:
   extrapolación; falta marcar entradas fuera del rango entrenado.
+- Caudal alto: forzar los días pronosticados con la temperatura de GEFS (la climatología es la principal fuente de
+  error en F6.7) y sumar años con el archivo operativo desde 2020-09 antes de repetir la prueba.
 - La verificación estacional tarda meses en juntar muestras; el hindcast de F6.2 da la primera estimación.
 
 ## Plan de cierre de la fase (2026-11-22)
