@@ -66,7 +66,7 @@ jobs:
           ls -l data/raw/camels-cl/zip
           uv run python -c "
           from clima_nqn.io import camels_cl as c
-          t, a = c.load_camels("data/raw/camels-cl/zip", "data/raw/camels-cl/camels_cl.parquet")
+          t, a = c.load_camels('data/raw/camels-cl/zip', 'data/raw/camels-cl/camels_cl.parquet')
           print(len(t), 'rows,', len(c.select_basins(t)), 'basins selected')"
           rm -rf data/raw/camels-cl/zip
       - name: Fetch the operational GEFS windows (2020-2025 floods)
