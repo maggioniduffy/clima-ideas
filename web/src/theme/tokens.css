@@ -33,15 +33,24 @@
   --raised: #EFECE4;
   --border: #D8D4C8;
   --text: #1C1C1C;
-  --text-muted: #5E5E5E;
+  --text-muted: #4D4C48;
   --ctrl: #1C1C1C;
   --on-ctrl: #F3F2EE;
-  /* The one inverted card (perspectiva / modelo) */
+  /* Kept for the palette; no card uses the inverse look any more (it follows the theme) */
   --inverse: #1C1C1C;
   --on-inverse: #F3F2EE;
   --accent: #F5CF4B;
   --water: #3A6E8F;
   --casing: #1C1C1C;
+  /* Glass: panels floating over the map (docs: visor sin barra) */
+  --glass: rgba(250,249,246,0.68);
+  --glass-line: rgba(28,28,28,0.12);
+  --rule: rgba(28,28,28,0.08);
+  --glass-hi: rgba(255,255,255,0.6);
+  --glass-shadow: rgba(40,36,28,0.10);
+  --well: rgba(28,28,28,0.05);
+  --row-sel: rgba(245,207,75,0.30);
+  --table-bg: rgba(255,255,255,0.55);
   /* Charts sit on a plain surface: pure white in light, a flat dark well in dark */
   --chart-surface: #FFFFFF;
   /* IVT sequential ramp, low to high over [0, IVT_SCALE_MAX]: pale to deep (light), dim to bright (dark) */
@@ -85,7 +94,7 @@
   --raised: #2A2B30;
   --border: #3C3D43;
   --text: #F1EFE8;
-  --text-muted: #A9A9A4;
+  --text-muted: #BEBCB5;
   --ctrl: #F1EFE8;
   --on-ctrl: #1B1C20;
   --inverse: #34353B;
@@ -93,6 +102,14 @@
   --accent: #F5CF4B;
   --water: #7FA9C6;
   --casing: #101114;
+  --glass: rgba(30,31,36,0.62);
+  --glass-line: rgba(241,239,232,0.14);
+  --rule: rgba(241,239,232,0.09);
+  --glass-hi: rgba(255,255,255,0.06);
+  --glass-shadow: rgba(0,0,0,0.35);
+  --well: rgba(241,239,232,0.07);
+  --row-sel: rgba(245,207,75,0.16);
+  --table-bg: rgba(16,17,20,0.35);
   --chart-surface: #1B1C20;
   --ivt-0: #22384A;
   --ivt-1: #2B5F80;
@@ -156,9 +173,9 @@ h2 {
   font-weight: 400;
 }
 
-/* Big hero numbers: 64-72px, light, tabular, with a 13px muted caption (.big-caption) under each */
+/* Hero numbers (panel header): light, tabular, with a 13px muted caption (.big-caption) under each */
 .big-num {
-  font-size: 64px;
+  font-size: 32px;
   font-weight: 300;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -171,6 +188,15 @@ h2 {
 
 button {
   font: inherit;
+}
+
+/* Glass surface: floating panels over the map */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: inset 0 1px 0 var(--glass-hi), 0 12px 40px var(--glass-shadow);
 }
 
 /* Numbers inside charts, tables and the timeline: mono with tabular numerals */

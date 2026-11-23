@@ -28,18 +28,14 @@ import {
   skillByLead,
   skillDomain,
 } from "./hindcastCharts";
+import { OFFICIAL_LINKS } from "./officialLinks";
 import { useWidth } from "./useWidth";
 
 const M = { ...CHART_MARGIN, r: 14 };
 const chartHeight = (w: number) => Math.round(Math.min(200, Math.max(140, w * 0.36)));
 const REGION_ORDER = ["cordillera_norte", "cordillera_sur", "confluencia"] as const;
 
-/** Official warnings. The Defensa Civil Neuquén address is "sin verificar": it could not be confirmed when written (2026-11-22). */
-export const OFFICIAL_LINKS = [
-  { id: "smn", href: "https://www.smn.gob.ar/alertas" },
-  { id: "aic", href: "https://www.aic.gob.ar" },
-  { id: "civil", href: "https://www.neuquen.gov.ar/defensacivil/" },
-] as const;
+export { OFFICIAL_LINKS };
 
 function ForecastChart({ ev, leads, lead, w, members }: { ev: HindcastEvent; leads: number[]; lead: number; w: number; members: number }) {
   const H = chartHeight(w);

@@ -27,7 +27,7 @@ interface Props {
 /** Second card of the card row: ENSO table or flood-station charts; not rendered when there is nothing to show. */
 export function DetailCard({ flood = null, enso = null, convection = null, debris = null, hindcast = null, forecast = null, onOpenArEvent }: Props) {
   if (!enso && !flood && !convection && !debris && !hindcast && !forecast) return null;
-  // The forecast / model card is the one inverted card; it only shows when no other panel wins the slot.
+  // The forecast / model card keeps its data-tone marker (tests, styling hooks) but follows the theme like every other card.
   const inverse = !enso && !flood && !convection && !debris && !hindcast && !!forecast;
   return (
     <section className="detail-card card" data-testid="detail-card" data-tone={inverse ? "inverse" : undefined}>

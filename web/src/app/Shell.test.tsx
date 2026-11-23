@@ -39,7 +39,14 @@ afterEach(() => {
   localStorage.clear();
 });
 
-const regions = ["topbar", "layer-panel", "hero", "map-canvas", "inspector", "timeline"];
+const regions = ["topbar", "menu-toggle", "hero", "map-canvas", "inspector", "timeline"];
+
+/** The layer list lives in the closed-by-default menu: open it (once) and return the layer's checkbox. */
+async function layerToggle(id: string) {
+  const btn = screen.getByTestId("menu-toggle");
+  if (btn.getAttribute("aria-expanded") !== "true") fireEvent.click(btn);
+  return screen.findByTestId(`layer-toggle-${id}`);
+}
 
 test("Shell renders the regions", () => {
   render(<Shell />);
@@ -59,7 +66,7 @@ test("theme toggle in the top bar flips data-theme", () => {
 
 test("activating a fetched layer adds the deck layer and shows manifest source/period", async () => {
   render(<Shell />);
-  fireEvent.click(await screen.findByTestId("layer-toggle-a"));
+  fireEvent.click(await layerToggle("a"));
   await waitFor(() => expect(screen.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", expect.stringMatching(/^points-a(,|$)/)));
   expect(screen.getByTestId("layer-item-a")).toHaveAttribute("data-active", "true");
   expect(screen.getByTestId("inspector-source")).toHaveTextContent("Fuente X");
@@ -76,19 +83,87 @@ test("province outline, city marker and label are always drawn, with no layer ac
   await waitFor(() => expect(canvas.getAttribute("data-deck-layers")).toContain("ref-province"));
   for (const id of ["ref-province-halo", "ref-city", "ref-labels"])
     expect(canvas.getAttribute("data-deck-layers")).toContain(id);
-  fireEvent.click(await screen.findByTestId("layer-toggle-a"));
+  fireEvent.click(await layerToggle("a"));
   fireEvent.click(screen.getByTestId("layer-toggle-a"));
   for (const id of ["ref-province", "ref-city", "ref-labels"])
     expect(canvas.getAttribute("data-deck-layers")).toContain(id);
   expect(canvas.getAttribute("data-deck-layers")).not.toContain("points-a");
 });
 
-test("there is no layers drawer, drawer button or scrim; the layer pills live in the header", () => {
+test("there is no layers drawer, drawer button or scrim; the layer list lives in the menu, closed by default", async () => {
   render(<Shell />);
   expect(screen.queryByTestId("drawer-toggle-layers")).not.toBeInTheDocument();
   expect(screen.queryByTestId("drawer-scrim")).not.toBeInTheDocument();
   expect(screen.queryByTestId("layers-slot")).not.toBeInTheDocument();
-  expect(screen.getByTestId("topbar")).toContainElement(screen.getByTestId("layer-panel"));
+  expect(screen.queryByTestId("layer-menu")).not.toBeInTheDocument();
+  expect(screen.getByTestId("menu-toggle")).toHaveAttribute("aria-expanded", "false");
+  await layerToggle("a");
+  expect(screen.getByTestId("layer-menu")).toContainElement(screen.getByTestId("layer-panel"));
+  expect(screen.getByTestId("topbar").parentElement).toContainElement(screen.getByTestId("layer-menu"));
+});
+
+test("the menu opens with its button, closes with Escape and with a click outside; the button points at it", async () => {
+  render(<Shell />);
+  const btn = screen.getByTestId("menu-toggle");
+  fireEvent.click(btn);
+  const menu = screen.getByTestId("layer-menu");
+  expect(btn).toHaveAttribute("aria-expanded", "true");
+  expect(btn).toHaveAttribute("aria-controls", menu.id);
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(screen.queryByTestId("layer-menu")).not.toBeInTheDocument();
+  expect(btn).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(btn);
+  fireEvent.mouseDown(screen.getByTestId("map-canvas"));
+  expect(screen.queryByTestId("layer-menu")).not.toBeInTheDocument();
+  fireEvent.click(btn);
+  fireEvent.mouseDown(screen.getByTestId("layer-menu")); // inside: stays open
+  expect(screen.getByTestId("layer-menu")).toBeInTheDocument();
+  fireEvent.click(btn);
+  expect(screen.queryByTestId("layer-menu")).not.toBeInTheDocument();
+});
+
+test("the menu footer says the viewer is retrospective and links the official warnings", () => {
+  render(<Shell />);
+  fireEvent.click(screen.getByTestId("menu-toggle"));
+  const foot = screen.getByTestId("layer-menu-foot");
+  expect(foot).toHaveTextContent(es.menu.retro);
+  expect(screen.getByTestId("menu-link-smn")).toHaveAttribute("href", "https://www.smn.gob.ar/alertas");
+  expect(screen.getByTestId("menu-link-aic")).toHaveAttribute("href", "https://www.aic.gob.ar");
+  expect(foot).toHaveTextContent(es.hindcast.links.civil);
+});
+
+test("relief layers are not in the menu and the relief comes on by itself", async () => {
+  const relief = { ...manifest, id: "relief", title: "Relieve", files: ["relief.bin", "relief.meta.json"] };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => (url.endsWith(".geojson") ? province : [manifest, relief]),
+      arrayBuffer: async () => new Float32Array([-70, -38, 100, -69, -37, 4000]).buffer,
+    })),
+  );
+  render(<Shell />);
+  await layerToggle("a");
+  expect(screen.queryByTestId("layer-item-relief")).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.getByTestId("map-canvas").getAttribute("data-deck-layers")).toContain("relief-relief"));
+  // the default background is the relief: its control is pressed
+  expect(screen.getByTestId("map-bg-relief")).toHaveAttribute("aria-pressed", "true");
+});
+
+test("without a basemap key the background control only switches the relief on and off", async () => {
+  render(<Shell />);
+  expect(screen.queryByTestId("map-bg-basemap")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("map-bg-none"));
+  expect(screen.getByTestId("map-bg-none")).toHaveAttribute("aria-pressed", "true");
+  expect(localStorage.getItem("map-background")).toBe("none");
+});
+
+test("the menu pill shows the short name of the selected active layer", async () => {
+  render(<Shell />);
+  expect(screen.queryByTestId("topbar-active")).not.toBeInTheDocument();
+  fireEvent.click(await layerToggle("a"));
+  await waitFor(() => expect(screen.getByTestId("topbar-active")).toHaveTextContent("Capa A"));
 });
 
 test("the card column holds the inspector; the map and the timeline are its siblings", () => {
@@ -98,14 +173,14 @@ test("the card column holds the inspector; the map and the timeline are its sibl
   expect(panels).not.toContainElement(screen.getByTestId("map-canvas"));
   expect(panels).not.toContainElement(screen.getByTestId("timeline-slot"));
   const order = (a: HTMLElement, b: HTMLElement) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
-  expect(order(screen.getByTestId("topbar"), screen.getByTestId("hero"))).toBeTruthy(); // header, h1, then map
-  expect(order(screen.getByTestId("hero"), screen.getByTestId("map-canvas"))).toBeTruthy();
+  expect(order(screen.getByTestId("topbar"), screen.getByTestId("map-canvas"))).toBeTruthy(); // menu, then map
+  expect(panels).toContainElement(screen.getByTestId("hero")); // the hero numbers moved into the panel header
   expect(order(screen.getByTestId("map-canvas"), panels)).toBeTruthy(); // narrow screens stack map, cards, timeline
   expect(order(panels, screen.getByTestId("timeline-slot"))).toBeTruthy();
   expect(screen.getByTestId("inspector")).toHaveAttribute("id", "inspector-panel");
 });
 
-test("the header shows the logo pill and the theme button; the h1 is the page title until a layer is selected", () => {
+test("the menu bar shows the wordmark and the theme button; the h1 is the page title until a layer is selected", () => {
   render(<Shell />);
   const bar = screen.getByTestId("topbar");
   expect(bar).toHaveTextContent("Clima Ideas");
@@ -115,7 +190,7 @@ test("the header shows the logo pill and the theme button; the h1 is the page ti
 
 test("selecting a layer puts its title in the h1 and its point count and source line in the hero", async () => {
   render(<Shell />);
-  fireEvent.click(await screen.findByTestId("layer-toggle-a"));
+  fireEvent.click(await layerToggle("a"));
   await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Capa A"));
   await waitFor(() => expect(screen.getByTestId("hero-stat-points")).toHaveTextContent(`1${es.hero.points}`));
   expect(screen.getByTestId("hero-source")).toHaveTextContent("Fuente X · 2000-01-01/2000-12-31");
@@ -152,7 +227,7 @@ test("IVT view toggle: legend control only with the AR layer; isolines add conto
   render(<Shell />);
   const canvas = screen.getByTestId("map-canvas");
   expect(screen.queryByTestId("map-legend")).not.toBeInTheDocument();
-  fireEvent.click(await screen.findByTestId("layer-toggle-ar-events"));
+  fireEvent.click(await layerToggle("ar-events"));
   expect(screen.getByTestId("ivt-view-drape")).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(await screen.findByTestId("year-expand-2000")); // years start collapsed
   fireEvent.click(screen.getByTestId("month-expand-2000-03"));
@@ -200,7 +275,7 @@ test("AR filter: year and month toggles and top N drive the event list and the t
     })),
   );
   render(<Shell />);
-  fireEvent.click(await screen.findByTestId("layer-toggle-ar-events"));
+  fireEvent.click(await layerToggle("ar-events"));
   for (const id of ["A", "B", "C"]) expect(await screen.findByTestId(`timeline-event-${id}`)).toBeInTheDocument();
 
   // a month off removes just that event from the timeline
@@ -253,7 +328,7 @@ test("ENSO panel: button only when the layer lists enso.json; opens in the detai
     })),
   );
   render(<Shell />);
-  await screen.findByTestId("layer-toggle-ar-events");
+  await layerToggle("ar-events");
   expect(screen.queryByTestId("enso-open")).not.toBeInTheDocument();
   expect(screen.queryByTestId("detail-card")).not.toBeInTheDocument();
   expect(screen.queryByTestId("event-card")).not.toBeInTheDocument();
@@ -268,7 +343,7 @@ test("ENSO panel: button only when the layer lists enso.json; opens in the detai
   expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
   fireEvent.click(screen.getByTestId("enso-open"));
   expect(screen.getByTestId("enso-panel")).toBeInTheDocument();
-  fireEvent.click(screen.getByTestId("layer-toggle-ar-events"));
+  fireEvent.click(await layerToggle("ar-events")); // Esc also closed the menu: reopen it
   expect(screen.queryByTestId("enso-panel")).not.toBeInTheDocument();
 });
 

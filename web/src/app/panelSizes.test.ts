@@ -25,9 +25,9 @@ test("clamps each panel to its limits", () => {
 
 test("the map keeps at least 320 px wide and 420 px tall", () => {
   expect(limitsFor("panels", DEFAULT_SIZES, { width: 1100, height: 900 }).max).toBe(640);
-  expect(limitsFor("panels", DEFAULT_SIZES, { width: 800, height: 900 }).max).toBe(800 - 104 - 8 - 320);
-  // 900 - 264 chrome - 8 handle - 420 map
-  expect(limitsFor("timeline", DEFAULT_SIZES, { width: 1000, height: 900 }).max).toBe(208);
+  expect(limitsFor("panels", DEFAULT_SIZES, { width: 800, height: 900 }).max).toBe(800 - 48 - 8 - 320);
+  // 900 - 32 chrome - 8 handle - 420 map
+  expect(limitsFor("timeline", DEFAULT_SIZES, { width: 1000, height: 900 }).max).toBe(440);
 });
 
 test("min wins when the window is too small", () => {
@@ -37,8 +37,8 @@ test("min wins when the window is too small", () => {
 
 test("clampAll re-clamps after the window shrinks and keeps collapsed panels at 0", () => {
   const out = clampAll({ panels: 640, timeline: 480 }, { width: 900, height: 700 });
-  expect(out.panels).toBeLessThanOrEqual(900 - 104 - 8 - 320);
-  expect(out.timeline).toBeLessThanOrEqual(148); // a 700 px window fits only the default timeline; the page scrolls
+  expect(out.panels).toBeLessThanOrEqual(900 - 48 - 8 - 320);
+  expect(out.timeline).toBeLessThanOrEqual(240); // 700 - 32 chrome - 8 handle - 420 map
   expect(clampAll({ panels: 0, timeline: 0 }, { width: 1100, height: 900 })).toEqual({ panels: 0, timeline: 0 });
 });
 

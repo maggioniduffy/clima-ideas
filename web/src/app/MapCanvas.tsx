@@ -96,6 +96,7 @@ export function MapCanvas({
   }, [markers, view, size]);
   return (
     <main ref={ref} className="shell-canvas" data-testid="map-canvas" data-deck-layers={layers.map((l) => l.id).join(",")}
+      data-hidden-layers={layers.filter((l) => l.props.visible === false).map((l) => l.id).join(",")}
       data-view-zoom={view.zoom.toFixed(2)}
       data-view-center={`${view.longitude.toFixed(4)},${view.latitude.toFixed(4)}`}
     >

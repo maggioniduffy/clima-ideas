@@ -9,11 +9,11 @@ interface Props {
   source?: { source: string; period: string } | null;
 }
 
-/** Hero row: the page `h1` on the left, up to 3 big numbers with a caption and one source line on the right. */
+/** Panel header: the page `h1` (visually hidden), up to 3 numbers with a caption and one source line. */
 export function Hero({ title, stats = [], source = null }: Props) {
   return (
     <section className="hero" data-testid="hero" aria-label={title}>
-      <h1>{title}</h1>
+      <h1 className="sr-only">{title}</h1>
       {stats.length > 0 && (
         <div className="hero-stats" data-testid="hero-stats">
           <ul className="hero-numbers">

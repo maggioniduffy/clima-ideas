@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures/test";
+import { expect, test, setLayer } from "./fixtures/test";
 
 const box = async (loc: import("@playwright/test").Locator) => {
   const b = await loc.boundingBox();
@@ -11,11 +11,11 @@ const intersects = (a: { x: number; y: number; width: number; height: number }, 
 test("timeline: the AR replay and the storm replay stack as separate rows and never overlap", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.getByTestId("layer-toggle-ar-events").check();
+  await setLayer(page, "ar-events", true);
   await page.getByTestId("year-expand-2000").click();
   await page.getByTestId("month-expand-2000-03").click();
   await page.getByTestId("timeline-event-AR-2000-001").click();
-  await page.getByTestId("layer-toggle-convection-idf").check();
+  await setLayer(page, "convection-idf", true);
 
   const conv = page.getByTestId("convection-replay");
   const ar = page.getByTestId("replay-controls");

@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { readFileSync } from "node:fs";
 import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import type { FloodStationDetail } from "../api/client";
@@ -28,7 +29,7 @@ test("hosts the ENSO panel, and it wins over the flood charts", () => {
   expect(screen.queryByTestId("flood-station-panel")).toBeNull();
 });
 
-test("only the forecast card is inverted, and only when no other panel wins the slot", () => {
+test("the forecast card keeps its data-tone marker only when no other panel wins the slot", () => {
   const forecast = { state: { status: "loading" as const, outlook: null }, source: "S", period: "P" } as unknown as ComponentProps<typeof DetailCard>["forecast"];
   const { rerender } = render(<DetailCard forecast={forecast} />);
   expect(screen.getByTestId("detail-card")).toHaveAttribute("data-tone", "inverse");
@@ -36,4 +37,10 @@ test("only the forecast card is inverted, and only when no other panel wins the 
   expect(screen.getByTestId("detail-card")).not.toHaveAttribute("data-tone");
   rerender(<DetailCard flood={{ status: "ready", detail }} />);
   expect(screen.getByTestId("detail-card")).not.toHaveAttribute("data-tone");
+});
+
+test("no stylesheet gives the inverse card a dark look: it follows the theme", () => {
+  const css = readFileSync("src/app/shell.css", "utf8");
+  expect(css).not.toMatch(/data-tone="inverse"\]\s*{/);
+  expect(css).not.toMatch(/var\(--inverse\)|var\(--on-inverse\)/);
 });

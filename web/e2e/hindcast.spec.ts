@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures/test";
+import { expect, test, setLayer, openLayerMenu, closeLayerMenu } from "./fixtures/test";
 
 test("hindcast verification: choose model, event and lead; gate, analogs, notices and links", async ({ page }) => {
   const errors: string[] = [];
@@ -6,8 +6,10 @@ test("hindcast verification: choose model, event and lead; gate, analogs, notice
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
+  await openLayerMenu(page);
   await expect(page.getByTestId("layer-item-hindcast-verification")).toHaveAttribute("title", "Verificación retrospectiva de pronósticos");
-  await page.getByTestId("layer-toggle-hindcast-verification").check();
+  await closeLayerMenu(page);
+  await setLayer(page, "hindcast-verification", true);
   await expect(page.getByTestId("inspector-source")).toHaveText("GEFS, IFS y AIFS falsos de prueba; observado ERA5 falso de prueba");
 
   const panel = page.getByTestId("hindcast-panel");

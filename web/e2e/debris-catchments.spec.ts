@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures/test";
+import { expect, test, setLayer, openLayerMenu, closeLayerMenu } from "./fixtures/test";
 
 test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   const errors: string[] = [];
@@ -6,8 +6,10 @@ test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
+  await openLayerMenu(page);
   await expect(page.getByTestId("layer-item-debris-catchments")).toHaveAttribute("title", "Aluviones: cuencas chicas");
-  await page.getByTestId("layer-toggle-debris-catchments").check();
+  await closeLayerMenu(page);
+  await setLayer(page, "debris-catchments", true);
   await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /polygons-debris-catchments/);
   await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /outlets-debris-catchments/);
 
@@ -86,7 +88,7 @@ test("debris: choose a catchment and inspect its panel", async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(0);
 
   // turning the layer off removes map layers and panel
-  await page.getByTestId("layer-toggle-debris-catchments").uncheck();
+  await setLayer(page, "debris-catchments", false);
   await expect(page.getByTestId("debris-panel")).toHaveCount(0);
   await expect(page.getByTestId("map-canvas")).not.toHaveAttribute("data-deck-layers", /debris-catchments/);
   expect(errors).toEqual([]);

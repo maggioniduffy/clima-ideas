@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures/test";
+import { expect, test, setLayer, openLayerMenu, closeLayerMenu } from "./fixtures/test";
 
 test("flood stations: pick a station, see the return-period curve and the top floods", async ({ page }) => {
   const errors: string[] = [];
@@ -6,10 +6,12 @@ test("flood stations: pick a station, see the return-period curve and the top fl
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
+  await openLayerMenu(page);
   await expect(page.getByTestId("layer-item-flood-stations")).toHaveAttribute("title", "Crecidas: caudal y período de retorno");
+  await closeLayerMenu(page);
 
-  await page.getByTestId("layer-toggle-flood-stations").check();
-  await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /^points-flood-stations(,|$)/);
+  await setLayer(page, "flood-stations", true);
+  await expect(page.getByTestId("map-canvas")).toHaveAttribute("data-deck-layers", /^(relief-relief,)?points-flood-stations(,|$)/);
   await expect(page.getByTestId("inspector-source")).toHaveText("Datos falsos de prueba");
 
   // the list names stations, not "Punto <id>"
@@ -51,7 +53,7 @@ test("flood card: past event, LSTM forecast with band vs observed, issue day cha
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/");
-  await page.getByTestId("layer-toggle-flood-stations").check();
+  await setLayer(page, "flood-stations", true);
   await page.getByTestId("feature-1001").click();
 
   const card = page.getByTestId("flood-event-card");
@@ -100,7 +102,7 @@ for (const width of [900, 1360]) {
   test(`flood panel fits its container at ${width} px and keeps text legible`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    await page.getByTestId("layer-toggle-flood-stations").check();
+    await setLayer(page, "flood-stations", true);
     await page.getByTestId("feature-1001").click();
     const card = page.getByTestId("detail-card");
     const chart = page.getByTestId("event-chart");
@@ -134,14 +136,16 @@ test("flood stations: a top flood tagged 'Coincide con' opens that AR event in t
   page,
 }) => {
   await page.goto("/");
-  await page.getByTestId("layer-toggle-flood-stations").check();
+  await setLayer(page, "flood-stations", true);
   await page.getByTestId("feature-1002").click();
   const tag = page.getByTestId("flood-ar-tag-AR-2000-002");
   await expect(tag).toHaveText("Coincide con AR-2000-002");
   await tag.click();
 
   // the ar-events layer is on, the event selected (and its year not hidden by the filter), its caudal chart shown
+  await openLayerMenu(page);
   await expect(page.getByTestId("layer-item-ar-events")).toHaveAttribute("data-active", "true");
+  await closeLayerMenu(page);
   await expect(page.getByTestId("inspector-event")).toContainText("2000-07-21");
   await expect(page.getByTestId("ar-response-chart-1002")).toBeVisible();
   await expect(page.getByTestId("ar-response-regulated-1002")).toContainText(/regulada/i);
