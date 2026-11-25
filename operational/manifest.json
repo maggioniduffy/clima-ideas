@@ -1,42 +1,42 @@
 {
  "ecmwf": {
-  "attempted_run_date": "2026-11-24",
+  "attempted_run_date": "2026-11-25",
   "detail": null,
   "error": null,
-  "file": "ecmwf/2026-11-24.parquet",
+  "file": "ecmwf/2026-11-25.parquet",
   "lag_days": -9,
-  "last_run_date": "2026-11-24",
-  "newest_value_date": "2026-12-03",
+  "last_run_date": "2026-11-25",
+  "newest_value_date": "2026-12-04",
   "rows": 30,
   "status": "ok",
-  "updated_at": "2026-11-24T20:41:31.529971+00:00"
+  "updated_at": "2026-11-25T19:58:37.040403+00:00"
  },
  "era5t": {
-  "attempted_run_date": "2026-11-24",
+  "attempted_run_date": "2026-11-25",
   "detail": null,
   "error": null,
-  "file": "era5t/2026-11-24.parquet",
-  "lag_days": 8,
-  "last_run_date": "2026-11-24",
+  "file": "era5t/2026-11-25.parquet",
+  "lag_days": 9,
+  "last_run_date": "2026-11-25",
   "newest_value_date": "2026-11-16",
-  "rows": 21,
+  "rows": 18,
   "status": "ok",
-  "updated_at": "2026-11-24T20:41:27.306492+00:00"
+  "updated_at": "2026-11-25T19:58:30.385649+00:00"
  },
  "era5t_regions": {
-  "attempted_run_date": "2026-11-24",
+  "attempted_run_date": "2026-11-25",
   "detail": null,
   "error": null,
-  "file": "era5t_regions/2026-11-24.parquet",
-  "lag_days": 8,
-  "last_run_date": "2026-11-24",
+  "file": "era5t_regions/2026-11-25.parquet",
+  "lag_days": 9,
+  "last_run_date": "2026-11-25",
   "newest_value_date": "2026-11-16",
-  "rows": 21,
+  "rows": 18,
   "status": "ok",
-  "updated_at": "2026-11-24T21:17:58.157822+00:00"
+  "updated_at": "2026-11-25T20:25:08.859440+00:00"
  },
  "flow": {
-  "attempted_run_date": "2026-11-24",
+  "attempted_run_date": "2026-11-25",
   "detail": null,
   "error": "RuntimeError: source returned no rows",
   "file": null,
@@ -45,24 +45,24 @@
   "newest_value_date": null,
   "rows": null,
   "status": "failed",
-  "updated_at": "2026-11-24T20:41:21.058814+00:00"
+  "updated_at": "2026-11-25T19:58:23.162559+00:00"
  },
  "gefs": {
-  "attempted_run_date": "2026-11-24",
+  "attempted_run_date": "2026-11-25",
   "detail": null,
   "error": null,
-  "file": "gefs/2026-11-24.parquet",
+  "file": "gefs/2026-11-25.parquet",
   "lag_days": -9,
-  "last_run_date": "2026-11-24",
-  "newest_value_date": "2026-12-03",
+  "last_run_date": "2026-11-25",
+  "newest_value_date": "2026-12-04",
   "rows": 60,
   "status": "ok",
-  "updated_at": "2026-11-24T21:17:43.048385+00:00"
+  "updated_at": "2026-11-25T20:24:49.294054+00:00"
  },
  "gefs_regions": {
-  "attempted_run_date": "2026-11-24",
+  "attempted_run_date": "2026-11-25",
   "detail": {
-   "init_date": "2026-11-24",
+   "init_date": "2026-11-25",
    "members_present": [
     "c00",
     "p01",
@@ -73,24 +73,24 @@
    "missing_steps": {}
   },
   "error": null,
-  "file": "gefs_regions/2026-11-24.parquet",
+  "file": "gefs_regions/2026-11-25.parquet",
   "lag_days": -9,
-  "last_run_date": "2026-11-24",
-  "newest_value_date": "2026-12-03",
+  "last_run_date": "2026-11-25",
+  "newest_value_date": "2026-12-04",
   "rows": 150,
   "status": "ok",
-  "updated_at": "2026-11-24T21:17:46.451384+00:00"
+  "updated_at": "2026-11-25T20:24:53.829053+00:00"
  },
  "oni": {
-  "attempted_run_date": "2026-11-24",
+  "attempted_run_date": "2026-11-25",
   "detail": null,
   "error": null,
-  "file": "oni/2026-11-24.parquet",
-  "lag_days": 84,
-  "last_run_date": "2026-11-24",
+  "file": "oni/2026-11-25.parquet",
+  "lag_days": 85,
+  "last_run_date": "2026-11-25",
   "newest_value_date": "2026-09-01",
   "rows": 921,
   "status": "ok",
-  "updated_at": "2026-11-24T20:41:27.023252+00:00"
+  "updated_at": "2026-11-25T19:58:30.059151+00:00"
  }
 }
